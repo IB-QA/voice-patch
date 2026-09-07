@@ -11,7 +11,7 @@
   "plugins": [
     {
       "name": "voicemode",
-      "description": "Voice conversations with Claude Code using local speech-to-text and text-to-speech. Includes support for remote agents via mobile, web and CLI.",
+      "description": "Voice conversations with Claude Code using local speech-to-text and text-to-speech.",
       "author": {
         "name": "Mike Bailey",
         "email": "mike@voicemode.dev"

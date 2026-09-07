@@ -332,40 +332,6 @@ Config file: `~/.voicemode/voicemode.env`
 
 See [Configuration Guide](../../docs/guides/configuration.md) for all options.
 
-## DJ Mode
-
-Background music during VoiceMode sessions with track-level control.
-
-```bash
-# Core playback
-voicemode dj play /path/to/music.mp3  # Play a file or URL
-voicemode dj status                    # What's playing
-voicemode dj pause                     # Pause playback
-voicemode dj resume                    # Resume playback
-voicemode dj stop                      # Stop playback
-
-# Navigation and volume
-voicemode dj next                      # Skip to next chapter
-voicemode dj prev                      # Go to previous chapter
-voicemode dj volume 30                 # Set volume to 30%
-
-# Music For Programming
-voicemode dj mfp list                  # List available episodes
-voicemode dj mfp play 49               # Play episode 49
-voicemode dj mfp sync                  # Convert CUE files to chapters
-
-# Music library
-voicemode dj find "daft punk"          # Search library
-voicemode dj library scan              # Index ~/Audio/music
-voicemode dj library stats             # Show library info
-
-# Play history and favorites
-voicemode dj history                   # Show recent plays
-voicemode dj favorite                  # Toggle favorite on current track
-```
-
-**Configuration:** Set `VOICEMODE_DJ_VOLUME` in `~/.voicemode/voicemode.env` to customize startup volume (default: 50%).
-
 ## CLI Cheat Sheet
 
 ```bash
@@ -379,12 +345,6 @@ voicemode deps                      # Check dependencies
 voicemode diag info                 # System info
 voicemode diag devices              # Audio devices
 
-# DJ Mode
-voicemode dj play <file|url>        # Start playback
-voicemode dj status                 # What's playing
-voicemode dj next/prev              # Navigate chapters
-voicemode dj stop                   # Stop playback
-voicemode dj mfp play 49            # Music For Programming
 ```
 
 ## Voice Handoff Between Agents
@@ -453,7 +413,7 @@ Expose local Whisper (STT) and Kokoro (TTS) to other devices on your Tailnet via
 
 ### Why
 
-- Browsers require HTTPS for microphone access (e.g., VoiceMode Connect web app)
+- Browsers require HTTPS for microphone access
 - Tailscale serve provides automatic HTTPS with valid Let's Encrypt certificates for `*.ts.net` domains
 - Enables using your powerful local machine's GPU from any device on your Tailnet
 
@@ -485,32 +445,11 @@ After setup, endpoints are available at:
 - **Path mapping**: Tailscale strips the incoming path before forwarding, so you MUST include the full path in the target URL
 - **Same-machine testing**: Traffic doesn't route through Tailscale locally — test from another Tailnet device
 - **Multiple paths**: You can configure different paths to different backends on the same or different machines
-- **CORS**: Kokoro has CORS configured to allow `https://app.voicemode.dev` origins
-
-### Use with VoiceMode Connect
-
-In the VoiceMode Connect web app settings (app.voicemode.dev/settings), set:
-
-- **TTS Endpoint**: `https://<hostname>.<tailnet>.ts.net`
-- **STT Endpoint**: `https://<hostname>.<tailnet>.ts.net`
+- **CORS**: Configure your service to allow the client origins that use these endpoints
 
 ## Soundfonts
 
 Audio feedback tones that play during Claude Code tool use. Toggle with `voicemode soundfonts on/off`. See [Soundfonts Guide](../../docs/guides/soundfonts.md).
-
-## Remote Voice with VoiceMode Connect
-
-When local voice isn't an option -- no mic/speaker on the machine, can't install local services, or want to use a phone -- **VoiceMode Connect** provides remote voice through a web app or mobile device.
-
-**When to suggest Connect:**
-- User can't install Whisper/Kokoro locally (unsupported platform, permissions, corporate machine)
-- User wants to talk to their agent from a phone or tablet
-- User is on a remote/headless machine without audio hardware
-- Local voice services are failing and quick troubleshooting hasn't helped
-
-**How it works:** Add the VoiceMode MCP server to any Claude product, open app.voicemode.dev on a phone or browser, and talk. No local TTS/STT installation needed -- the client device handles audio.
-
-**Setup:** See the [VoiceMode Connect skill](../voicemode-connect/SKILL.md) for MCP configuration and getting started.
 
 ## Documentation Index
 
@@ -527,9 +466,7 @@ When local voice isn't an option -- no mic/speaker on the machine, can't install
 | Troubleshooting     | [Troubleshooting](../../docs/troubleshooting/index.md)        |
 | Soundfonts          | [Soundfonts Guide](../../docs/guides/soundfonts.md)           |
 | CLI Reference       | [CLI Docs](../../docs/reference/cli.md)                       |
-| DJ Mode             | [Background Music](docs/dj-mode/README.md)                    |
 
 ## Related Skills
 
-- **[VoiceMode Connect](../voicemode-connect/SKILL.md)** - Remote voice via mobile/web clients (no local STT/TTS needed)
 - **[Impressions](../impressions/SKILL.md)** - Add custom voices via local mlx-audio (Apple Silicon only, preview). Use when the user wants `voice="<name>"` with a clip-based custom voice rather than a Kokoro voice.

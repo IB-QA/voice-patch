@@ -459,15 +459,6 @@ TTS \\bAPI\\b A P I # API as individual letters
 #   voicemode autofocus status
 
 #############
-# Credential Storage
-#############
-
-# Where to store OAuth credentials (keyring or plaintext)
-# keyring uses the OS keychain (macOS Keychain, Linux Secret Service)
-# plaintext stores in ~/.voicemode/credentials (chmod 600)
-# VOICEMODE_CREDENTIAL_STORE=keyring
-
-#############
 # API Keys (set these in your environment for security)
 #############
 
