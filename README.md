@@ -1,5 +1,7 @@
 # VoiceMode
 
+**Private working clone derived from [mbailey/voicemode](https://github.com/mbailey/voicemode).**
+
 > Natural voice conversations with Claude Code (and other MCP capable agents)
 
 [![PyPI Downloads](https://static.pepy.tech/badge/voice-mode)](https://pepy.tech/project/voice-mode)

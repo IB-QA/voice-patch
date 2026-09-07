@@ -40,6 +40,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   natively cancels in-flight handlers when a transport closes, so VoiceMode's
   private FastMCP 3 shutdown patch has been removed.
 
+### Removed
+
+- **Removed unused product surfaces from this private build** — VoiceMode DJ,
+  Music For Programming, the local music library, and their CLI, skill,
+  documentation, data, and tests are gone. The hosted VoiceMode Connect Auth0
+  login, credential storage, skill, documentation, and tests are also removed.
+  Local `converse`, conch coordination, service management, Whisper, Kokoro,
+  MLX Audio, `voicemode serve`, and the generic remote MCP bridge are unchanged.
+
 ### Fixed
 
 - **Long streaming speech no longer blocks continuation timers** — audio-device

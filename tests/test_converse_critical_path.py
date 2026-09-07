@@ -254,7 +254,9 @@ class TestConverseSTTFailures:
 
                     result = await getattr(converse, 'fn', converse)(
                         message="Are you there?",
-                        wait_for_response=True
+                        wait_for_response=True,
+                        disable_silence_detection=True,
+                        listen_duration_max=60,
                     )
 
                     # Should indicate no speech detected
