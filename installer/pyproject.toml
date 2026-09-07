@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
-    {name = "mbailey", email = "mbailey@example.com"},
+    {name = "IB-QA", email = "IB-QA@example.com"},
 ]
 keywords = ["voicemode", "installer", "mcp", "voice", "setup"]
 classifiers = [

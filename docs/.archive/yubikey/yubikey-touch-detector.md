@@ -11,11 +11,13 @@ YubiKey Touch Detector monitors various authentication methods (GPG, SSH, U2F/FI
 ## Installation
 
 ### Fedora
+
 ```bash
 sudo dnf install yubikey-touch-detector
 ```
 
 ### From Source
+
 ```bash
 go install github.com/maximbaz/yubikey-touch-detector@latest
 ```
