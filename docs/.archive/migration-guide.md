@@ -140,5 +140,5 @@ export VOICEMODE_ALLOW_EMOTIONS=true
 
 If you encounter any issues during migration:
 1. Check the [documentation](https://docs.getvoicemode.com)
-2. Report issues at [GitHub Issues](https://github.com/mbailey/voicemode/issues)
+2. Report issues at [GitHub Issues](https://github.com/IB-QA/voice-patch/issues)
 3. Join our community discussions

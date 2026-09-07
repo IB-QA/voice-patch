@@ -15,7 +15,7 @@ We provide an automated setup script that handles all the configuration for you:
 
 **Option 1: Download and run directly**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/mbailey/voicemode/master/scripts/setup-npm-global.sh | bash
+curl -fsSL https://raw.githubusercontent.com/IB-QA/voice-patch/master/scripts/setup-npm-global.sh | bash
 ```
 
 **Option 2: Run from cloned repository**
