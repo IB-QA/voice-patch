@@ -34,17 +34,17 @@ def patched_converse():
     the `message` kwarg the CLI would have spoken.
     """
     async_mock = AsyncMock(return_value="Voice response: ack | provider=test")
+    async_mock.fn = async_mock
 
     # check_component_dependencies is imported inside the command body, so we
     # patch at the source module.
     with patch(
         "voice_mode.utils.dependencies.checker.check_component_dependencies",
         return_value={"core": True},
-    ), patch("voice_mode.tools.converse.converse") as mock_converse_tool:
-        # `converse_fn.fn` is the unwrapped coroutine inside FastMCP. The CLI
-        # uses getattr(converse_fn, 'fn', converse_fn) so providing `.fn` is
-        # the cleanest path.
-        mock_converse_tool.fn = async_mock
+    ), patch(
+        "voice_mode.tools.converse._converse_core",
+        new=async_mock,
+    ):
         yield async_mock
 
 
@@ -52,6 +52,28 @@ def _spoken_message(async_mock):
     """Return the `message` kwarg of the last call to the patched converse."""
     assert async_mock.await_count >= 1, "converse was never awaited"
     return async_mock.await_args.kwargs["message"]
+
+
+def test_direct_cli_does_not_create_mcp_continuation_job():
+    """The CLI owns one long-lived loop and must run the core call to completion."""
+    runner = CliRunner()
+    core = AsyncMock(return_value="Voice response: ack | provider=test")
+    core.fn = core
+
+    with patch(
+        "voice_mode.utils.dependencies.checker.check_component_dependencies",
+        return_value={"core": True},
+    ), patch(
+        "voice_mode.tools.converse._converse_core",
+        new=core,
+    ), patch(
+        "voice_mode.tools.converse.conversation_job_manager.create",
+    ) as create_job:
+        result = runner.invoke(voice_mode_main_cli, ["converse", "hello"])
+
+    assert result.exit_code == 0
+    core.assert_awaited_once()
+    create_job.assert_not_called()
 
 
 class TestConversePositionalMessage:

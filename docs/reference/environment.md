@@ -14,6 +14,18 @@ Environment variables are processed in this order (highest to lowest priority):
 
 ## Core Configuration
 
+### Persistence
+
+| Variable | Description | Default | Example |
+|----------|-------------|---------|---------|
+| `VOICEMODE_SAVE_AUDIO` | Save recorded audio, including partial audio recovered after cancellation | `false` | `true` |
+| `VOICEMODE_SAVE_TRANSCRIPTIONS` | Save transcription files, including partial cancellation transcripts | `false` | `true` |
+| `VOICEMODE_SAVE_ALL` | Enable both audio and transcription persistence | `false` | `true` |
+
+Cancellation recovery follows these settings independently. It never writes a
+partial WAV or transcript unless the corresponding persistence setting is
+enabled.
+
 ### API Keys
 
 | Variable | Description | Default | Example |
@@ -130,6 +142,7 @@ Supported formats: `pcm`, `opus`, `mp3`, `wav`, `flac`, `aac`
 | Variable | Description | Default | Example |
 |----------|-------------|---------|---------|
 | `VOICEMODE_AUDIO_FEEDBACK` | Enable recording chimes | `true` | `false` |
+| `VOICEMODE_CANCEL_ANNOUNCEMENT` | Speak the fixed “VoiceMode call cancelled” announcement after cancelled audio is saved | `true` | `false` |
 | `VOICEMODE_FEEDBACK_STYLE` | Chime style | `whisper` | `shout` |
 | `VOICEMODE_CHIME_PRE_DELAY` | Silence before chime (seconds) | `0.1` | `1.0` |
 | `VOICEMODE_CHIME_POST_DELAY` | Silence after chime (seconds) | `0.2` | `0.5` |

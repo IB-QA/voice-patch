@@ -201,4 +201,4 @@ mlx-audio exposes an OpenAI-compatible `/v1/audio/speech` endpoint with two extr
 - [Impressions skill](../../.claude/skills/impressions/SKILL.md) — agent-facing reference for adding voices and troubleshooting on demand.
 - [Setup deep-dive](../../.claude/skills/impressions/docs/setup.md) — model quants, remote mlx-audio config, install troubleshooting.
 - [Finding good samples](../../.claude/skills/impressions/docs/finding-samples.md) — ranking heuristics, ffmpeg recipes, voice-lab tooling.
-- [voice-lab](https://github.com/mbailey/voice-lab) — companion repo for curating reference clips and personas.
+- [voice-lab] — companion repo for curating reference clips and personas.

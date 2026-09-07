@@ -116,6 +116,10 @@ def load_voicemode_env():
 # Enable audio feedback chimes (true/false)
 # VOICEMODE_AUDIO_FEEDBACK=true
 
+# Speak a short server-owned announcement after an MCP cancellation. The
+# recording-ended tone always plays whether this is enabled or not.
+# VOICEMODE_CANCEL_ANNOUNCEMENT=true
+
 # Enable sound fonts for tool use hooks (true/false, default: true)
 # VOICEMODE_SOUNDFONTS_ENABLED=true
 
@@ -567,6 +571,10 @@ SAVE_TRANSCRIPTIONS = SAVE_ALL or DEBUG or os.getenv("VOICEMODE_SAVE_TRANSCRIPTI
 
 # Audio feedback configuration
 AUDIO_FEEDBACK_ENABLED = os.getenv("VOICEMODE_AUDIO_FEEDBACK", "true").lower() in ("true", "1", "yes", "on")
+CANCEL_ANNOUNCEMENT_ENABLED = os.getenv(
+    "VOICEMODE_CANCEL_ANNOUNCEMENT", "true"
+).lower() in ("true", "1", "yes", "on")
+CANCEL_ANNOUNCEMENT_TEXT = "VoiceMode call cancelled."
 
 # Skip TTS configuration (skip text-to-speech for faster responses)
 SKIP_TTS = os.getenv("VOICEMODE_SKIP_TTS", "false").lower() in ("true", "1", "yes", "on")
@@ -1075,7 +1083,9 @@ TTS_TRAILING_SILENCE = float(os.getenv("VOICEMODE_TTS_TRAILING_SILENCE", "0.5"))
 # Event logging configuration
 # Event logs are enabled by default, or if SAVE_ALL is true
 EVENT_LOG_ENABLED = SAVE_ALL or os.getenv("VOICEMODE_EVENT_LOG_ENABLED", "true").lower() in ("true", "1", "yes", "on")
-EVENT_LOG_DIR = os.getenv("VOICEMODE_EVENT_LOG_DIR", str(LOGS_DIR / "events"))
+EVENT_LOG_DIR = str(
+    expand_path(os.getenv("VOICEMODE_EVENT_LOG_DIR", str(LOGS_DIR / "events")))
+)
 EVENT_LOG_ROTATION = os.getenv("VOICEMODE_EVENT_LOG_ROTATION", "daily")  # Currently only daily is supported
 
 # ==================== GLOBAL STATE ====================

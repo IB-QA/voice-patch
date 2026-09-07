@@ -3,8 +3,8 @@ site_url: https://voicemode.dev
 site_description: Natural voice conversations for AI assistants
 site_author: Voice Mode Team
 
-repo_name: mbailey/voicemode
-repo_url: https://github.com/mbailey/voicemode
+repo_name: IB-QA/voice-patch
+repo_url: https://github.com/IB-QA/voice-patch
 edit_uri: edit/main/docs/
 
 theme:
@@ -48,7 +48,7 @@ markdown_extensions:
       anchor_linenums: true
   - pymdownx.inlinehilite
   - pymdownx.snippets:
-      base_path: !relative $config_dir
+      base_path: [.]
   - pymdownx.superfences
   - pymdownx.details
   - pymdownx.tabbed:
@@ -58,9 +58,7 @@ markdown_extensions:
   - md_in_html
   - toc:
       permalink: true
-  - pymdownx.emoji:
-      emoji_index: !!python/name:material.extensions.emoji.twemoji
-      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.emoji
 
 plugins:
   - search
@@ -115,7 +113,7 @@ nav:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/mbailey/voicemode
+      link: https://github.com/IB-QA/voice-patch
     - icon: fontawesome/brands/x-twitter
       link: https://twitter.com/getvoicemode
     - icon: fontawesome/brands/youtube

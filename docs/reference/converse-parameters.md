@@ -35,6 +35,27 @@ Minimum recording time before silence detection can stop.
 ### timeout (DEPRECATED)
 Use `listen_duration_max` instead.
 
+### continuation_wait
+**Type:** number (default: 50 seconds, maximum: 55 seconds)
+
+Maximum time one MCP request waits for the complete voice operation. If TTS,
+recording, and transcription are still active at this boundary, `converse`
+returns compact JSON containing `status: "in_progress"`, a `job_id`, and the
+arguments for `converse_continue`.
+
+Call `converse_continue` with that same ID. The original operation remains
+active inside the server; it does not replay the message, reopen the microphone,
+or discard partial audio. Repeat the continuation call until it returns the
+ordinary final `Voice response: ...` result.
+
+```json
+{"status":"in_progress","job_id":"...","next":{"tool":"converse_continue","arguments":{"job_id":"...","wait_seconds":50}}}
+```
+
+Set `stop: true` on `converse_continue` to end the active operation cleanly.
+Explicit MCP cancellation still cancels the operation immediately; only the
+server's own continuation boundary leaves it running.
+
 ## Voice & TTS Parameters
 
 ### voice

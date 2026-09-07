@@ -239,7 +239,7 @@ async def play_cached_utterance(record, control_state=None) -> str:
 
             chunk = pcm[offset:offset + chunk_bytes]
             audio_array = np.frombuffer(chunk, dtype=np.int16)
-            stream.write(audio_array)
+            await asyncio.to_thread(stream.write, audio_array)
 
         # Played to the end -- drain naturally.
         stream.stop()
@@ -291,7 +291,10 @@ async def _hold_and_play_remainder(stream, remainder_chunks, control_state) -> s
             )
             logger.info("paused-utterance remainder interrupted (%s)", reason)
             return reason
-        stream.write(np.frombuffer(chunk, dtype=np.int16))
+        await asyncio.to_thread(
+            stream.write,
+            np.frombuffer(chunk, dtype=np.int16),
+        )
     return REPLAY_COMPLETED
 
 
@@ -463,7 +466,7 @@ async def stream_pcm_audio(
                 # Play the chunk immediately, unless an interrupt suppressed playback.
                 if playing:
                     audio_array = np.frombuffer(chunk, dtype=np.int16)
-                    stream.write(audio_array)
+                    await asyncio.to_thread(stream.write, audio_array)
                     metrics.chunks_played = chunk_count + 1
                 else:
                     # Suppressed by a pause: keep the un-played chunk to replay
@@ -757,7 +760,7 @@ async def stream_cartesia_pcm(
             audio_buffer.write(chunk)
             if playing:
                 audio_array = np.frombuffer(chunk, dtype=np.int16)
-                stream.write(audio_array)
+                await asyncio.to_thread(stream.write, audio_array)
             else:
                 remainder_chunks.append(chunk)
 
@@ -1114,7 +1117,7 @@ async def stream_with_buffering(
                             logger.info(f"Buffered streaming started - TTFA: {metrics.ttfa:.3f}s")
 
                             # Play audio
-                            stream.write(samples)
+                            await asyncio.to_thread(stream.write, samples)
                             metrics.chunks_played += len(samples) // 1024
                             pcm_parts.append(_float_samples_to_pcm16(samples))
 
@@ -1178,7 +1181,7 @@ async def stream_with_buffering(
                     metrics.ttfa = time.perf_counter() - start_time
 
                 if play_final:
-                    stream.write(samples)
+                    await asyncio.to_thread(stream.write, samples)
                     metrics.chunks_played += len(samples) // 1024
                 pcm_parts.append(_float_samples_to_pcm16(samples))
 

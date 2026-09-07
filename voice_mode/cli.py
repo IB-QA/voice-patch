@@ -1850,7 +1850,13 @@ def converse(message_args, message, wait, skip_stt, duration, min_duration, voic
         click.echo("   Run 'voicemode deps' to install them")
         return
 
-    from voice_mode.tools.converse import converse as converse_fn
+    # The direct CLI owns the event loop for the whole conversation and has no
+    # MCP request deadline or follow-up request in which to call
+    # ``converse_continue``. Run the core operation to completion instead of
+    # entering the MCP-only continuation manager; otherwise an in-progress
+    # result makes ``asyncio.run`` cancel the still-speaking/listening job as it
+    # closes its loop.
+    from voice_mode.tools.converse import _converse_core as converse_fn
     
     async def run_conversation():
         """Run the conversation asynchronously."""

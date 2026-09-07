@@ -7,6 +7,7 @@ import os
 import threading
 import time
 import traceback
+import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from typing import Optional, Literal, Tuple, Dict, Union, Any, Annotated
@@ -33,6 +34,11 @@ except ImportError as e:
 from voice_mode.server import mcp
 from voice_mode.conch import Conch, _get_hold_expiry
 from voice_mode.conch_queue import ConchQueue
+from voice_mode.conversation_jobs import (
+    DEFAULT_CONTINUATION_WAIT,
+    conversation_job_manager,
+    resolve_continuation_wait,
+)
 from voice_mode.conversation_logger import get_conversation_logger
 from voice_mode.config import (
     audio_operation_lock,
@@ -46,6 +52,8 @@ from voice_mode.config import (
     AUDIO_DIR,
     OPENAI_API_KEY,
     AUDIO_FEEDBACK_ENABLED,
+    CANCEL_ANNOUNCEMENT_ENABLED,
+    CANCEL_ANNOUNCEMENT_TEXT,
     service_processes,
     save_transcription,
     SAVE_TRANSCRIPTIONS,
@@ -1846,6 +1854,165 @@ async def _drain_skip_back(control_state, replay_cursor: int) -> int:
 # ask-turn survey loop (impl-002) will also call this once per ask turn.
 # ---------------------------------------------------------------------------
 
+_cancelled_recording_recovery_tasks: set[asyncio.Task[None]] = set()
+
+
+def _track_cancelled_recording_recovery(task: asyncio.Task[None]) -> None:
+    """Keep detached cancellation recovery alive and consume its exception."""
+    _cancelled_recording_recovery_tasks.add(task)
+
+    def completed(finished: asyncio.Task[None]) -> None:
+        _cancelled_recording_recovery_tasks.discard(finished)
+        try:
+            finished.result()
+        except asyncio.CancelledError:
+            logger.debug("Cancelled recording recovery was interrupted by server shutdown")
+        except Exception as exc:
+            logger.error("Cancelled recording recovery failed: %s", exc)
+
+    task.add_done_callback(completed)
+
+
+_CANCEL_RECOVERY_TIMEOUT = 60.0
+_cancelled_recovery_threads: set[threading.Thread] = set()
+
+
+def join_cancelled_recovery(timeout: float = 30.0) -> None:
+    """Wait for detached cancellation recovery threads to finish."""
+    for thread in list(_cancelled_recovery_threads):
+        thread.join(timeout)
+
+
+async def _recover_cancelled_recording(
+    recording_future,
+    *,
+    transport: str,
+    chime_leading_silence: Optional[float],
+    chime_trailing_silence: Optional[float],
+) -> None:
+    """Save and transcribe audio captured before an MCP request cancellation."""
+    audio_data, speech_detected = await recording_future
+
+    # The cancelling request's event loop shuts its default executor down while
+    # this recovery is still pending, and the chime, announcement, and STT paths
+    # all reach for that executor. Finish on a private loop that owns its own.
+    def runner() -> None:
+        try:
+            asyncio.run(
+                asyncio.wait_for(
+                    _finish_cancelled_recording(
+                        audio_data,
+                        speech_detected,
+                        transport=transport,
+                        chime_leading_silence=chime_leading_silence,
+                        chime_trailing_silence=chime_trailing_silence,
+                    ),
+                    timeout=_CANCEL_RECOVERY_TIMEOUT,
+                )
+            )
+        except Exception:
+            logger.exception("Cancelled recording recovery failed")
+        finally:
+            _cancelled_recovery_threads.discard(threading.current_thread())
+
+    thread = threading.Thread(
+        target=runner,
+        name="voicemode-cancel-recovery",
+        daemon=False,
+    )
+    _cancelled_recovery_threads.add(thread)
+    thread.start()
+
+
+async def _finish_cancelled_recording(
+    audio_data,
+    speech_detected: bool,
+    *,
+    transport: str,
+    chime_leading_silence: Optional[float],
+    chime_trailing_silence: Optional[float],
+) -> None:
+    """Persist, announce, and transcribe a recording cut short by cancellation."""
+    recovery_path = None
+    if SAVE_AUDIO and len(audio_data) > 0:
+        try:
+            AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+            recovery_path = AUDIO_DIR / (
+                f"cancelled_{datetime.now().strftime('%Y%m%d_%H%M%S')}_"
+                f"{uuid.uuid4().hex[:8]}.wav"
+            )
+            write(recovery_path, SAMPLE_RATE, audio_data)
+            recovery_path.chmod(0o600)
+            logger.info("Saved partial cancelled recording to %s", recovery_path)
+        except OSError as exc:
+            logger.error("Could not save partial cancelled recording: %s", exc)
+
+    # Cancellation feedback is deliberately outside the recording stream: the
+    # input future has completed and released the microphone before audio plays.
+    await play_chime_end(
+        leading_silence=chime_leading_silence,
+        trailing_silence=chime_trailing_silence,
+    )
+    if CANCEL_ANNOUNCEMENT_ENABLED:
+        await play_system_audio(
+            "recording-cancelled",
+            fallback_text=CANCEL_ANNOUNCEMENT_TEXT,
+        )
+
+    # A cancelled request has no caller waiting for a result, so transcription
+    # serves persistence only. Respect the existing persistence flags instead
+    # of creating cancellation-specific copies users did not opt into.
+    if SAVE_TRANSCRIPTIONS and len(audio_data) > 0 and speech_detected:
+        stt_started = time.perf_counter()
+        stt_result = await speech_to_text(audio_data, False, None, transport)
+        stt_duration = time.perf_counter() - stt_started
+        if not isinstance(stt_result, dict) or "error_type" in stt_result:
+            # Losing the transcript silently is what makes a cancelled turn look
+            # like it never happened, so name the audio that still holds it.
+            logger.error(
+                "Could not transcribe cancelled recording (%s); audio kept at %s",
+                (
+                    stt_result.get("error_type", "unknown error")
+                    if isinstance(stt_result, dict)
+                    else "unexpected STT result"
+                ),
+                recovery_path or "<not saved: VOICEMODE_SAVE_AUDIO is off>",
+            )
+        else:
+            response_text = stt_result.get("text")
+            if response_text:
+                stt_provider = stt_result.get("provider", "unknown")
+                save_transcription(
+                    response_text,
+                    prefix="cancelled",
+                    metadata={"reason": "mcp_cancellation"},
+                )
+                conversation_logger = get_conversation_logger()
+                stt_config = await get_stt_config()
+                conversation_logger.log_stt(
+                    text=response_text,
+                    model=stt_config.get("model", "whisper-1"),
+                    provider=(
+                        stt_provider
+                        if stt_provider != "unknown"
+                        else stt_config.get("provider", "unknown")
+                    ),
+                    provider_url=stt_config.get("base_url"),
+                    provider_type=stt_config.get("provider_type"),
+                    audio_format="wav",
+                    audio_file=recovery_path.name if recovery_path else None,
+                    transport=transport,
+                    timing=f"cancel recovery stt {stt_duration:.1f}s",
+                    silence_detection={
+                        "enabled": not DISABLE_SILENCE_DETECTION,
+                        "vad_aggressiveness": VAD_AGGRESSIVENESS,
+                        "silence_threshold_ms": SILENCE_THRESHOLD_MS,
+                    },
+                    transcription_time=stt_duration,
+                    total_turnaround_time=None,
+                )
+
+
 @dataclass
 class ListenResult:
     """Classified result of one listen exchange.
@@ -1971,16 +2138,33 @@ async def listen_and_transcribe(
     # listen_duration_max regardless, which is what stalls server teardown
     # (see the RCA). stop_event is our side channel into the thread: set it
     # the instant we're cancelled so the VAD loop's next 0.1s chunk poll sees
-    # it and returns, instead of running to max_duration. Nobody awaits the
-    # executor future again after that, so its eventual (now fast) result is
-    # simply discarded.
+    # it and returns, instead of running to max_duration. Cancellation recovery
+    # then awaits that shielded future in a detached task, saves/transcribes the
+    # partial capture, and plays feedback after the microphone has closed.
     stop_event = threading.Event()
+    recording_future = asyncio.get_event_loop().run_in_executor(
+        None,
+        record_audio_with_silence_detection,
+        listen_duration_max,
+        disable_silence_detection,
+        listen_duration_min,
+        vad_aggressiveness,
+        stop_event,
+    )
     try:
-        audio_data, speech_detected = await asyncio.get_event_loop().run_in_executor(
-            None, record_audio_with_silence_detection, listen_duration_max, disable_silence_detection, listen_duration_min, vad_aggressiveness, stop_event
-        )
+        audio_data, speech_detected = await asyncio.shield(recording_future)
     except asyncio.CancelledError:
         stop_event.set()
+        recovery_task = asyncio.create_task(
+            _recover_cancelled_recording(
+                recording_future,
+                transport=transport,
+                chime_leading_silence=chime_leading_silence,
+                chime_trailing_silence=chime_trailing_silence,
+            ),
+            name="voicemode-cancelled-recording-recovery",
+        )
+        _track_cancelled_recording_recovery(recovery_task)
         raise
     timings['record'] = time.perf_counter() - record_start
 
@@ -4334,6 +4518,7 @@ async def converse(
     session_id: Optional[str] = None,
     ref_text: Optional[str] = None,
     ack: Union[bool, str] = False,
+    continuation_wait: Optional[float] = None,
     time_in_response: Optional[Union[bool, str]] = None,
 ) -> str:
     """Have an ongoing voice conversation - speak a message and optionally listen for response.
@@ -4405,6 +4590,14 @@ KEY PARAMETERS:
   - minimal: Just response text (saves tokens)
   - summary: Response + compact timing (default)
   - verbose: Response + detailed metrics breakdown
+• continuation_wait (number, default: automatic): Maximum seconds this MCP
+  request waits before returning an in-progress job ID. The voice operation
+  continues in the server; call converse_continue with that ID instead of
+  starting a new recording. Capped at 55 seconds to stay below common host
+  deadlines. Left unset, continuation turns on only when it is actually needed
+  — a multi-turn call, or a listen_duration_max above 60 seconds. Shorter
+  listens simply return the reply, so hosts that do not implement
+  converse_continue keep working unchanged.
 • time_in_response (bool, default: VOICEMODE_TIME_IN_RESPONSE, itself false):
   Append the current local wall-clock time to the result as a trailing
   ` | Widgets: time HH:MM:SS` segment. Text-only — never spoken by TTS.
@@ -4492,7 +4685,7 @@ consult the MCP resources listed above.
         time_in_response = time_in_response.lower() in ("true", "1", "yes", "on")
     effective_time_in_response = time_in_response if time_in_response is not None else TIME_IN_RESPONSE
 
-    result = await _converse_core(
+    operation = _converse_core(
         message=message,
         turns=turns,
         pause_after_ms=pause_after_ms,
@@ -4522,7 +4715,55 @@ consult the MCP resources listed above.
         ref_text=ref_text,
         ack=ack,
     )
+    effective_continuation_wait = resolve_continuation_wait(
+        continuation_wait,
+        wait_for_response=(
+            wait_for_response.lower() in ("true", "1", "yes", "on")
+            if isinstance(wait_for_response, str)
+            else bool(wait_for_response)
+        ),
+        listen_duration_max=listen_duration_max,
+        multi_turn=bool(turns),
+    )
+    if effective_continuation_wait is None:
+        result = await operation
+        return result + _build_widgets_segment(effective_time_in_response)
+
+    job = conversation_job_manager.create(operation)
+    try:
+        result = await conversation_job_manager.wait(
+            job.job_id, effective_continuation_wait
+        )
+    except asyncio.CancelledError:
+        job.task.cancel()
+        raise
+    if result.startswith('{"status":"in_progress"'):
+        return result
     return result + _build_widgets_segment(effective_time_in_response)
+
+
+@mcp.tool()
+async def converse_continue(
+    job_id: str,
+    wait_seconds: float = DEFAULT_CONTINUATION_WAIT,
+    stop: Union[bool, str] = False,
+) -> str:
+    """Continue waiting for an active VoiceMode operation without restarting it.
+
+    Call this tool when ``converse`` returns ``status: in_progress``. Reuse the
+    exact ``job_id`` from that result. The original TTS, microphone recording,
+    silence detection, and transcription continue inside the MCP server.
+
+    Args:
+        job_id: The ID returned by converse.
+        wait_seconds: Seconds to wait for completion, capped at 55.
+        stop: If true, request a clean stop instead of continuing to wait.
+    """
+    if isinstance(stop, str):
+        stop = stop.lower() in ("true", "1", "yes", "on")
+    if stop:
+        return await conversation_job_manager.stop(job_id)
+    return await conversation_job_manager.wait(job_id, wait_seconds)
 
 
 @mcp.tool()

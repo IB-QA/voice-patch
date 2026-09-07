@@ -509,11 +509,14 @@ from voice_mode.cli import voice_mode_main_cli
 @pytest.fixture
 def patched_converse():
     async_mock = AsyncMock(return_value="✓ Spoke 2/2 turns")
+    async_mock.fn = async_mock
     with patch(
         "voice_mode.utils.dependencies.checker.check_component_dependencies",
         return_value={"core": True},
-    ), patch("voice_mode.tools.converse.converse") as mock_tool:
-        mock_tool.fn = async_mock
+    ), patch(
+        "voice_mode.tools.converse._converse_core",
+        new=async_mock,
+    ):
         yield async_mock
 
 

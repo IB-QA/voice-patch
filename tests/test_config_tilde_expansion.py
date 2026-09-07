@@ -48,7 +48,8 @@ class TestConfigTildeExpansion(unittest.TestCase):
             "VOICEMODE_MODELS_DIR": "~/models",
             "VOICEMODE_WHISPER_MODEL_PATH": "~/whisper",
             "VOICEMODE_KOKORO_MODELS_DIR": "~/kokoro/models",
-            "VOICEMODE_KOKORO_CACHE_DIR": "~/kokoro/cache"
+            "VOICEMODE_KOKORO_CACHE_DIR": "~/kokoro/cache",
+            "VOICEMODE_EVENT_LOG_DIR": "~/event-logs",
         }
         
         with patch.dict(os.environ, test_env, clear=False):
@@ -64,6 +65,7 @@ class TestConfigTildeExpansion(unittest.TestCase):
             self.assertEqual(config.WHISPER_MODEL_PATH, home / "whisper")
             self.assertEqual(config.KOKORO_MODELS_DIR, home / "kokoro" / "models")
             self.assertEqual(config.KOKORO_CACHE_DIR, home / "kokoro" / "cache")
+            self.assertEqual(config.EVENT_LOG_DIR, str(home / "event-logs"))
     
     def test_config_paths_without_tilde(self):
         """Test that paths without tilde work normally."""
