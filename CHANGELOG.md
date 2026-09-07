@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [8.12.1] - 2026-09-07
+
 ### Added
 
 - **Long voice turns survive short MCP request deadlines** — when a turn cannot
