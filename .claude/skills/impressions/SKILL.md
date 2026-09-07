@@ -106,4 +106,3 @@ If you see those in a user's `voicemode.env`, suggest updating them.
 
 - [Impressions guide](../../../docs/guides/impressions.md) -- user-facing prose version of this skill.
 - [VoiceMode skill](../voicemode/SKILL.md) -- primary voice interaction skill.
-- [voice-lab](https://github.com/mbailey/voice-lab) -- companion repo for curating reference clips and personas.

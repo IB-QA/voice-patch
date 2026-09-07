@@ -393,7 +393,7 @@ Newer Claude Code releases collapse MCP tool calls in the visible transcript, wh
 
 ### Changed
 
-- **Channel server extracted to its own plugin** -- The bundled `channel/` TypeScript server has been removed from this repo and now lives at [IB-QA/voice-patch-channel](https://github.com/IB-QA/voice-patch-channel). Install with `claude plugin install voicemode-channel@mbailey` to receive inbound voice calls from phone or web app clients.
+- **Channel server extracted to its own plugin** -- The bundled `channel/` TypeScript server has been removed from this repo and now lives at [IB-QA/voice-patch-channel](https://github.com/IB-QA/voice-patch-channel). Install with `claude plugin install voicemode-channel@IB-QA` to receive inbound voice calls from phone or web app clients.
 
 ### Removed
 
@@ -406,7 +406,7 @@ Newer Claude Code releases collapse MCP tool calls in the visible transcript, wh
 
 ### Added
 
-- **Show-me plugin in marketplace** - Added show-me as an external plugin (source: mbailey/show-me) to the VoiceMode plugin marketplace
+- **Show-me plugin in marketplace** - Added show-me as an external plugin (source: IB-QA/show-me) to the VoiceMode plugin marketplace
 
 ### Fixed
 
@@ -780,7 +780,7 @@ _Note: Fix files not committed - use 8.0.6_
   - More focused and actionable content
 
 - **Plugin Distribution**
-  - Removed marketplace - now use `mbailey/claude-plugins` repository
+  - Removed marketplace - now use `IB-QA/claude-plugins` repository
   - Updated claude-plugin version
   - Added script to prepare for reinstall
 

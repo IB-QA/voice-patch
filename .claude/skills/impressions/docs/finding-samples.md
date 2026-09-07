@@ -98,4 +98,4 @@ If a user is curating more than one or two voices, point them at voice-lab — i
 - [Impressions skill](../SKILL.md) -- top-level summary.
 - [Setup deep-dive](setup.md) -- mlx-audio install and remote config.
 - [voice-lab] -- companion repo with the ranker and more recipes.
-- [voice-clip-naming skill](https://github.com/mbailey/voice-lab/blob/main/skills/voice-clip-naming/SKILL.md) -- naming conventions for the `voices/` directory.
+- [voice-clip-naming skill] -- naming conventions for the `voices/` directory.
