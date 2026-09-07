@@ -97,7 +97,7 @@ If you want to use VoiceMode from the command line:
 uv tool install voice-mode
 
 # Or install from source in editable mode
-git clone https://github.com/IB-QA/voice-patch
+git clone https://github.com/mbailey/voicemode
 cd voicemode
 uv tool install -e .
 ```
@@ -271,7 +271,7 @@ For security best practices when running remotely, see the [Configuration Guide]
 
 ## Getting Help
 
-- **GitHub Issues**: [github.com/IB-QA/voice-patch/issues](https://github.com/IB-QA/voice-patch/issues)
+- **GitHub Issues**: [github.com/mbailey/voicemode/issues](https://github.com/mbailey/voicemode/issues)
 - **Discord**: Join our community for support
 
 Welcome to voice-enabled AI coding! 🎙️

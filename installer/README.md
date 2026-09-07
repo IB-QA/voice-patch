@@ -159,7 +159,7 @@ See `DECISIONS.md` in the task directory for detailed rationale behind:
 
 ## Contributing
 
-This installer is part of the [VoiceMode](https://github.com/IB-QA/voice-patch) project.
+This installer is part of the [VoiceMode](https://github.com/mbailey/voicemode) project.
 
 ## License
 

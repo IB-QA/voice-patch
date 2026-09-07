@@ -421,7 +421,7 @@ class MfpService:
         Returns:
             Path to cached chapter file, or None if not available on GitHub.
         """
-        github_base = "https://raw.githubusercontent.com/IB-QA/voice-patch/master/voice_mode/data/mfp"
+        github_base = "https://raw.githubusercontent.com/mbailey/voicemode/master/voice_mode/data/mfp"
 
         self._ensure_cache_dir()
 

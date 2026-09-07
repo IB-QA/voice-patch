@@ -18,7 +18,7 @@ Thank you for your interest in contributing to VoiceMode. This guide will help y
 
    External contributors need to fork the repository first (you can't push directly to the main repo):
 
-   - Click **Fork** at https://github.com/IB-QA/voice-patch
+   - Click **Fork** at https://github.com/mbailey/voicemode
    - Clone your fork:
    ```bash
    git clone https://github.com/YOUR-USERNAME/voicemode.git
@@ -100,7 +100,7 @@ python -c "from voice_mode.core import text_to_speech; import asyncio; asyncio.r
    ```bash
    git push origin feature/your-feature-name
    ```
-   Then open a PR from your fork to `IB-QA/voice-patch`
+   Then open a PR from your fork to `mbailey/voicemode`
 
 ## Debugging
 

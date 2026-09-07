@@ -19,5 +19,5 @@
     "./voice_mode/data/hooks/pre-compact.json",
     "./voice_mode/data/hooks/permission-request.json"
   ],
-  "homepage": "https://github.com/IB-QA/voice-patch"
+  "homepage": "https://github.com/mbailey/voicemode"
 }
