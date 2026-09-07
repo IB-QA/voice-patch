@@ -171,7 +171,7 @@ def commit_and_tag(version, packages=None):
 # a `v*` tag push there). Resolve the remote dynamically by URL — never assume
 # the remote is named "origin": post-2026-06-10 migration, origin -> ms2 (a bare
 # git host with no Actions), so a tag push to origin ships nothing.
-CANONICAL_GITHUB = ("mbailey", "voicemode")
+CANONICAL_GITHUB = ("IB-QA", "voice-patch")
 
 
 def _parse_remote_url(url):
