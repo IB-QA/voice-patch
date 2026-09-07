@@ -6,7 +6,7 @@ This document outlines the design for integrating LiveKit as a managed service i
 
 ## Architecture Overview
 
-```
+```tree
 Voice Mode
 ├── CLI Commands
 │   ├── voice-mode livekit install
@@ -25,11 +25,13 @@ Voice Mode
 ## Installation Strategy
 
 ### Binary Installation
+
 1. **macOS**: Use `brew install livekit` (already available)
 2. **Linux**: Use official install script: `curl -sSL https://get.livekit.io | bash`
 3. **Fallback**: Direct binary download from GitHub releases
 
 ### Service Location
+
 - Install to: `~/.voicemode/services/livekit/`
 - Binary: `~/.voicemode/services/livekit/livekit-server`
 - Config: `~/.voicemode/services/livekit/livekit.yaml`
@@ -38,6 +40,7 @@ Voice Mode
 ## Configuration
 
 ### Dev Mode (Default)
+
 ```yaml
 # ~/.voicemode/services/livekit/livekit.yaml
 port: 7880
@@ -51,6 +54,7 @@ log_level: info
 ```
 
 ### Environment Variables
+
 ```bash
 LIVEKIT_URL=ws://localhost:7880
 LIVEKIT_API_KEY=devkey
@@ -60,6 +64,7 @@ LIVEKIT_API_SECRET=secret
 ## Service Templates
 
 ### systemd Template
+
 ```ini
 [Unit]
 Description=Voice Mode LiveKit Server
@@ -78,6 +83,7 @@ WantedBy=default.target
 ```
 
 ### launchd Template
+
 ```xml
 <dict>
     <key>Label</key>
@@ -99,6 +105,7 @@ WantedBy=default.target
 ## Implementation Plan
 
 ### Phase 1: Core Installation
+
 1. Create `voice_mode/tools/services/livekit/install.py`
    - Platform detection (macOS/Linux)
    - Binary installation (brew/curl/direct download)
@@ -111,6 +118,7 @@ WantedBy=default.target
    - Config cleanup
 
 ### Phase 2: Service Management
+
 1. Extend `voice_mode/tools/service.py`
    - Add LiveKit support
    - Health check integration
@@ -121,17 +129,20 @@ WantedBy=default.target
    - `voice_mode/templates/launchd/com.voicemode.livekit.plist`
 
 ### Phase 3: CLI Integration
+
 1. Add to `voice_mode/cli.py`
    - Create `@voice_mode_main_cli.group()` for livekit
    - Add all subcommands (install, start, stop, etc.)
 
 ### Phase 4: MCP Tools
+
 1. Create/update MCP tools
    - `install_livekit` tool
    - Update existing `service` tool
    - Add `livekit_status` tool
 
 ### Phase 5: Web Interface
+
 1. Update web interface in `docs/web/`
    - Auto-detect local LiveKit server
    - Connection configuration
@@ -140,12 +151,14 @@ WantedBy=default.target
 ## Health Checks
 
 LiveKit exposes health endpoints:
+
 - `/health` - Basic health check
 - `/` - Returns LiveKit version info
 
 ## Auto-Discovery
 
 Add to provider discovery:
+
 - Check port 7880 for LiveKit server
 - Verify with health endpoint
 - Add to provider registry
@@ -170,6 +183,7 @@ Add to provider discovery:
 ## Migration from Previous Work
 
 From the voice-mcp.tgz analysis:
+
 - Reuse livekit-admin-mcp concepts for room management
 - Adapt web interface from livekit/voice-assistant-frontend
 - Use existing LiveKit documentation structure
