@@ -17,13 +17,19 @@ Coverage:
 """
 
 import asyncio
+import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import numpy as np
 import pytest
 
 from voice_mode.control_channel import get_control_state, COMMAND_SKIP_BACK
-from voice_mode.tools.converse import ListenResult, listen_and_transcribe
+from voice_mode.tools.converse import (
+    ListenResult,
+    _recover_cancelled_recording,
+    join_cancelled_recovery,
+    listen_and_transcribe,
+)
 
 
 def _converse_fn():
@@ -65,6 +71,105 @@ def _listen_kwargs(**overrides):
 # ---------------------------------------------------------------------------
 
 class TestListenAndTranscribe:
+    async def test_cancellation_detaches_partial_recording_recovery(self):
+        partial = np.ones(2400, dtype=np.int16)
+        recovery_finished = asyncio.Event()
+        recovered = {}
+
+        def _record(*args):
+            stop_event = args[-1]
+            while not stop_event.is_set():
+                time.sleep(0.01)
+            return partial, True
+
+        async def _recover(recording_future, **_kwargs):
+            recovered["audio"], recovered["speech"] = await recording_future
+            recovery_finished.set()
+
+        with patch("voice_mode.tools.converse.play_audio_feedback", new=_noop_feedback), \
+             patch("voice_mode.tools.converse.record_audio_with_silence_detection", new=_record), \
+             patch("voice_mode.tools.converse._recover_cancelled_recording", new=_recover):
+            task = asyncio.create_task(listen_and_transcribe(**_listen_kwargs()))
+            await asyncio.sleep(0.05)
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+            await asyncio.wait_for(recovery_finished.wait(), timeout=1)
+
+        assert np.array_equal(recovered["audio"], partial)
+        assert recovered["speech"] is True
+
+    async def test_cancel_recovery_saves_transcribes_chimes_and_announces(self, tmp_path):
+        loop = asyncio.get_running_loop()
+        recording_future = loop.create_future()
+        recording_future.set_result((np.ones(2400, dtype=np.int16), True))
+        conversation_logger = MagicMock()
+
+        with patch("voice_mode.tools.converse.AUDIO_DIR", tmp_path), \
+             patch("voice_mode.tools.converse.SAVE_AUDIO", True), \
+             patch("voice_mode.tools.converse.SAVE_TRANSCRIPTIONS", True), \
+             patch("voice_mode.tools.converse.CANCEL_ANNOUNCEMENT_ENABLED", True), \
+             patch("voice_mode.tools.converse.play_chime_end", new_callable=AsyncMock) as chime, \
+             patch("voice_mode.tools.converse.play_system_audio", new_callable=AsyncMock) as announcement, \
+             patch("voice_mode.tools.converse.speech_to_text", new_callable=AsyncMock,
+                   return_value={"text": "partial words", "provider": "whisper-local"}), \
+             patch("voice_mode.tools.converse.save_transcription") as save_transcript, \
+             patch("voice_mode.tools.converse.get_stt_config", new_callable=AsyncMock,
+                   return_value={"model": "whisper", "provider": "whisper-local"}), \
+             patch("voice_mode.tools.converse.get_conversation_logger",
+                   return_value=conversation_logger):
+            await _recover_cancelled_recording(
+                recording_future,
+                transport="local",
+                chime_leading_silence=None,
+                chime_trailing_silence=None,
+            )
+            join_cancelled_recovery()
+
+        chime.assert_awaited_once()
+        announcement.assert_awaited_once_with(
+            "recording-cancelled",
+            fallback_text="VoiceMode call cancelled.",
+        )
+        saved_files = list(tmp_path.glob("cancelled_*.wav"))
+        assert len(saved_files) == 1
+        save_transcript.assert_called_once()
+        conversation_logger.log_stt.assert_called_once()
+        assert conversation_logger.log_stt.call_args.kwargs["text"] == "partial words"
+        assert conversation_logger.log_stt.call_args.kwargs["audio_file"] == saved_files[0].name
+
+    async def test_cancel_recovery_respects_disabled_persistence_flags(self, tmp_path):
+        loop = asyncio.get_running_loop()
+        recording_future = loop.create_future()
+        recording_future.set_result((np.ones(2400, dtype=np.int16), True))
+        stt = AsyncMock()
+        conversation_logger = MagicMock()
+
+        with patch("voice_mode.tools.converse.AUDIO_DIR", tmp_path), \
+             patch("voice_mode.tools.converse.SAVE_AUDIO", False), \
+             patch("voice_mode.tools.converse.SAVE_TRANSCRIPTIONS", False), \
+             patch("voice_mode.tools.converse.CANCEL_ANNOUNCEMENT_ENABLED", False), \
+             patch("voice_mode.tools.converse.play_chime_end", new_callable=AsyncMock) as chime, \
+             patch("voice_mode.tools.converse.play_system_audio", new_callable=AsyncMock) as announcement, \
+             patch("voice_mode.tools.converse.speech_to_text", new=stt), \
+             patch("voice_mode.tools.converse.save_transcription") as save_transcript, \
+             patch("voice_mode.tools.converse.get_conversation_logger",
+                   return_value=conversation_logger):
+            await _recover_cancelled_recording(
+                recording_future,
+                transport="local",
+                chime_leading_silence=None,
+                chime_trailing_silence=None,
+            )
+            join_cancelled_recovery()
+
+        chime.assert_awaited_once()
+        announcement.assert_not_awaited()
+        assert list(tmp_path.glob("cancelled_*.wav")) == []
+        stt.assert_not_awaited()
+        save_transcript.assert_not_called()
+        conversation_logger.log_stt.assert_not_called()
+
     async def test_answered(self):
         def _record(*_a, **_k):
             return (np.zeros(2400, dtype=np.int16), True)

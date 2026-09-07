@@ -11,17 +11,16 @@ wrapper's parameter list drifts from the core's beyond the one expected
 extra param, which is a much safer property than "did we remember to
 forward every parameter by keyword."
 
-As of do-002, the wrapper adds exactly one new wrapper-only parameter,
-``time_in_response`` (the time-widget toggle), on top of every core param
-forwarded unchanged.
+The wrapper adds the continuation deadline and time-widget toggle on top of
+every core parameter forwarded unchanged.
 """
 
 import inspect
 
 from voice_mode.tools.converse import converse, _converse_core
 
-# do-002: the wrapper's one deliberate extra parameter beyond the core's.
-_WRAPPER_ONLY_PARAMS = ("time_in_response",)
+# Deliberate wrapper concerns beyond the voice-operation core.
+_WRAPPER_ONLY_PARAMS = ("continuation_wait", "time_in_response")
 
 
 def _wrapper_fn():
@@ -30,7 +29,7 @@ def _wrapper_fn():
 
 
 def test_wrapper_and_core_have_identical_signatures():
-    """converse() forwards every core parameter by keyword, adding only time_in_response."""
+    """converse() forwards every core parameter and adds only wrapper concerns."""
     core_params = inspect.signature(_converse_core).parameters
     wrapper_params = inspect.signature(_wrapper_fn()).parameters
 
@@ -57,14 +56,17 @@ def test_wrapper_and_core_have_identical_signatures():
         )
 
 
-def test_wrapper_only_params_are_optional_with_none_default():
-    """Wrapper-only params (time_in_response) must be opt-in: Optional, default None."""
+def test_time_widget_parameter_is_optional_with_none_default():
+    """The time widget remains opt-in and falls back to the config global."""
     wrapper_params = inspect.signature(_wrapper_fn()).parameters
-    for name in _WRAPPER_ONLY_PARAMS:
-        assert name in wrapper_params, f"Expected wrapper-only param {name!r} not found"
-        assert wrapper_params[name].default is None, (
-            f"{name!r} must default to None (opt-in, falls back to config global)"
-        )
+    parameter = wrapper_params["time_in_response"]
+    assert parameter.default is None
+
+
+def test_continuation_wait_defaults_to_automatic():
+    """Continuation is decided per call, so hosts that cannot follow up still work."""
+    wrapper_params = inspect.signature(_wrapper_fn()).parameters
+    assert wrapper_params["continuation_wait"].default is None
 
 
 def test_wrapper_return_type_matches_core():

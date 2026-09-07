@@ -29,7 +29,7 @@ classifiers = [
 
 dependencies = [
     "uv>=0.4.0",
-    "fastmcp>=3.2.0,<4",  # Migrated to 3.x in VM-1242. Fixes CVSS 10.0 (GHSA-vv7q-7jx5-f767).
+    "fastmcp>=4.0.3,<5",  # MCP 2 dispatcher natively cancels in-flight handlers on transport close.
     "numpy",
     "sounddevice",
     "scipy",
@@ -82,8 +82,8 @@ docs = [
 
 [project.urls]
 Homepage = "https://getvoicemode.com/"
-Repository = "https://github.com/mbailey/voicemode"
-Issues = "https://github.com/mbailey/voicemode/issues"
+Repository = "https://github.com/IB-QA/voice-patch"
+Issues = "https://github.com/IB-QA/voice-patch/issues"
 
 [project.scripts]
 voice-mode = "voice_mode.cli:voice_mode"

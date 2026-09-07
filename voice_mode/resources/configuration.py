@@ -280,6 +280,7 @@ async def environment_variables() -> str:
         ("VOICEMODE_TTS_AUDIO_FORMAT", "Audio format for TTS output"),
         ("VOICEMODE_STT_AUDIO_FORMAT", "Audio format for STT input"),
         ("VOICEMODE_TTS_TRAILING_SILENCE", "Trailing silence (s) appended to opus TTS output to prevent tail clipping"),
+        ("VOICEMODE_CANCEL_ANNOUNCEMENT", "Speak the fixed cancellation announcement (true/false)"),
         # STT Prompt for vocabulary biasing
         ("VOICEMODE_STT_PROMPT", "Vocabulary hints for Whisper (names, technical terms)"),
         # STT Models

@@ -14,6 +14,7 @@ will do at runtime.
 
 import asyncio
 import threading
+import time
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -165,6 +166,29 @@ class TestAbortStream:
 # --------------------------------------------------------------------------
 
 class TestStreamPcmAudio:
+    async def test_device_write_does_not_block_event_loop(self):
+        client, _ = _make_openai_client(_pcm_chunks(1))
+        mock_stream = _make_mock_stream()
+        mock_stream.write.side_effect = lambda _samples: time.sleep(0.1)
+
+        started = time.perf_counter()
+        with patch.object(streaming.sd, "OutputStream", return_value=mock_stream):
+            playback = asyncio.create_task(
+                stream_pcm_audio(
+                    text="hello",
+                    openai_client=client,
+                    request_params={},
+                )
+            )
+            await asyncio.sleep(0.02)
+            elapsed = time.perf_counter() - started
+            assert not playback.done()
+            await playback
+
+        # A synchronous device write would hold the loop for the full 100 ms,
+        # delaying this 20 ms timer until after playback returned.
+        assert elapsed < 0.07
+
     async def test_natural_completion_unaffected(self):
         chunks = _pcm_chunks(5)
         client, resp = _make_openai_client(chunks)

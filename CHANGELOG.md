@@ -7,6 +7,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Long voice turns survive short MCP request deadlines** — when a turn cannot
+  fit in one request, `converse` returns a compact continuation job after 50
+  seconds while the original TTS, recording, and transcription continue inside
+  the server. Agents can call `converse_continue` repeatedly without restarting
+  the microphone or putting partial transcripts into context; completed results
+  are recoverable from `~/.voicemode/jobs/`. Continuation engages only where it
+  is needed — a multi-turn call, or a `listen_duration_max` above 60 seconds —
+  so hosts that do not implement `converse_continue` behave exactly as before.
+  Pass `continuation_wait` explicitly to override the rule either way.
+- **Direct CLI calls stay attached for the full turn** — the
+  continuation handshake is an MCP request-boundary feature. Direct
+  `voicemode converse` calls have no second request in which to continue, so
+  they now run the core operation to completion instead of returning
+  `in_progress` and cancelling their own pending TTS or recording when the CLI
+  event loop closes.
+- **Cancelled recordings respect existing persistence preferences** —
+  cancellation now stops capture promptly and plays the recording-ended tone
+  after the microphone closes. The detached recovery task saves partial audio
+  only when `VOICEMODE_SAVE_AUDIO=true` and transcribes it only when
+  `VOICEMODE_SAVE_TRANSCRIPTIONS=true`; it never overrides those settings.
+  Set `VOICEMODE_CANCEL_ANNOUNCEMENT=true` to speak the fixed, short
+  “VoiceMode call cancelled” announcement after the tone.
+
+### Changed
+
+- **VoiceMode now uses FastMCP 4 and MCP SDK 2** — the MCP SDK dispatcher now
+  natively cancels in-flight handlers when a transport closes, so VoiceMode's
+  private FastMCP 3 shutdown patch has been removed.
+
+### Fixed
+
+- **Long streaming speech no longer blocks continuation timers** — audio-device
+  writes now run off the async event loop. A slow device write can no longer
+  hold the loop past the continuation deadline and make a long assistant
+  message appear to be cancelled at 53–55 seconds.
+
+- **Non-continuation calls no longer create job files** — calls at or below the
+  automatic continuation threshold now execute directly rather than filling
+  `~/.voicemode/jobs/` with completed records that can never be continued.
+
+- **Cancelled turns no longer lose their transcript** — recovery after a
+  cancellation used the cancelling request's thread pool, which the host had
+  already shut down, so the tone, the announcement, and the transcription all
+  failed with `Executor shutdown has been called`. Nothing reached
+  `~/.voicemode/transcriptions/` or the conversation log, and the failure was
+  never reported. Recovery now finishes on its own event loop, and a
+  transcription that still fails is logged along with the path to the audio
+  that holds the words.
+
+- **Configured event-log paths now expand `~` consistently** — values such as
+  `VOICEMODE_EVENT_LOG_DIR=~/.voicemode/logs/events` no longer make GUI-launched
+  MCP hosts such as Claude Desktop try to create a literal `~` directory and
+  disconnect during startup.
+
 ## [8.12.0] - 2026-07-21
 
 ### Fixed
@@ -18,7 +74,7 @@ This one has been with us for months and survived an earlier attempt at a fix
 (VM-1026) — it's properly fixed now.
 
 - **ESC wedged the connection, then killed the server** — the cancel looked
-  clean, but the *next* `converse()` call got no response at all and the MCP
+  clean, but the _next_ `converse()` call got no response at all and the MCP
   server then exited on its own, taking voice down until you restarted it.
   `CancelledError` is now handled at the boundary the MCP SDK expects, so a
   cancel unwinds one request instead of the whole server.
@@ -50,7 +106,7 @@ This one has been with us for months and survived an earlier attempt at a fix
 
 - **Saved STT recordings are now linked from the conversation log (VM-4)** —
   with `VOICEMODE_SAVE_AUDIO` on, `stt` log entries recorded `audio_file:
-  null`, so a transcript couldn't be tied back to its recording. The filename
+null`, so a transcript couldn't be tied back to its recording. The filename
   is now logged for both single listens and survey turns, matching what TTS
   entries already did. No schema change.
 
@@ -105,7 +161,7 @@ This one has been with us for months and survived an earlier attempt at a fix
   turn, no STT, no model call. Pause now frees the provider connection (resume plays the
   buffered remainder), and a `status` query reports now-playing + buffer position.
 - **skip-forward (VM-1739, VM-1754)** — the universal "move on" button: pressed while the
-  assistant speaks, it cuts the utterance and hands you the mic; pressed while *you*
+  assistant speaks, it cuts the utterance and hands you the mic; pressed while _you_
   speak, it ends the recording immediately and transcribes what was captured — a manual
   end-of-turn and a reliable VAD fallback. Lands in ~200 ms.
 
@@ -118,7 +174,7 @@ This one has been with us for months and survived an earlier attempt at a fix
 ### Changed
 
 - **Media-key Next now barges instead of stopping (VM-1742)** — the Hammerspoon binding
-  sends `skip-forward`: cut the assistant *and* take the mic. Point
+  sends `skip-forward`: cut the assistant _and_ take the mic. Point
   `~/.hammerspoon/init.lua` at `scripts/hammerspoon/voicemode-media-keys.lua`.
 - **Previous media key now replays (VM-1919)** — the Hammerspoon binding's Previous
   handler is wired to `voicemode control skip-back` (it was a notice-only stub pending
@@ -168,17 +224,17 @@ This one has been with us for months and survived an earlier attempt at a fix
 
 ### Fixed
 
-- **Shell completions now actually produce suggestions in zsh and fish ([#483](https://github.com/mbailey/voicemode/pull/483))** — `voicemode completions zsh` and `fish` shipped hand-rolled scripts that parsed Click's completion backend as comma-separated `type,value` pairs, but the backend emits newline-separated `type` / `value` / `help` triples — so pressing <kbd>Tab</kbd> after `voicemode ` offered nothing. The scripts are now generated by Click's own machinery (`comp.source()`), so they always match the installed Click protocol and can't drift again; `completions bash` was already correct and is unchanged. Net −43 lines of embedded shell. Contributed by [@JimGaylard](https://github.com/JimGaylard).
+- **Shell completions now actually produce suggestions in zsh and fish ([#483](https://github.com/IB-QA/voice-patch/pull/483))** — `voicemode completions zsh` and `fish` shipped hand-rolled scripts that parsed Click's completion backend as comma-separated `type,value` pairs, but the backend emits newline-separated `type` / `value` / `help` triples — so pressing <kbd>Tab</kbd> after `voicemode ` offered nothing. The scripts are now generated by Click's own machinery (`comp.source()`), so they always match the installed Click protocol and can't drift again; `completions bash` was already correct and is unchanged. Net −43 lines of embedded shell. Contributed by [@JimGaylard](https://github.com/JimGaylard).
 
 ### Security
 
-- **Cleared the remaining 19 Dependabot alerts, all in dev/docs tooling (VM-1667)** — None of these reached an installed `voice-mode`; they lived only in the `docs` and `scripts` extras and in non-shipped transitives. The `docs` extra no longer pulls `mkdocs-material[imaging]` (Pillow + CairoSVG): that imaging stack existed solely to render mkdocs-material *social cards*, which are pointless for a docs site we preview locally rather than deploy — removing it drops both packages from the tree entirely (7 alerts) and makes `pip install "voice-mode[docs]"` noticeably lighter. The rest are pinned to patched versions via uv constraints: `GitPython>=3.1.50` (5 alerts), and `idna>=3.15`, `python-dotenv>=1.2.2`, `requests>=2.33.0`, `Pygments>=2.20.0`, `Werkzeug>=3.1.6` (one each). No runtime behavior changes; the docs site still builds.
+- **Cleared the remaining 19 Dependabot alerts, all in dev/docs tooling (VM-1667)** — None of these reached an installed `voice-mode`; they lived only in the `docs` and `scripts` extras and in non-shipped transitives. The `docs` extra no longer pulls `mkdocs-material[imaging]` (Pillow + CairoSVG): that imaging stack existed solely to render mkdocs-material _social cards_, which are pointless for a docs site we preview locally rather than deploy — removing it drops both packages from the tree entirely (7 alerts) and makes `pip install "voice-mode[docs]"` noticeably lighter. The rest are pinned to patched versions via uv constraints: `GitPython>=3.1.50` (5 alerts), and `idna>=3.15`, `python-dotenv>=1.2.2`, `requests>=2.33.0`, `Pygments>=2.20.0`, `Werkzeug>=3.1.6` (one each). No runtime behavior changes; the docs site still builds.
 
 ## [8.9.0] - 2026-06-24
 
 ### Added
 
-- **A minimal voice-only example agent (VM-1658)** — The voicemode plugin now ships a `voice-only` subagent whose *only* tool is `converse` — no file access, shell, or editing, by design. It's the smallest thing that can hold a spoken conversation, so it starts with a tiny context footprint, and works whether voicemode is provided by the plugin or by a project `.mcp.json` (both `converse` tool names are whitelisted). Launch it for a quick voice-only chat, or copy it as a template for your own lean voice agents.
+- **A minimal voice-only example agent (VM-1658)** — The voicemode plugin now ships a `voice-only` subagent whose _only_ tool is `converse` — no file access, shell, or editing, by design. It's the smallest thing that can hold a spoken conversation, so it starts with a tiny context footprint, and works whether voicemode is provided by the plugin or by a project `.mcp.json` (both `converse` tool names are whitelisted). Launch it for a quick voice-only chat, or copy it as a template for your own lean voice agents.
 
 ## [8.8.0] - 2026-06-23
 
@@ -199,14 +255,14 @@ The conch is VoiceMode's single-speaker lock. This release turns it into a full 
 
 #### Other
 
-- **Cartesia as a first-class cloud TTS provider with sub-second streaming ([#368](https://github.com/mbailey/voicemode/pull/368))** — Adds Cartesia alongside OpenAI and Kokoro, with low-latency SSE PCM streaming (audio starts playing within a few hundred milliseconds) and a buffered WAV fallback, plus automatic primary→fallback model retry. It's auto-detected: add an `api.cartesia.ai` entry to `VOICEMODE_TTS_BASE_URLS` and set `CARTESIA_API_KEY` (with optional `VOICEMODE_CARTESIA_VOICE_ID` / `VOICEMODE_CARTESIA_MODEL` / `VOICEMODE_CARTESIA_FALLBACK_MODEL`). When Cartesia isn't configured the TTS path is unchanged. Contributed by [@Sallvainian](https://github.com/Sallvainian).
-- **NixOS: build whisper.cpp (with CUDA) via a Nix flake, and clearer NixOS install guidance ([#319](https://github.com/mbailey/voicemode/pull/319))** — Nix flake outputs build whisper.cpp from source (CPU + CUDA) with a `voice-mode-cuda` wrapper, and the whisper/kokoro install tools now detect NixOS and give actionable setup guidance instead of a cryptic FHS build failure. Contributed by [@KaiStarkk](https://github.com/KaiStarkk).
+- **Cartesia as a first-class cloud TTS provider with sub-second streaming ([#368](https://github.com/IB-QA/voice-patch/pull/368))** — Adds Cartesia alongside OpenAI and Kokoro, with low-latency SSE PCM streaming (audio starts playing within a few hundred milliseconds) and a buffered WAV fallback, plus automatic primary→fallback model retry. It's auto-detected: add an `api.cartesia.ai` entry to `VOICEMODE_TTS_BASE_URLS` and set `CARTESIA_API_KEY` (with optional `VOICEMODE_CARTESIA_VOICE_ID` / `VOICEMODE_CARTESIA_MODEL` / `VOICEMODE_CARTESIA_FALLBACK_MODEL`). When Cartesia isn't configured the TTS path is unchanged. Contributed by [@Sallvainian](https://github.com/Sallvainian).
+- **NixOS: build whisper.cpp (with CUDA) via a Nix flake, and clearer NixOS install guidance ([#319](https://github.com/IB-QA/voice-patch/pull/319))** — Nix flake outputs build whisper.cpp from source (CPU + CUDA) with a `voice-mode-cuda` wrapper, and the whisper/kokoro install tools now detect NixOS and give actionable setup guidance instead of a cryptic FHS build failure. Contributed by [@KaiStarkk](https://github.com/KaiStarkk).
 - **`converse --voice` now accepts relative and `~` paths to a reference clip (VM-1607)** — `--voice ./clip.wav`, `../clip.wav`, and `~/clip.wav` now work, not just absolute paths, and pick up a sidecar `<basename>.txt` transcript the same way.
-- **Voice personas are now discoverable by agents (VM-1580)** — The `converse` tool and the `converse` / `voicemode` skills now point agents at a voice's persona file (`~/.voicemode/voices/<name>/README.md`), so an agent picking a voice can read *who it is and how it should behave*, not just its name.
+- **Voice personas are now discoverable by agents (VM-1580)** — The `converse` tool and the `converse` / `voicemode` skills now point agents at a voice's persona file (`~/.voicemode/voices/<name>/README.md`), so an agent picking a voice can read _who it is and how it should behave_, not just its name.
 
 ### Fixed
 
-- **Clearer guidance when the CUDA toolkit is missing during a GPU whisper install ([#250](https://github.com/mbailey/voicemode/pull/250), fixes #249)** — A GPU-enabled whisper.cpp install on Linux without `nvcc` now detects the distro (apt vs dnf) and suggests the correct package-install command plus a `--no-gpu` CPU-only alternative, instead of a confusing build error. Contributed by [@htrex](https://github.com/htrex).
+- **Clearer guidance when the CUDA toolkit is missing during a GPU whisper install ([#250](https://github.com/IB-QA/voice-patch/pull/250), fixes #249)** — A GPU-enabled whisper.cpp install on Linux without `nvcc` now detects the distro (apt vs dnf) and suggests the correct package-install command plus a `--no-gpu` CPU-only alternative, instead of a confusing build error. Contributed by [@htrex](https://github.com/htrex).
 - **Pin the mlx-audio install spec to `>=0.4.3,<0.4.4` to block the broken 0.4.4 release (VM-1550, VM-1547)** — mlx-audio 0.4.4 regressed the Kokoro TTS decoder: `istftnet.py` SineGen crashes with a `[broadcast_shapes]` `ValueError` on longer utterances and returns HTTP 500. With mlx-audio as the primary TTS endpoint, voicemode's failover then masks this as a spurious "OpenAI API key is not set" error, producing intermittent, confusing converse failures. `voicemode service install mlx-audio` now caps below 0.4.4 (resolving to the crash-free 0.4.3) until a fixed upstream release ships. Existing installs on 0.4.4 should reinstall: `uv tool uninstall mlx-audio` then `voicemode service install mlx-audio` (or `uv tool install "mlx-audio==0.4.3" --force` with the server extras).
 - **Freshly cloned voices no longer fail to synthesize with empty reference text (VM-1439)** — `clone add` saved the reference transcript where the loader didn't look, so a just-cloned voice synthesized with no reference text and failed. The loader now also reads it from `voice.md`, repairing existing cloned voices automatically.
 - **`config set` no longer reports "updated" when nothing changed (VM-1628)** — Setting a key to the value it already had still rewrote `voicemode.env` and said `✅ updated successfully`. It now detects the no-op and reports `✓ already set to this value — no change`. Fixes the CLI, the MCP tool, and the installer.
@@ -222,15 +278,15 @@ The conch is VoiceMode's single-speaker lock. This release turns it into a full 
 
 ### Security
 
-- **Fixed X-Forwarded-For IP allowlist bypass in `voicemode serve` ([GHSA-2qvv-vjq9-g5r4](https://github.com/mbailey/voicemode/security/advisories/GHSA-2qvv-vjq9-g5r4), VM-1466)** — `IPAllowlistMiddleware` previously trusted the client-supplied `X-Forwarded-For` header unconditionally, so a remote unauthenticated attacker could send `X-Forwarded-For: 127.0.0.1` (or any allowed IP) to bypass the IP allowlist entirely and reach all HTTP MCP endpoints, including microphone recording and transcription (CVSS 8.6, High). The allowlist now decides on the **direct TCP peer**, and `X-Forwarded-For` is only honored when the peer is a configured trusted proxy. Affected `voice-mode <= 8.6.2`.
+- **Fixed X-Forwarded-For IP allowlist bypass in `voicemode serve` ([GHSA-2qvv-vjq9-g5r4](https://github.com/IB-QA/voice-patch/security/advisories/GHSA-2qvv-vjq9-g5r4), VM-1466)** — `IPAllowlistMiddleware` previously trusted the client-supplied `X-Forwarded-For` header unconditionally, so a remote unauthenticated attacker could send `X-Forwarded-For: 127.0.0.1` (or any allowed IP) to bypass the IP allowlist entirely and reach all HTTP MCP endpoints, including microphone recording and transcription (CVSS 8.6, High). The allowlist now decides on the **direct TCP peer**, and `X-Forwarded-For` is only honored when the peer is a configured trusted proxy. Affected `voice-mode <= 8.6.2`.
 
   **Migration (only if you run `voicemode serve` behind a reverse proxy):** if you rely on forwarded client IPs — e.g. Tailscale Funnel or another reverse proxy in front of `voicemode serve` — you must now declare the proxy's address so its `X-Forwarded-For` is trusted, via `--trust-proxy <CIDR>` (repeatable) or `VOICEMODE_SERVE_TRUSTED_PROXIES=<comma-separated CIDRs>`. When trusted, the forwarded chain is parsed right-to-left (skipping trusted hops) instead of blindly taking the leftmost, spoofable entry. Direct (non-proxied) deployments need no changes.
 
 ### Added
 
-- **`install.sh` now detects system capability and offers mlx-audio on Apple Silicon (VM-1330)** — The `curl | bash` installer (`https://getvoicemode.com/install.sh`) assesses the host (Apple Silicon → excellent, other → good/limited) and, on Apple Silicon, offers to install and configure **mlx-audio** as the local voice engine — *even when whisper.cpp + Kokoro are already present*. The flow is **status-first**: it reports what's already installed and skips the prompt entirely when voice services are already satisfied. mlx-audio stays **opt-in** (whisper.cpp + Kokoro remain the cross-platform fallback; Intel Macs / Linux / Windows are unaffected). Reworded prompts and a de-emojified banner round out the pass. The large orange VoiceMode ASCII banner is restored (24-bit truecolor) after a regression to a compact 3-line version (VM-1324). Part of the installer overhaul for the mlx-audio release (epic VM-1322).
+- **`install.sh` now detects system capability and offers mlx-audio on Apple Silicon (VM-1330)** — The `curl | bash` installer (`https://getvoicemode.com/install.sh`) assesses the host (Apple Silicon → excellent, other → good/limited) and, on Apple Silicon, offers to install and configure **mlx-audio** as the local voice engine — _even when whisper.cpp + Kokoro are already present_. The flow is **status-first**: it reports what's already installed and skips the prompt entirely when voice services are already satisfied. mlx-audio stays **opt-in** (whisper.cpp + Kokoro remain the cross-platform fallback; Intel Macs / Linux / Windows are unaffected). Reworded prompts and a de-emojified banner round out the pass. The large orange VoiceMode ASCII banner is restored (24-bit truecolor) after a regression to a compact 3-line version (VM-1324). Part of the installer overhaul for the mlx-audio release (epic VM-1322).
 
-- **The voicemode plugin can connect to a streamable-HTTP server instead of the default local stdio (VM-1292, VM-1314)** — Set `VOICEMODE_MCP_URL` to point the plugin's bundled MCP at a remote (or same-machine) `voicemode serve`. The plugin ships **one** `.mcp.json` entry (`type: stdio`) whose command is a first-party smart launcher (`voicemode-mcp-launcher`): with `VOICEMODE_MCP_URL` unset it runs the local stdio server, byte-for-byte the previous behaviour; set, it acts as a **native** stdio↔Streamable-HTTP bridge (built on the bundled `fastmcp` — no `npx`/Node, no launch-time fetch). One server, one `mcp__voicemode__*` namespace either way — **remote mode no longer also spawns the local stdio server, and there is no manual `disabledMcpjsonServers` step**. Enables a plugin-only install (skills + commands + hooks, no local `voicemode`/Whisper/Kokoro) pointed at an audio host. Auth via secret-in-path (`/mcp/<secret>`) with optional `VOICEMODE_MCP_TOKEN` Bearer header — reuses the existing serve auth, no serve-side changes. `VOICEMODE_MCP_URL`/`_TOKEN` now also take effect from `~/.voicemode/voicemode.env` (the launcher reads it; an exported env var still wins). See the [Claude Code Plugin guide](https://github.com/mbailey/voicemode/blob/master/docs/guides/claude-code-plugin.md#transport-modes-local-stdio-vs-remote-http).
+- **The voicemode plugin can connect to a streamable-HTTP server instead of the default local stdio (VM-1292, VM-1314)** — Set `VOICEMODE_MCP_URL` to point the plugin's bundled MCP at a remote (or same-machine) `voicemode serve`. The plugin ships **one** `.mcp.json` entry (`type: stdio`) whose command is a first-party smart launcher (`voicemode-mcp-launcher`): with `VOICEMODE_MCP_URL` unset it runs the local stdio server, byte-for-byte the previous behaviour; set, it acts as a **native** stdio↔Streamable-HTTP bridge (built on the bundled `fastmcp` — no `npx`/Node, no launch-time fetch). One server, one `mcp__voicemode__*` namespace either way — **remote mode no longer also spawns the local stdio server, and there is no manual `disabledMcpjsonServers` step**. Enables a plugin-only install (skills + commands + hooks, no local `voicemode`/Whisper/Kokoro) pointed at an audio host. Auth via secret-in-path (`/mcp/<secret>`) with optional `VOICEMODE_MCP_TOKEN` Bearer header — reuses the existing serve auth, no serve-side changes. `VOICEMODE_MCP_URL`/`_TOKEN` now also take effect from `~/.voicemode/voicemode.env` (the launcher reads it; an exported env var still wins). See the [Claude Code Plugin guide](https://github.com/IB-QA/voice-patch/blob/master/docs/guides/claude-code-plugin.md#transport-modes-local-stdio-vs-remote-http).
 
 - **`voicemode converse --skip-stt`** -- Replaces `--no-wait` with a name that parallels the existing `--skip-tts` flag. Same behaviour: speak the message and exit without listening for a spoken response. The legacy `--no-wait` continues to work for now (see Deprecated).
 
@@ -252,7 +308,7 @@ VoiceMode can now do **impressions** -- speak in any voice from a short referenc
 - Docs: new [Impressions guide](docs/guides/impressions.md) (replaces `docs/guides/voice-cloning.md`), with footguns covering Kokoro voice-name collisions, Apple Silicon constraint, and first-synthesis model download.
 - Skill: new `.claude/skills/impressions/` skill with progressive-disclosure deep-dives for setup (model quants, remote mlx-audio, troubleshooting) and finding samples (clip ranking heuristic, ffmpeg loudnorm recipes, voice-lab integration).
 
-#### Transcript Visibility (echo user/assistant around converse) (VM-1166, [#371](https://github.com/mbailey/voicemode/pull/371))
+#### Transcript Visibility (echo user/assistant around converse) (VM-1166, [#371](https://github.com/IB-QA/voice-patch/pull/371))
 
 Newer Claude Code releases collapse MCP tool calls in the visible transcript, which hid the spoken side of `voicemode:converse` exchanges. VoiceMode now keeps the conversation reconstructible from the transcript alone.
 
@@ -264,7 +320,7 @@ Newer Claude Code releases collapse MCP tool calls in the visible transcript, wh
 
 #### Other
 
-- **Whisper start uses wrapper script** ([#283](https://github.com/mbailey/voicemode/pull/283) by @codesmax) -- Whisper service start now goes through a wrapper script that handles fallback paths cleanly.
+- **Whisper start uses wrapper script** ([#283](https://github.com/IB-QA/voice-patch/pull/283) by @codesmax) -- Whisper service start now goes through a wrapper script that handles fallback paths cleanly.
 
 - **`voicemode autofocus on|off|status` — toggle tmux auto-focus mid-session (VM-1024)** — A new CLI command (modelled on `voicemode soundfonts`) to flip the "focus the agent's tmux pane when it speaks" behaviour on or off without editing `voicemode.env` or restarting agents. `off` drops a sentinel at `~/.voicemode/autofocus-disabled` that wins over transient visual-conch holds; `--config` persists the matching env var. Ships the `off` mode (today's behaviour is the implicit `gentle`; an `aggressive` mode is deferred).
 
@@ -276,14 +332,15 @@ Newer Claude Code releases collapse MCP tool calls in the visible transcript, wh
   - `VOICEMODE_CLONE_PORT` -> use `VOICEMODE_MLX_AUDIO_PORT` (the old name was a duplicate; same default `8890`).
 
   The old names are honoured for one release with a one-shot per-process deprecation warning routed through `voice_mode/_env_deprecation.py`. **Removal scheduled for 8.8.0.**
+
 - **The `sayas` CLI is removed.** Use `voicemode converse --voice <name>` instead -- it routes cloned voices through the same mlx-audio backend `sayas` did, with the rest of the converse pipeline (silence detection, audio formats, providers) for free. `sayas` was an alternate door to the same room; the unified converse surface is the canonical path now.
 
 ### Fixed
 
-- **Long utterances ending in a trigger word are no longer discarded** (VM-291) -- The local repeat/wait detection (`should_repeat` / `should_wait`) fired whenever a transcript merely *ended* with a trigger phrase (`what`, `repeat`, `pardon`, `wait`, ...), so a 30-word sentence ending in "what" was thrown away and replaced with a "Repeating" replay -- losing the whole utterance. Detection now only fires when at most a few words precede the trigger, configurable **per trigger class**: `VOICEMODE_REPEAT_MAX_LEADING_WORDS` and `VOICEMODE_WAIT_MAX_LEADING_WORDS` (both default `4`). A bare "what?" still replays, but substantive messages are delivered to the LLM intact. Also fixes a substring bug where "somewhat" matched the trigger "what" -- matching is now word-boundary aware.
+- **Long utterances ending in a trigger word are no longer discarded** (VM-291) -- The local repeat/wait detection (`should_repeat` / `should_wait`) fired whenever a transcript merely _ended_ with a trigger phrase (`what`, `repeat`, `pardon`, `wait`, ...), so a 30-word sentence ending in "what" was thrown away and replaced with a "Repeating" replay -- losing the whole utterance. Detection now only fires when at most a few words precede the trigger, configurable **per trigger class**: `VOICEMODE_REPEAT_MAX_LEADING_WORDS` and `VOICEMODE_WAIT_MAX_LEADING_WORDS` (both default `4`). A bare "what?" still replays, but substantive messages are delivered to the LLM intact. Also fixes a substring bug where "somewhat" matched the trigger "what" -- matching is now word-boundary aware.
 - **Service install error messages now reference real CLI commands** (VM-1409) -- Errors like "Whisper start script not found. Please run whisper_install first." pointed at MCP tool names (`whisper_install`, `kokoro_install`, `download_model`) that don't exist as CLI commands, so users hitting the error from the CLI had no way to act on it. Updated to match the existing mlx-audio branch's style -- now reference `voicemode service install whisper`, `voicemode service install kokoro`, and `voicemode whisper model <name>`.
 - **mlx-audio install no longer fails at the patch step** (VM-1126) -- `voicemode service install mlx-audio` would fail with "Patch step failed: ... 2 out of 5 hunks failed" against mlx-audio 0.4.3. The MLX Metal serialisation lock the bundled patch carried ([ml-explore/mlx#2133](https://github.com/ml-explore/mlx/issues/2133)) is upstream from 0.4.3 on, so the patch now adds lines that already exist and rejects.
-- **mlx-audio STT `response_format` patch restored** (VM-1128) -- VM-1126 over-removed: while the Metal lock was upstreamed, the OpenAI-style STT `response_format` handling on `/v1/audio/transcriptions` is *not* yet in mlx-audio 0.4.3. Restored as a separate patch.
+- **mlx-audio STT `response_format` patch restored** (VM-1128) -- VM-1126 over-removed: while the Metal lock was upstreamed, the OpenAI-style STT `response_format` handling on `/v1/audio/transcriptions` is _not_ yet in mlx-audio 0.4.3. Restored as a separate patch.
 
 ### Changed
 
@@ -306,10 +363,10 @@ Newer Claude Code releases collapse MCP tool calls in the visible transcript, wh
 
 ### Fixed
 
-- **Kokoro service no longer silently dies after `UVICORN_LIMIT_MAX_REQUESTS` requests on Linux** (VM-1398, [#448](https://github.com/mbailey/voicemode/issues/448) — reported by @JulesGosnell) — The systemd unit `voicemode-kokoro.service` combined `Restart=on-failure` with `Environment="UVICORN_LIMIT_MAX_REQUESTS=25"` (the memory-leak workaround from VM-358). Hitting the request limit makes uvicorn exit cleanly (status 0), which `on-failure` treats as a successful shutdown — so the service stayed dead and the 26th TTS request failed with connection refused. The leak workaround was silently disabling the very service it was meant to protect. **Switched to `Restart=always`** in the kokoro template (and defensively in the whisper and serve templates for the same shape of bug). `RestartPreventExitStatus=127` still guards against fight-looping on a missing executable. **macOS / launchd was unaffected** — its plist uses `KeepAlive=true`, which restarts on clean exits too. To recover an existing v1.3.0 deployment without reinstalling: `sed -i 's/^Restart=on-failure/Restart=always/' ~/.config/systemd/user/voicemode-kokoro.service && systemctl --user daemon-reload && systemctl --user restart voicemode-kokoro.service`.
+- **Kokoro service no longer silently dies after `UVICORN_LIMIT_MAX_REQUESTS` requests on Linux** (VM-1398, [#448](https://github.com/IB-QA/voice-patch/issues/448) — reported by @JulesGosnell) — The systemd unit `voicemode-kokoro.service` combined `Restart=on-failure` with `Environment="UVICORN_LIMIT_MAX_REQUESTS=25"` (the memory-leak workaround from VM-358). Hitting the request limit makes uvicorn exit cleanly (status 0), which `on-failure` treats as a successful shutdown — so the service stayed dead and the 26th TTS request failed with connection refused. The leak workaround was silently disabling the very service it was meant to protect. **Switched to `Restart=always`** in the kokoro template (and defensively in the whisper and serve templates for the same shape of bug). `RestartPreventExitStatus=127` still guards against fight-looping on a missing executable. **macOS / launchd was unaffected** — its plist uses `KeepAlive=true`, which restarts on clean exits too. To recover an existing v1.3.0 deployment without reinstalling: `sed -i 's/^Restart=on-failure/Restart=always/' ~/.config/systemd/user/voicemode-kokoro.service && systemctl --user daemon-reload && systemctl --user restart voicemode-kokoro.service`.
 
-- **Fresh plugin installs no longer fail with "voicemode-mcp-launcher not found"** (VM-1364, [#441](https://github.com/mbailey/voicemode/issues/441)) — `.mcp.json` on `master` was switched to invoke the new `voicemode-mcp-launcher` binary (VM-1314), but the binary only exists in `master` — it isn't shipped in the latest PyPI release (8.6.1). Because Claude Code plugins install `.mcp.json` from the default branch, every fresh `claude plugin install voicemode@voicemode` produced `voicemode: voicemode-mcp-launcher - ✗ Failed to connect`. Reverted `.mcp.json` to the v8.6.1 form (`command: uv`, `args: [run, voicemode]`) so plugin installs work against the released package. The launcher invocation will be restored at the next release, alongside the published binary.
-- **Provider tests no longer fail when user voicemode.env overrides TTS/STT base URLs** (VM-1138, [#370](https://github.com/mbailey/voicemode/pull/370)) -- `tests/test_providers.py` (and friends) now isolate themselves from the user's `~/.voicemode/voicemode.env`, so `VOICEMODE_TTS_BASE_URLS` / `VOICEMODE_STT_BASE_URLS` overrides on the dev machine no longer break the suite.
+- **Fresh plugin installs no longer fail with "voicemode-mcp-launcher not found"** (VM-1364, [#441](https://github.com/IB-QA/voice-patch/issues/441)) — `.mcp.json` on `master` was switched to invoke the new `voicemode-mcp-launcher` binary (VM-1314), but the binary only exists in `master` — it isn't shipped in the latest PyPI release (8.6.1). Because Claude Code plugins install `.mcp.json` from the default branch, every fresh `claude plugin install voicemode@voicemode` produced `voicemode: voicemode-mcp-launcher - ✗ Failed to connect`. Reverted `.mcp.json` to the v8.6.1 form (`command: uv`, `args: [run, voicemode]`) so plugin installs work against the released package. The launcher invocation will be restored at the next release, alongside the published binary.
+- **Provider tests no longer fail when user voicemode.env overrides TTS/STT base URLs** (VM-1138, [#370](https://github.com/IB-QA/voice-patch/pull/370)) -- `tests/test_providers.py` (and friends) now isolate themselves from the user's `~/.voicemode/voicemode.env`, so `VOICEMODE_TTS_BASE_URLS` / `VOICEMODE_STT_BASE_URLS` overrides on the dev machine no longer break the suite.
 - **Opus playback no longer truncates the tail** -- Pad trailing silence on opus output to prevent the last frame being clipped.
 - **Kokoro install pinned to fork with opus tail fix** -- `voicemode service install kokoro` now installs from `ai-cora/Kokoro-FastAPI` until the fix lands upstream.
 
@@ -328,13 +385,13 @@ Newer Claude Code releases collapse MCP tool calls in the visible transcript, wh
 
 ### Fixed
 
-- **ESC during converse no longer kills the MCP server** (VM-1026, [#337](https://github.com/mbailey/voicemode/issues/337), [#339](https://github.com/mbailey/voicemode/pull/339)) -- Pressing ESC while a `converse` call was in flight used to take the entire voicemode MCP server offline, requiring `/mcp` reconnect. The tool now catches `CancelledError`, cleans up audio state, and returns control to Claude without bringing the server down.
+- **ESC during converse no longer kills the MCP server** (VM-1026, [#337](https://github.com/IB-QA/voice-patch/issues/337), [#339](https://github.com/IB-QA/voice-patch/pull/339)) -- Pressing ESC while a `converse` call was in flight used to take the entire voicemode MCP server offline, requiring `/mcp` reconnect. The tool now catches `CancelledError`, cleans up audio state, and returns control to Claude without bringing the server down.
 - **Circular import in changelog/release_notes under pytest 9** -- Deferred `voice_mode.resources.changelog` import inside `release_notes_prompt` so `tests/test_changelog_resource.py` collects cleanly under pytest 9's stricter import rules. No behavioural change; the resource is still registered at import time.
 - **Star notification failures on multiline bios** -- GitHub user bios containing newlines no longer break the star notification script.
 
 ### Changed
 
-- **Channel server extracted to its own plugin** -- The bundled `channel/` TypeScript server has been removed from this repo and now lives at [mbailey/voicemode-channel](https://github.com/mbailey/voicemode-channel). Install with `claude plugin install voicemode-channel@mbailey` to receive inbound voice calls from phone or web app clients.
+- **Channel server extracted to its own plugin** -- The bundled `channel/` TypeScript server has been removed from this repo and now lives at [IB-QA/voice-patch-channel](https://github.com/IB-QA/voice-patch-channel). Install with `claude plugin install voicemode-channel@mbailey` to receive inbound voice calls from phone or web app clients.
 
 ### Removed
 
@@ -351,7 +408,7 @@ Newer Claude Code releases collapse MCP tool calls in the visible transcript, wh
 
 ### Fixed
 
-- **Pass WHISPER_LANGUAGE config to STT API** ([#253](https://github.com/mbailey/voicemode/pull/253) by @htrex) - The `VOICEMODE_WHISPER_LANGUAGE` config existed but was never passed to the transcription API. Local whisper.cpp defaults to English when no language parameter is given, producing incorrect transcriptions for non-English audio. Now passes `language="auto"` explicitly to whisper.cpp and handles the OpenAI API difference (omit parameter for auto-detect)
+- **Pass WHISPER_LANGUAGE config to STT API** ([#253](https://github.com/IB-QA/voice-patch/pull/253) by @htrex) - The `VOICEMODE_WHISPER_LANGUAGE` config existed but was never passed to the transcription API. Local whisper.cpp defaults to English when no language parameter is given, producing incorrect transcriptions for non-English audio. Now passes `language="auto"` explicitly to whisper.cpp and handles the OpenAI API difference (omit parameter for auto-detect)
 
 ### Changed
 
@@ -816,7 +873,7 @@ _Note: Fix files not committed - use 8.0.6_
 ### Added
 
 - **VoiceMode Plugin for Claude Code** (VM-227)
-  - Install via: `/plugin marketplace add mbailey/voicemode` then `/plugin install voicemode`
+  - Install via: `/plugin marketplace add IB-QA/voice-patch` then `/plugin install voicemode`
   - Includes MCP server integration, slash commands, skill, and hooks
   - Commands: `/voicemode:install`, `/voicemode:converse`, `/voicemode:status`, `/voicemode:start`, `/voicemode:stop`
   - Self-contained hook receiver for soundfont support out of the box
@@ -2994,7 +3051,7 @@ This change reflects our vision for the project's future. While MCP (Model Conte
 #### What's Changed?
 
 - Primary command renamed from `voice-mcp` to `voicemode`
-- GitHub repository moved to `mbailey/voicemode`
+- GitHub repository moved to `IB-QA/voice-patch`
 - Primary PyPI package is now `voice-mode` (hyphenated due to naming restrictions)
 - Legacy `voice-mcp` package maintained for backward compatibility
 - Documentation and branding updated throughout
