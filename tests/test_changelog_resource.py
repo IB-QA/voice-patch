@@ -57,7 +57,7 @@ def test_changelog_resource_file_not_found():
         result = getattr(changelog_resource, 'fn', changelog_resource)()
         
         assert "CHANGELOG.md not found in package" in result
-        assert "https://github.com/IB-QA/voice-patch" in result
+        assert "https://github.com/mbailey/voicemode" in result
 
 
 def test_changelog_resource_read_error():

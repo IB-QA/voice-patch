@@ -16,12 +16,12 @@ uvx .
 uvx --from . voicemode
 
 # Or from anywhere with full path
-uvx --from /home/m/Code/github.com/IB-QA/voice-patch voicemode
+uvx --from /home/m/Code/github.com/mbailey/voicemode voicemode
 ```
 
 ### 2. Using file:// URL
 ```bash
-uvx --from file:///home/m/Code/github.com/IB-QA/voice-patch voicemode
+uvx --from file:///home/m/Code/github.com/mbailey/voicemode voicemode
 ```
 
 ### 3. Installing in editable mode for development

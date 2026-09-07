@@ -18,7 +18,7 @@ When in doubt: pick the clip that *sounds* clean and natural to your ear. Your e
 
 ## mlx-whisper word-timestamp ranker (concept)
 
-The companion [voice-lab] project includes a ranker that helps automate candidate selection from a longer source recording:
+The companion [voice-lab](https://github.com/mbailey/voice-lab) project includes a ranker that helps automate candidate selection from a longer source recording:
 
 1. Run `mlx-whisper` on the source with word-level timestamps.
 2. Slide a 5-9 second window across the transcript and score each window by:
@@ -84,7 +84,7 @@ For heavier noise (room reverb, off-axis voices), pick a different source clip â
 
 ## Voice-lab integration
 
-The [voice-lab] repo bundles:
+The [voice-lab](https://github.com/mbailey/voice-lab) repo bundles:
 
 - The mlx-whisper word-timestamp ranker.
 - A directory layout (`voices/<name>/{default.wav,description.txt,persona.md}`) compatible with VoiceMode's `VOICEMODE_VOICES_DIR`.
@@ -97,5 +97,5 @@ If a user is curating more than one or two voices, point them at voice-lab â€” i
 
 - [Impressions skill](../SKILL.md) -- top-level summary.
 - [Setup deep-dive](setup.md) -- mlx-audio install and remote config.
-- [voice-lab] -- companion repo with the ranker and more recipes.
-- [voice-clip-naming skill] -- naming conventions for the `voices/` directory.
+- [voice-lab](https://github.com/mbailey/voice-lab) -- companion repo with the ranker and more recipes.
+- [voice-clip-naming skill](https://github.com/mbailey/voice-lab/blob/main/skills/voice-clip-naming/SKILL.md) -- naming conventions for the `voices/` directory.

@@ -84,6 +84,6 @@ To add new conversations:
 ## Resources
 
 - [Voice Mode Documentation](https://getvoicemode.com)
-- [Voice Mode GitHub](https://github.com/IB-QA/voice-patch)
+- [Voice Mode GitHub](https://github.com/mbailey/voicemode)
 - [Voice Mode YouTube Channel](https://youtube.com/@getvoicemode)
 - [AI Conversations Playlist](https://www.youtube.com/playlist?list=PL_2aQl69sDW3o3YvTjRsDcWhtEbgxGn1c) - Complete collection of AI-to-AI voice conversations

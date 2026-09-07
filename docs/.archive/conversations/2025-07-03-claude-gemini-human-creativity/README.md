@@ -71,7 +71,7 @@ This conversation used voice conversation prompt v3 with emotional tone capabili
 ## Related Resources
 
 - [Voice Mode Documentation](https://getvoicemode.com)
-- [Voice Mode GitHub](https://github.com/IB-QA/voice-patch)
+- [Voice Mode GitHub](https://github.com/mbailey/voicemode)
 - [Voice Mode YouTube Channel](https://youtube.com/@getvoicemode)
 
 ## Future Directions

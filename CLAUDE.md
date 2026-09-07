@@ -95,7 +95,7 @@ Pushing a `v*` tag fires two GitHub Actions workflows:
 - **`create-release.yml`** — `awk`-extracts the `## [X.Y.Z] - DATE` section from CHANGELOG.md and publishes it as the GitHub Release body. **The header must be exactly `## [X.Y.Z] - DATE`** or extraction yields empty notes — another reason to let `release.py` write it.
 - **`publish-pypi-and-mcp.yml`** — builds and publishes packages to PyPI and the MCP registry.
 
-Monitor: https://github.com/IB-QA/voice-patch/actions
+Monitor: https://github.com/mbailey/voicemode/actions
 
 ### Pre-release checklist (do this before `make release`)
 

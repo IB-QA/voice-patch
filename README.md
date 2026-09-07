@@ -30,7 +30,7 @@ The fastest way for Claude Code users to get started:
 
 ```bash
 # Add the VoiceMode marketplace
-claude plugin marketplace add IB-QA/voice-patch
+claude plugin marketplace add mbailey/voicemode
 
 # Install VoiceMode plugin
 claude plugin install voicemode@voicemode
@@ -149,10 +149,10 @@ brew install ffmpeg node portaudio
 
 ```bash
 # Use development shell
-nix develop github:IB-QA/voice-patch
+nix develop github:mbailey/voicemode
 
 # Or install system-wide
-nix profile install github:IB-QA/voice-patch
+nix profile install github:mbailey/voicemode
 ```
 
 </details>
@@ -163,7 +163,7 @@ nix profile install github:IB-QA/voice-patch
 #### From source
 
 ```bash
-git clone https://github.com/IB-QA/voice-patch.git
+git clone https://github.com/mbailey/voicemode.git
 cd voicemode
 uv tool install -e .
 ```
@@ -173,7 +173,7 @@ uv tool install -e .
 ```nix
 # In /etc/nixos/configuration.nix
 environment.systemPackages = [
-  (builtins.getFlake "github:IB-QA/voice-patch").packages.${pkgs.system}.default
+  (builtins.getFlake "github:mbailey/voicemode").packages.${pkgs.system}.default
 ];
 ```
 
@@ -210,7 +210,7 @@ Full documentation: [voicemode.dev](https://voicemode.dev)
 ## Links
 
 - **Website**: [voicemode.dev](https://voicemode.dev)
-- **GitHub**: [github.com/IB-QA/voice-patch](https://github.com/IB-QA/voice-patch)
+- **GitHub**: [github.com/mbailey/voicemode](https://github.com/mbailey/voicemode)
 - **PyPI**: [pypi.org/project/voice-mode](https://pypi.org/project/voice-mode/)
 - **YouTube**: [@getvoicemode](https://youtube.com/@getvoicemode)
 - **Twitter/X**: [@getvoicemode](https://twitter.com/getvoicemode)

@@ -19,10 +19,10 @@ The plugin is published to the Claude Code plugin marketplace:
 
 ```bash
 # Add the marketplace
-claude plugin marketplace add https://github.com/IB-QA/claude-plugins
+claude plugin marketplace add https://github.com/mbailey/claude-plugins
 
 # Install the plugin
-claude plugin install @IB-QA/voicemode
+claude plugin install voicemode@mbailey
 ```
 
 ## Prerequisites
@@ -135,8 +135,8 @@ microphone and speakers (the "audio host"). No local `voicemode` install, no
    MCP entry):
 
    ```bash
-   claude plugin marketplace add https://github.com/IB-QA/claude-plugins
-   claude plugin install voicemode@IB-QA
+   claude plugin marketplace add https://github.com/mbailey/claude-plugins
+   claude plugin install voicemode@mbailey
    ```
 
 2. Point it at a streamable-HTTP `voicemode serve` (remote **or** a serve on
@@ -267,8 +267,8 @@ voicemode config edit
 
 ## Resources
 
-- [GitHub Repository](https://github.com/IB-QA/voice-patch)
-- [Plugin Source](https://github.com/IB-QA/voice-patch)
+- [GitHub Repository](https://github.com/mbailey/voicemode)
+- [Plugin Source](https://github.com/mbailey/voicemode)
 
 ## Development
 
@@ -279,5 +279,5 @@ For local development, add the plugin from your local clone:
 claude plugin marketplace add /path/to/voicemode
 
 # Install the plugin
-claude plugin install voicemode@IB-QA
+claude plugin install voicemode@mbailey
 ```
