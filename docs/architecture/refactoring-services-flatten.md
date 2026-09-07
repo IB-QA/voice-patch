@@ -97,7 +97,7 @@ elif file in {any_subdir}/:
 
 #### 1.1 Create Feature Branch
 ```bash
-cd /Users/admin/Code/github.com/mbailey/voicemode
+cd /Users/admin/Code/github.com/IB-QA/voice-patch
 git checkout master
 git pull origin master  # Ensure up to date
 git checkout -b refactor/flatten-services-directory

@@ -50,7 +50,7 @@ instead).
 3. **Locate the voicemode checkout** so you can point `dofile` at the right
    path. If you don't already know it, ask the user or check common
    locations (`~/Code/voicemode`, wherever their `git_url:
-   github.com/mbailey/voicemode` clone lives).
+   github.com/IB-QA/voice-patch` clone lives).
 
 4. **Write (or merge into) `~/.hammerspoon/init.lua`.** If the file doesn't
    exist, create it with just the dofile line. If it exists, **append** —

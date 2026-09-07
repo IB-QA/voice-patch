@@ -42,7 +42,7 @@ install cleanly but silently do nothing for VoiceMode.
 ## 3. Load the config
 
 VoiceMode ships the Hammerspoon config in its own repo checkout:
-[`scripts/hammerspoon/voicemode-media-keys.lua`](https://github.com/mbailey/voicemode/blob/master/scripts/hammerspoon/voicemode-media-keys.lua).
+[`scripts/hammerspoon/voicemode-media-keys.lua`](https://github.com/IB-QA/voice-patch/blob/master/scripts/hammerspoon/voicemode-media-keys.lua).
 `dofile` it from `~/.hammerspoon/init.lua`, pointing at wherever you checked
 out `voicemode`:
 
@@ -57,7 +57,7 @@ dofile(os.getenv("HOME") .. "/Code/voicemode/scripts/hammerspoon/voicemode-media
 ```
 
 Adjust the path to match your checkout (`git_url:
-github.com/mbailey/voicemode`). Then reload: click the Hammerspoon menubar
+github.com/IB-QA/voice-patch`). Then reload: click the Hammerspoon menubar
 icon → **Reload Config** (or run `hs.reload()` from the Hammerspoon Console).
 
 ## 4. Grant Accessibility (load-bearing step)

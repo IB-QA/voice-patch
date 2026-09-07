@@ -355,9 +355,9 @@ async def whisper_install(
                 "error": "NixOS detected — the standard whisper installer cannot "
                          "build on NixOS because it expects FHS paths that don't exist.",
                 "nixos_guidance": {
-                    "cpu": "nix build github:mbailey/voicemode#whisper-cpp",
-                    "cuda": "nix build github:mbailey/voicemode#whisper-cpp-cuda",
-                    "wrapper": "nix build github:mbailey/voicemode#voice-mode-cuda",
+                    "cpu": "nix build github:IB-QA/voice-patch#whisper-cpp",
+                    "cuda": "nix build github:IB-QA/voice-patch#whisper-cpp-cuda",
+                    "wrapper": "nix build github:IB-QA/voice-patch#voice-mode-cuda",
                     "note": "The voice-mode-cuda wrapper puts whisper-server on PATH "
                             "so VoiceMode discovers it automatically. See flake.nix "
                             "for GPU architecture options (cudaArch)."

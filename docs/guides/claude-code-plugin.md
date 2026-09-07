@@ -267,8 +267,8 @@ voicemode config edit
 
 ## Resources
 
-- [GitHub Repository](https://github.com/mbailey/voicemode)
-- [Plugin Source](https://github.com/mbailey/voicemode)
+- [GitHub Repository](https://github.com/IB-QA/voice-patch)
+- [Plugin Source](https://github.com/IB-QA/voice-patch)
 
 ## Development
 
