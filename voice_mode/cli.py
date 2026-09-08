@@ -111,82 +111,15 @@ _OPENAI_VOICES = (
 )
 
 
-def _list_clone_voice_names() -> list[str]:
-    """Return cloned voice names from both registries.
-
-    voicemode has two overlapping voice registries:
-
-    1. ``~/.voicemode/voices.json`` -- written by ``voicemode clone add``,
-       read by ``voicemode clone list``/``clone remove``. CRUD metadata.
-    2. ``$VOICEMODE_VOICES_DIR`` (default ``~/.voicemode/voices/``) --
-       walked at runtime by :mod:`voice_mode.voice_profiles` to resolve
-       a voice name to a WAV at TTS time. Treats any directory containing
-       a ``.wav`` as a voice; otherwise it's a group and we descend.
-
-    We union both so completion surfaces everything either path knows
-    about. Stays dependency-free for fast shell completion (no imports of
-    config, voice_profiles, or the impressions tool module).
-    """
-    voices: list[str] = []
-    seen: set[str] = set()
-
-    def add(name: str) -> None:
-        if name and name not in seen:
-            seen.add(name)
-            voices.append(name)
-
-    # Registry #1: voices.json (CRUD metadata).
-    voices_json = os.path.expanduser("~/.voicemode/voices.json")
-    if os.path.isfile(voices_json):
-        try:
-            import json
-            with open(voices_json) as f:
-                data = json.load(f)
-            for name in data.get("voices", {}).keys():
-                add(name)
-        except (OSError, ValueError):
-            pass
-
-    # Registry #2: VOICEMODE_VOICES_DIR walk (runtime resolution).
-    base = os.path.expanduser(
-        os.environ.get("VOICEMODE_VOICES_DIR", "~/.voicemode/voices")
-    )
-    if os.path.isdir(base):
-        def walk(path: str) -> None:
-            try:
-                entries = list(os.scandir(path))
-            except OSError:
-                return
-            has_wav = any(
-                e.is_file(follow_symlinks=False) and e.name.lower().endswith(".wav")
-                for e in entries
-            )
-            if has_wav:
-                add(os.path.basename(path))
-                return  # do NOT descend into a voice dir
-            for e in entries:
-                if e.is_dir(follow_symlinks=False):
-                    walk(e.path)
-
-        for e in sorted(os.scandir(base), key=lambda x: x.name):
-            if e.is_dir(follow_symlinks=False):
-                walk(e.path)
-
-    return sorted(voices)
-
-
 def _complete_voice_names(ctx, param, incomplete):
     """Click shell_complete callback for --voice options.
 
-    Combines cloned voices (from voices.json) with standard Kokoro and
-    OpenAI voice names. Returns CompletionItem objects whose values start
-    with the incomplete prefix.
+    Offers the standard Kokoro and OpenAI voice names, returning
+    CompletionItem objects whose values start with the incomplete prefix.
     """
     all_voices = []
-    all_voices.extend(_list_clone_voice_names())
     all_voices.extend(_KOKORO_COMMON_VOICES)
     all_voices.extend(_OPENAI_VOICES)
-    # Deduplicate while preserving order so clone voices come first.
     seen = set()
     ordered = []
     for v in all_voices:
@@ -198,134 +131,6 @@ def _complete_voice_names(ctx, param, incomplete):
         for v in ordered
         if v.startswith(incomplete)
     ]
-
-
-# ============================================================================
-# Clone Voice Profile Command Group
-# ============================================================================
-# Voice profile CRUD for the clone-voice feature. The underlying TTS
-# *service* is mlx-audio -- install it via:
-#   voicemode service install mlx-audio
-# Profile commands:
-#   voicemode clone add          Add a voice profile
-#   voicemode clone list         List voice profiles
-#   voicemode clone remove       Remove a voice profile
-
-
-@voice_mode_main_cli.group()
-@click.help_option('-h', '--help', help='Show this message and exit')
-def clone():
-    """Voice cloning profile management.
-
-    \b
-    Voice Profiles:
-      add        Add a clone voice profile from a reference audio clip
-      list       List available clone voices
-      remove     Remove a clone voice profile
-
-    \b
-    Service install lives under `voicemode service`:
-      voicemode service install mlx-audio   # install the TTS/STT backend
-
-    \b
-    Quick Start:
-      voicemode service install mlx-audio              # Install backend
-      voicemode clone add mike ~/clip.wav              # Add a voice
-      voicemode converse --voice mike -m "Hello world" --skip-stt  # Use it
-    """
-    pass
-
-
-@clone.command()
-@click.help_option('-h', '--help')
-@click.argument('name')
-@click.argument('audio_file', type=click.Path(exists=True))
-@click.option('--description', '-d', default='', help='Description of the voice')
-@click.option('--ref-text', default=None, help='Transcript of the audio (auto-transcribed if omitted)')
-@click.option('--model', default=None, help='TTS model override')
-@click.option('--base-url', default=None, help='TTS endpoint override')
-def add(name, audio_file, description, ref_text, model, base_url):
-    """Add a clone voice profile from a reference audio clip.
-
-    Copies the audio file to ~/.voicemode/voices/ and auto-transcribes it
-    via the local Whisper STT service (unless --ref-text is provided).
-
-    \b
-    Examples:
-      voicemode clone add fleabag ~/clip.wav -d "Phoebe as Fleabag"
-      voicemode clone add mike ~/mike.wav --ref-text "Hello everyone"
-    """
-    from voice_mode.tools.impressions.profiles import clone_add
-    result = asyncio.run(clone_add(
-        name=name,
-        audio_file=audio_file,
-        description=description,
-        ref_text=ref_text,
-        model=model,
-        base_url=base_url,
-    ))
-
-    if result.get('success'):
-        click.echo(f"Voice profile '{result['name']}' added successfully!")
-        click.echo(f"   Audio: {result.get('ref_audio', 'unknown')}")
-        click.echo(f"   Text:  {result.get('ref_text', 'unknown')}")
-        if result.get('description'):
-            click.echo(f"   Desc:  {result['description']}")
-    else:
-        click.echo(f"Failed to add voice profile: {result.get('error', 'Unknown error')}", err=True)
-        if result.get('hint'):
-            click.echo(f"   Hint: {result['hint']}", err=True)
-        raise SystemExit(1)
-
-
-@clone.command('list')
-@click.help_option('-h', '--help')
-def list_voices():
-    """List available clone voice profiles.
-
-    Shows all voice profiles from ~/.voicemode/voices.json.
-    """
-    from voice_mode.tools.impressions.profiles import clone_list
-    result = asyncio.run(clone_list())
-
-    voices = result.get('voices', [])
-    if not voices:
-        click.echo("No voice profiles found.")
-        click.echo("Add one with: voicemode clone add <name> <audio-file>")
-        return
-
-    click.echo(f"Clone voice profiles ({result.get('count', len(voices))}):")
-    for v in voices:
-        desc = v.get('description', '')
-        if desc:
-            click.echo(f"  {v['name']}  -- {desc}")
-        else:
-            click.echo(f"  {v['name']}")
-
-
-@clone.command()
-@click.help_option('-h', '--help')
-@click.argument('name')
-@click.option('--keep-audio', is_flag=True, help='Keep the reference audio file')
-def remove(name, keep_audio):
-    """Remove a clone voice profile.
-
-    Removes the profile from voices.json and optionally the reference audio file.
-    By default, the audio file is also deleted.
-    """
-    from voice_mode.tools.impressions.profiles import clone_remove
-    result = asyncio.run(clone_remove(
-        name=name,
-        remove_audio=not keep_audio,
-    ))
-
-    if result.get('success'):
-        click.echo(f"Voice profile '{result['name']}' removed.")
-        for item in result.get('removed_items', []):
-            click.echo(f"   {item}")
-    else:
-        click.echo(f"Failed to remove voice profile: {result.get('error', 'Unknown error')}", err=True)
-        raise SystemExit(1)
 
 
 # ============================================================================
@@ -1698,7 +1503,6 @@ Examples:
   voicemode converse -- "-c is short for continuous"    # `--` escapes dash-prefixed text
   voicemode converse --continuous                       # continuous conversation mode
   voicemode converse "Hello there!" --voice nova        # pick a TTS voice
-  voicemode converse "Hi" --voice ./voices/ray/default.wav  # clone from a relative path
   voicemode converse "Hey, urgent question." --skip-conch  # bypass the conch lock
 \b
 Multi-voice (speak a gap-free sequence in one call; synth overlaps playback):
@@ -1843,7 +1647,7 @@ def _survey_exit_code(result):
               help='Exact LiveKit room name (or omit for unambiguous prefix resolution).')
 @click.option('--duration', '-d', type=float, default=DEFAULT_LISTEN_DURATION, help='Listen duration in seconds')
 @click.option('--min-duration', type=float, default=MIN_RECORDING_DURATION, help='Minimum listen duration before silence detection')
-@click.option('--voice', help='TTS voice: a name (nova, shimmer, af_sky), a clone '
+@click.option('--voice', help='TTS voice name (nova, shimmer, af_sky) '
                                'profile, or a path to a .wav clip (absolute, ./relative, or ~/)',
               shell_complete=_complete_voice_names)
 @click.option('--tts-provider', type=click.Choice(['openai', 'kokoro']), help='TTS provider')

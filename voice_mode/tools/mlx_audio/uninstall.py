@@ -2,8 +2,6 @@
 
 Cleans up the launchd plist (or systemd unit), the ``uv tool``
 installation, and -- on ``remove_all_data`` -- the log directory.
-User-cloned voice profiles in ``~/.voicemode/voices/`` are *always*
-preserved -- losing those would silently delete user data.
 """
 
 from __future__ import annotations
@@ -43,9 +41,7 @@ async def mlx_audio_uninstall(
             Default ``False`` -- the cache is shared with other Hugging
             Face tools, so this only touches the mlx-community subset.
         remove_all_data: Remove logs and the install dir under
-            ``~/.voicemode/services/mlx-audio``. User-cloned voice
-            profiles in ``~/.voicemode/voices/`` are *always* preserved
-            regardless of this flag.
+            ``~/.voicemode/services/mlx-audio``.
 
     Returns:
         Dict with ``success``, ``removed_items``, and ``errors``.

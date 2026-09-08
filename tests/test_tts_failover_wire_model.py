@@ -182,29 +182,6 @@ class TestTtsFailoverWireModel:
         assert first["model"] == "tts-1"
 
 
-class TestClonePrepareEndpoint:
-    """Clone voices bypass the resolver and keep their profile's model."""
-
-    def test_clone_profile_model_untouched(self):
-        """_prepare_tts_endpoint with a clone profile returns the profile's
-        pinned model even against an mlx-audio endpoint (resolver not run)."""
-        from types import SimpleNamespace
-
-        clone_profile = SimpleNamespace(model="mlx-community/My-Clone-Voice")
-        with patch("voice_mode.providers.TTS_MODELS", DEFAULT_TTS_MODELS), patch(
-            "voice_mode.providers.TTS_MODELS_BY_PROVIDER", {}
-        ):
-            client, voice, model, provider_type = _prepare_tts_endpoint(
-                base_url="http://127.0.0.1:8890/v1",
-                voice="my_clone",
-                model="tts-1",  # would resolve to the mlx default if consulted
-                clone_profile=clone_profile,
-            )
-        assert model == "mlx-community/My-Clone-Voice"
-        assert voice == "my_clone"
-        assert provider_type == "mlx-audio"
-
-
 class TestConverseNoModelCollapse:
     """converse.text_to_speech_with_failover must not collapse None -> TTS_MODELS[0]."""
 

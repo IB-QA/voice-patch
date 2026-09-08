@@ -233,31 +233,13 @@ VOICEMODE_VOICES=af_sky
 # VOICEMODE_KOKORO_MAX_REQUESTS=25
 
 #############
-# Impressions (Qwen3-TTS via mlx-audio)
+# MLX Audio (Apple Silicon TTS/STT backend)
 #############
 
-# Where voice profile dirs live locally (each subdir is a voice).
-# VOICEMODE_VOICES_DIR=~/.voicemode/voices
-
-# Path on the remote TTS server where VOICES_DIR is mirrored.
-# Required when the mlx-audio server runs on a different machine.
-# Leave unset (or empty) when the mlx-audio server is local.
-# VOICEMODE_REMOTE_VOICES_DIR=
-
-# mlx-audio TTS endpoint (Qwen3-TTS for impressions).
-# Defaults to the local mlx-audio server. Override to point at a remote
-# host (e.g. ms2 on the LAN).
+# mlx-audio TTS endpoint. Defaults to the local mlx-audio server; override
+# to point at a remote host. Listing it after Kokoro in
+# VOICEMODE_TTS_BASE_URLS gives TTS a second provider to fail over to.
 # VOICEMODE_MLX_AUDIO_BASE_URL=http://127.0.0.1:8890/v1
-
-# Qwen3-TTS model (which weights mlx-audio loads on first request).
-# 1.7B-Base-4bit is the chosen default: ~2× realtime, clean audio, ~2.2GB.
-# VOICEMODE_IMPRESSIONS_MODEL=mlx-community/Qwen3-TTS-12Hz-1.7B-Base-4bit
-#
-# Alternatives (uncomment one to switch):
-# VOICEMODE_IMPRESSIONS_MODEL=mlx-community/Qwen3-TTS-12Hz-1.7B-Base-5bit  # ok, slightly larger
-# VOICEMODE_IMPRESSIONS_MODEL=mlx-community/Qwen3-TTS-12Hz-1.7B-Base-6bit  # ok, slightly larger
-# VOICEMODE_IMPRESSIONS_MODEL=mlx-community/Qwen3-TTS-12Hz-1.7B-Base-bf16  # full quality, slow (~1× realtime)
-# VOICEMODE_IMPRESSIONS_MODEL=mlx-community/Qwen3-TTS-12Hz-0.6B-Base-5bit  # smaller (1.7GB), ok quality
 
 #############
 # Recording & Voice Activity Detection
@@ -849,25 +831,12 @@ KOKORO_MAX_REQUESTS = int(os.getenv("VOICEMODE_KOKORO_MAX_REQUESTS", "25"))
 
 # ==================== MLX-AUDIO SERVICE CONFIGURATION ====================
 
-# mlx-audio is the unified Whisper STT + Kokoro TTS + Qwen3-TTS
-# clone-voice service used on Apple Silicon. The launchd plist /
+# mlx-audio is the unified Whisper STT + Kokoro TTS service used on
+# Apple Silicon, and doubles as the TTS failover target. The launchd plist /
 # systemd unit reads VOICEMODE_MLX_AUDIO_HOST / VOICEMODE_MLX_AUDIO_PORT
 # from voicemode.env so changes here are picked up at next service start.
 MLX_AUDIO_HOST = os.getenv("VOICEMODE_MLX_AUDIO_HOST", "127.0.0.1")
 MLX_AUDIO_PORT = int(os.getenv("VOICEMODE_MLX_AUDIO_PORT", "8890"))
-
-# ==================== IMPRESSIONS CONFIGURATION ====================
-
-# Default Qwen3-TTS model for the impressions feature (voice cloning).
-# This is an *impressions* setting (which weights to ask the mlx-audio
-# service to use), not a service setting -- the mlx-audio service itself
-# doesn't pin a model. 1.7B-Base-4bit is the chosen default from the
-# Apr 2026 quant matrix bench: ~2× realtime on M-series, clean audio,
-# ~2.2GB on disk.
-CLONE_MODEL = os.environ.get(
-    "VOICEMODE_IMPRESSIONS_MODEL",
-    "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-4bit",
-)
 
 # ==================== SERVICE MANAGEMENT CONFIGURATION ====================
 

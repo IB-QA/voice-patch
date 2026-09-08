@@ -24,8 +24,7 @@ VM-1208 test-002 step-by-step coverage:
 
 The enumerator is monkey-patched to a deterministic list — this isolates
 the test from whether kokoro/mlx-audio happen to be running on the dev
-box. The privacy filter ``_is_local_request`` runs naturally because we
-are hitting the resource through real HTTP (loopback peer ⇒ local).
+box.
 """
 
 from __future__ import annotations
@@ -77,14 +76,11 @@ _FAKE_VOICES_LOCAL: list[dict[str, Any]] = [
 ]
 
 
-async def _fake_enumerate(*, include_local_only: bool) -> list[dict[str, Any]]:
+async def _fake_enumerate() -> list[dict[str, Any]]:
     """Deterministic stand-in for ``enumerate_voices``.
 
-    Returns the same list whether called locally or remotely so that the
-    AC3 parity check (stdio vs HTTP) compares apples to apples. The
-    privacy decision is made by ``_is_local_request`` upstream — both
-    transports here are local (in-memory and loopback HTTP), so we
-    expect ``include_local_only=True`` from each.
+    Returns the same list on every transport so the AC3 parity check
+    (stdio vs HTTP) compares apples to apples.
     """
     return [dict(v) for v in _FAKE_VOICES_LOCAL]
 
@@ -237,12 +233,9 @@ async def test_stdio_and_http_bodies_match_modulo_generated_at(
     for ``generated_at``.
 
     "stdio" is approximated by the in-memory ``FastMCPTransport`` against
-    the same ``mcp`` instance (no HTTP request → ``_is_local_request``
-    returns True via the ``RuntimeError`` branch — same outcome as a
-    real stdio server). The HTTP side connects from loopback, which the
-    privacy predicate also classifies as local. With the deterministic
-    enumerator both paths produce the same voice list, so any diff
-    outside ``generated_at`` indicates a transport-level bug.
+    the same ``mcp`` instance. With the deterministic enumerator both
+    paths produce the same voice list, so any diff outside
+    ``generated_at`` indicates a transport-level bug.
     """
     from voice_mode.server import mcp
 
@@ -263,28 +256,3 @@ async def test_stdio_and_http_bodies_match_modulo_generated_at(
         _strip_generated_at(http_body), sort_keys=True
     )
     assert stdio_canonical == http_canonical
-
-
-# ---------- AC8 spot-check: loopback is local ----------------------------
-
-
-async def test_loopback_caller_treated_as_local(
-    patched_enum, http_server_url
-):
-    """AC8 spot-check: peer 127.0.0.1 ⇒ caller treated as local, so the
-    impression in the fake enumerator output appears in the response.
-
-    This is the privacy predicate exercised end-to-end through real
-    HTTP — the whole point of the integration test. With ``_is_local_request``
-    returning True for a loopback peer, the response carries every voice
-    in ``_FAKE_VOICES_LOCAL``, including the ``mlx-audio`` impression.
-    """
-    transport = StreamableHttpTransport(url=http_server_url)
-    async with Client(transport=transport) as client:
-        _raw, body = await _read_voice_voices(client)
-
-    providers = {v["provider"] for v in body["voices"]}
-    assert "mlx-audio" in providers, (
-        "loopback caller should see impressions; got providers="
-        f"{providers!r}"
-    )

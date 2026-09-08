@@ -50,7 +50,6 @@ def _pipeline_kwargs(**overrides):
         tts_model=None,
         tts_provider=None,
         audio_format=None,
-        resolved_ref_text=None,
         should_skip_tts=False,
         control_state=get_control_state(),
         disable_silence_detection=False,
