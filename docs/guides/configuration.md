@@ -174,7 +174,7 @@ VOICEMODE_MAX_RECORDING_TIME=120.0  # Maximum recording
 
 When running multiple voice agents (e.g. separate Claude Code sessions in
 different tmux panes), the "conch" mechanism serialises speech so only one
-agent talks at a time, and `VOICEMODE_AUTO_FOCUS_PANE` can visually follow
+agent talks at a time
 the speaker.
 
 ```bash
@@ -183,7 +183,6 @@ the speaker.
 # so agents waiting on the conch never steal focus. Respects the focus-hold
 # sentinel written by show-me (~/.voicemode/focus-hold) so a shown file is
 # not yanked away. Silent no-op outside tmux.
-VOICEMODE_AUTO_FOCUS_PANE=false
 
 # Override the default focus-hold duration if the sentinel file has no
 # explicit value (default: 30 seconds)

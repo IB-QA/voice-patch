@@ -25,8 +25,7 @@ mid-conversation; both surfaces share the same enumerator
 ### `voice://voices`
 
 Returns the full voice list the connected server can produce — every
-configured TTS endpoint that responded plus, for local callers, any
-impressions/clones from `VOICES_DIR`.
+configured TTS endpoint that responded.
 
 ### `voice://voices/{provider}`
 
@@ -90,11 +89,10 @@ the right surface for the LLM mid-conversation.
 
 ## Example Responses
 
-### Stdio caller (impressions visible)
+### Full list
 
-`resources/read voice://voices` from a local stdio caller with
-`TTS_BASE_URLS=https://api.openai.com/v1,http://127.0.0.1:8880/v1`
-and one impression `samantha` under `~/.voicemode/voices/`:
+`resources/read voice://voices` with
+`TTS_BASE_URLS=https://api.openai.com/v1,http://127.0.0.1:8880/v1`:
 
 ```json
 {
@@ -112,24 +110,7 @@ and one impression `samantha` under `~/.voicemode/voices/`:
     { "id": "openai:sage",    "voice": "sage",    "name": "sage",    "provider": "openai", "language": null, "gender": null, "preview_url": null },
     { "id": "openai:shimmer", "voice": "shimmer", "name": "shimmer", "provider": "openai", "language": null, "gender": null, "preview_url": null },
     { "id": "openai:verse",   "voice": "verse",   "name": "verse",   "provider": "openai", "language": null, "gender": null, "preview_url": null },
-    { "id": "kokoro:af_river", "voice": "af_river", "name": "af_river", "provider": "kokoro", "language": null, "gender": null, "preview_url": null },
-    { "id": "mlx-audio:samantha", "voice": "samantha", "name": "samantha", "provider": "mlx-audio", "language": null, "gender": null, "preview_url": null }
-  ]
-}
-```
-
-### Remote streamable HTTP caller (impressions hidden)
-
-Same server, same configuration, but the caller is a remote client over
-streamable HTTP. The impression is filtered out (see [Privacy](#privacy)):
-
-```json
-{
-  "schema_version": 1,
-  "generated_at": "2026-05-10T16:42:01Z",
-  "voices": [
-    { "id": "openai:alloy", "voice": "alloy", "name": "alloy", "provider": "openai", "language": null, "gender": null, "preview_url": null }
-    // ... other openai + kokoro voices, no mlx-audio:samantha
+    { "id": "kokoro:af_river", "voice": "af_river", "name": "af_river", "provider": "kokoro", "language": null, "gender": null, "preview_url": null }
   ]
 }
 ```
@@ -153,58 +134,10 @@ streamable HTTP. The impression is filtered out (see [Privacy](#privacy)):
 An unknown `{provider}` returns `"voices": []` with the rest of the
 envelope intact.
 
-## Privacy
-
-Impressions/clones are personal voice data and are **omitted from
-remote responses by default**. The resolution order, hardened against
-malformed peer information:
-
-1. `VOICEMODE_EXPOSE_LOCAL_VOICES_REMOTE` truthy → include impressions.
-2. No active HTTP request (stdio / in-memory transport) → include
-   impressions.
-3. HTTP request with a loopback peer (`127/8`, `::1`, IPv4-mapped
-   loopback `::ffff:127.0.0.1`) → include impressions.
-4. Anything else — `None` client, empty host string, unparseable IP, or
-   a public peer → omit impressions (safe default).
-
-The check looks at the connection peer reported by uvicorn via
-`fastmcp.server.dependencies.get_http_request()`, not at request
-headers, so an HTTP client cannot lie its way into "local". The
-predicate is implemented in `voice_mode/resources/voices.py`.
-
-> **`stdio` vs in-memory test transports.** The stdio path is detected
-> by the same `RuntimeError` that `FastMCPTransport` (the in-memory
-> test transport) raises when it is asked for an HTTP request. So both
-> behave identically for the privacy predicate — there is no third
-> "local-but-HTTP" branch.
-
-### `VOICEMODE_EXPOSE_LOCAL_VOICES_REMOTE`
-
-| Truthy values             | Falsy values (anything else, including unset) |
-| ------------------------- | --------------------------------------------- |
-| `1`, `true`, `yes`, `on`  | `0`, `false`, `no`, `off`, `""`, unset        |
-
-Case-insensitive; surrounding whitespace is stripped. When set truthy,
-impressions are included for every read regardless of transport or peer
-address.
-
-> **When to set this.** Use it when running VoiceMode behind a
-> co-located reverse proxy on the same host: every connection arrives
-> from `127.0.0.1`, so the loopback test would over-report "local" and
-> include impressions to remote callers. Either configure your proxy
-> to forward the real peer (uvicorn `--proxy-headers`,
-> `X-Forwarded-For` / `Forwarded`) — VoiceMode does not currently honour
-> these headers, so the safer alternative is to leave the env var unset
-> (or explicitly `false`) and accept that impressions stay hidden. Set
-> the env var truthy only when you actively want every caller treated
-> as local.
-
 ## Freshness and Cadence
 
-The enumerator caches results in-process for **60 seconds**, with two
-independent cache slots keyed by whether impressions are included
-(`include_local_only=True` for local callers, `False` for remote). Each
-read inside the TTL window returns the cached list with a fresh
+The enumerator caches results in-process for **60 seconds**. Each read
+inside the TTL window returns the cached list with a fresh
 `generated_at` timestamp computed at call time.
 
 | Provider source                    | Subject to TTL?              | Notes                                                                 |
@@ -212,14 +145,11 @@ read inside the TTL window returns the cached list with a fresh
 | OpenAI                             | No (hardcoded constant)      | `OPENAI_TTS_VOICES` lives in `voice_mode/voices.py`. Never network-probed. |
 | Kokoro / mlx-audio / local / unknown | Yes (60 s)                  | Live `GET {base_url}/audio/voices` with a 5 s per-endpoint timeout.   |
 | Whisper                            | Skipped entirely             | STT-only; not in the TTS enumerator.                                  |
-| Impressions (`VOICES_DIR`)         | Yes (60 s, local callers only) | Filesystem scan via `voice_profiles.list_profiles()`.                |
 
 **Implications:**
 
 - A user installing or restarting Kokoro / mlx-audio sees the new voice
   list within ~60 seconds.
-- A user adding a new impression sees it within ~60 seconds of the next
-  local read (no file-watcher in v1).
 - OpenAI voices change only when the maintainer hand-edits
   `OPENAI_TTS_VOICES` (see [Maintenance](#maintenance)).
 - Polling more often than once per minute returns cached data; trading
@@ -240,7 +170,7 @@ TTL expires.
 
 The `voice_registry` MCP tool — the prose-shaped surface for the LLM
 mid-conversation — now sources its voice list via
-`enumerate_voices(include_local_only=False)` rather than the legacy
+`enumerate_voices()` rather than the legacy
 `provider_registry` cache. Same enumerator backing both surfaces means
 the JSON resource and the LLM prose can never disagree on the voice
 list.

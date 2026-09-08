@@ -1,0 +1,768 @@
+VoiceMode live backend audit — Mon Sep  7 08:39:59 IST 2026
+\n===== CONFIG =====
+$ grep -E 'VOICEMODE_(TTS_BASE_URLS|STT_BASE_URLS|WHISPER_MODEL|WHISPER_PORT|KOKORO_PORT|MLX_AUDIO_(PORT|HOST|BASE_URL)|IMPRESSIONS_MODEL)' ~/.voicemode/voicemode.env
+VOICEMODE_TTS_BASE_URLS=http://127.0.0.1:8090/v1
+VOICEMODE_STT_BASE_URLS=http://127.0.0.1:2060/v1
+VOICEMODE_WHISPER_MODEL=large-v3-turbo
+VOICEMODE_WHISPER_PORT=2060
+VOICEMODE_WHISPER_MODEL_PATH='~/.voicemode/services/whisper/models'
+VOICEMODE_KOKORO_PORT=8090
+VOICEMODE_MLX_AUDIO_BASE_URL=http://127.0.0.1:8890/v1
+# VOICEMODE_IMPRESSIONS_MODEL=mlx-community/Qwen3-TTS-12Hz-1.7B-Base-4bit
+# VOICEMODE_IMPRESSIONS_MODEL=mlx-community/Qwen3-TTS-12Hz-1.7B-Base-5bit  # ok, slightly larger
+# VOICEMODE_IMPRESSIONS_MODEL=mlx-community/Qwen3-TTS-12Hz-1.7B-Base-6bit  # ok, slightly larger
+# VOICEMODE_IMPRESSIONS_MODEL=mlx-community/Qwen3-TTS-12Hz-1.7B-Base-bf16  # full quality, slow (~1× realtime)
+# VOICEMODE_IMPRESSIONS_MODEL=mlx-community/Qwen3-TTS-12Hz-0.6B-Base-5bit  # smaller (1.7GB), ok quality
+[exit 0]
+\n===== CLI_CONTRACT =====
+$ voicemode service install --help
+2026-09-07 08:39:59,782 - voicemode - INFO - Debug logging to file: /Users/ibhatt/voicemode_debug.log
+Usage: voicemode service install [OPTIONS] SERVICE
+
+  Install a voice service.
+
+  Downloads and installs the service software:
+    whisper    whisper.cpp speech-to-text server
+    kokoro     Kokoro text-to-speech server
+    voicemode  Already installed (enables the HTTP server)
+    mlx-audio  Apple Silicon: unified Whisper STT + Kokoro TTS + Qwen3-TTS
+
+  Examples:
+    voicemode service install whisper
+    voicemode service install kokoro --force
+    voicemode service install mlx-audio
+
+Options:
+  -f, --force  Force reinstall even if already installed
+  -h, --help   Show this message and exit.
+[exit 0]
+$ voicemode service uninstall --help
+2026-09-07 08:39:59,892 - voicemode - INFO - Debug logging to file: /Users/ibhatt/voicemode_debug.log
+Usage: voicemode service [OPTIONS] COMMAND [ARGS]...
+
+Error: No such command 'uninstall'. Did you mean 'install'?
+[exit 2]
+$ voicemode whisper model
+2026-09-07 08:40:00,002 - voicemode - INFO - Debug logging to file: /Users/ibhatt/voicemode_debug.log
+2026-09-07 08:40:00,018 - voicemode - INFO - Tool loading: whitelist mode (2 tools) - loading 2 tools
+2026-09-07 08:40:00,018 - voicemode - DEBUG - Loading tool: converse
+2026-09-07 08:40:00,810 - mcp.server.lowlevel.server - DEBUG - Initializing server 'voicemode'
+2026-09-07 08:40:00,810 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListToolsRequest
+2026-09-07 08:40:00,811 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListResourcesRequest
+2026-09-07 08:40:00,811 - mcp.server.lowlevel.server - DEBUG - Registering handler for PromptListRequest
+2026-09-07 08:40:00,811 - mcp.server.lowlevel.server - DEBUG - Registering handler for CallToolRequest
+2026-09-07 08:40:00,811 - mcp.server.lowlevel.server - DEBUG - Registering handler for SetLevelRequest
+2026-09-07 08:40:00,827 - voicemode - INFO - Module loaded with DISABLE_SILENCE_DETECTION=False
+2026-09-07 08:40:00,848 - voicemode - DEBUG - Loading tool: service
+
+Active Whisper model: large-v3-turbo [Not installed]
+  Size: 1.6 GB
+  Languages: Multilingual
+  Description: Faster large model with good accuracy
+
+Whisper service status: Running
+
+To change: voicemode whisper model <model-name>
+To list all: voicemode whisper model --all
+[exit 0]
+$ voicemode whisper model --all
+2026-09-07 08:40:01,110 - voicemode - INFO - Debug logging to file: /Users/ibhatt/voicemode_debug.log
+2026-09-07 08:40:01,124 - voicemode - INFO - Tool loading: whitelist mode (2 tools) - loading 2 tools
+2026-09-07 08:40:01,124 - voicemode - DEBUG - Loading tool: converse
+2026-09-07 08:40:01,756 - mcp.server.lowlevel.server - DEBUG - Initializing server 'voicemode'
+2026-09-07 08:40:01,756 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListToolsRequest
+2026-09-07 08:40:01,756 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListResourcesRequest
+2026-09-07 08:40:01,756 - mcp.server.lowlevel.server - DEBUG - Registering handler for PromptListRequest
+2026-09-07 08:40:01,756 - mcp.server.lowlevel.server - DEBUG - Registering handler for CallToolRequest
+2026-09-07 08:40:01,756 - mcp.server.lowlevel.server - DEBUG - Registering handler for SetLevelRequest
+2026-09-07 08:40:01,771 - voicemode - INFO - Module loaded with DISABLE_SILENCE_DETECTION=False
+2026-09-07 08:40:01,788 - voicemode - DEBUG - Loading tool: service
+
+Whisper Models:
+
+  tiny            [ Download ]     39 MB   Multilingual         Fastest, least accurate
+  tiny.en         [ Download ]     39 MB   English only         Fastest English model
+  base            [✓ Installed+ML] 142 MB  Multilingual         Good balance of speed and accuracy
+  base.en         [ Download ]     142 MB  English only         Good English model
+  small           [ Download ]     466 MB  Multilingual         Better accuracy, slower
+  small.en        [ Download ]     466 MB  English only         Better English accuracy
+  medium          [ Download ]     1.5 GB  Multilingual         High accuracy, slow
+  medium.en       [ Download ]     1.5 GB  English only         High English accuracy
+  large-v1        [ Download ]     2.9 GB  Multilingual         Original large model
+  large-v2        [ Download ]     2.9 GB  Multilingual         Improved large model (recommended)
+  large-v3        [ Download ]     3.1 GB  Multilingual         Latest large model
+→ large-v3-turbo  [ Download ]     1.6 GB  Multilingual         Faster large model with good accuracy (active)
+
+Models directory: /Users/ibhatt/.voicemode/services/whisper/models
+Total size: 142 MB installed / 14.8 GB available
+
+To use a model: voicemode whisper model <model-name>
+[exit 0]
+\n===== SERVICES =====
+$ voicemode status
+2026-09-07 08:40:02,025 - voicemode - INFO - Debug logging to file: /Users/ibhatt/voicemode_debug.log
+{
+  "version": "8.12.0",
+  "runtime": {
+    "mode": "mcp",
+    "command": "uvx voice-mode"
+  },
+  "tts": {
+    "active": "kokoro",
+    "providers": {
+      "kokoro": {
+        "status": "running",
+        "port": 8090,
+        "voice": "af_sky",
+        "version": "v0.2.4",
+        "memory": "718 MB",
+        "uptime": "1h 2m",
+        "auto_start": true,
+        "health": "healthy"
+      },
+      "openai": {
+        "status": "not_configured",
+        "api_key_set": false,
+        "model": "tts-1-hd"
+      }
+    }
+  },
+  "stt": {
+    "active": "whisper",
+    "providers": {
+      "whisper": {
+        "status": "running",
+        "port": 2060,
+        "model": "base",
+        "coreml": true,
+        "version": "v1.9.3",
+        "memory": "28 MB",
+        "uptime": "51m 2s",
+        "auto_start": true,
+        "health": "healthy"
+      },
+      "openai": {
+        "status": "not_configured",
+        "api_key_set": false
+      }
+    }
+  },
+  "config": {
+    "file": "/Users/ibhatt/.voicemode/voicemode.env",
+    "voices": [
+      "af_sky"
+    ],
+    "audio_feedback": true
+  },
+  "dependencies": {
+    "ffmpeg": true,
+    "portaudio": true,
+    "uv": true
+  }
+}
+[exit 0]
+$ voicemode service status whisper
+2026-09-07 08:40:02,820 - voicemode - INFO - Debug logging to file: /Users/ibhatt/voicemode_debug.log
+2026-09-07 08:40:02,832 - voicemode - INFO - Tool loading: whitelist mode (2 tools) - loading 2 tools
+2026-09-07 08:40:02,833 - voicemode - DEBUG - Loading tool: converse
+2026-09-07 08:40:03,443 - mcp.server.lowlevel.server - DEBUG - Initializing server 'voicemode'
+2026-09-07 08:40:03,444 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListToolsRequest
+2026-09-07 08:40:03,444 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListResourcesRequest
+2026-09-07 08:40:03,444 - mcp.server.lowlevel.server - DEBUG - Registering handler for PromptListRequest
+2026-09-07 08:40:03,444 - mcp.server.lowlevel.server - DEBUG - Registering handler for CallToolRequest
+2026-09-07 08:40:03,444 - mcp.server.lowlevel.server - DEBUG - Registering handler for SetLevelRequest
+2026-09-07 08:40:03,458 - voicemode - INFO - Module loaded with DISABLE_SILENCE_DETECTION=False
+2026-09-07 08:40:03,475 - voicemode - DEBUG - Loading tool: service
+2026-09-07 08:40:03,477 - asyncio - DEBUG - Using selector: KqueueSelector
+✅ Whisper is running locally
+   PID: 27307
+   Port: 2060
+   CPU: 0.0%
+   Memory: 28.2 MB
+   Uptime: 51m 3s
+   Model: ggml-base.bin
+   Version: v1.9.3
+   Core ML: ✓ Enabled & Active
+   GPU: Metal
+[exit 0]
+$ voicemode service status kokoro
+2026-09-07 08:40:03,904 - voicemode - INFO - Debug logging to file: /Users/ibhatt/voicemode_debug.log
+2026-09-07 08:40:03,920 - voicemode - INFO - Tool loading: whitelist mode (2 tools) - loading 2 tools
+2026-09-07 08:40:03,920 - voicemode - DEBUG - Loading tool: converse
+2026-09-07 08:40:04,581 - mcp.server.lowlevel.server - DEBUG - Initializing server 'voicemode'
+2026-09-07 08:40:04,581 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListToolsRequest
+2026-09-07 08:40:04,581 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListResourcesRequest
+2026-09-07 08:40:04,581 - mcp.server.lowlevel.server - DEBUG - Registering handler for PromptListRequest
+2026-09-07 08:40:04,581 - mcp.server.lowlevel.server - DEBUG - Registering handler for CallToolRequest
+2026-09-07 08:40:04,581 - mcp.server.lowlevel.server - DEBUG - Registering handler for SetLevelRequest
+2026-09-07 08:40:04,598 - voicemode - INFO - Module loaded with DISABLE_SILENCE_DETECTION=False
+2026-09-07 08:40:04,616 - voicemode - DEBUG - Loading tool: service
+2026-09-07 08:40:04,618 - asyncio - DEBUG - Using selector: KqueueSelector
+✅ Kokoro is running locally
+   PID: 91402
+   Port: 8090
+   CPU: 0.0%
+   Memory: 753.8 MB
+   Uptime: 1h 2m 40s
+   Version: v0.2.4
+[exit 0]
+$ voicemode service status mlx-audio
+2026-09-07 08:40:05,080 - voicemode - INFO - Debug logging to file: /Users/ibhatt/voicemode_debug.log
+2026-09-07 08:40:05,096 - voicemode - INFO - Tool loading: whitelist mode (2 tools) - loading 2 tools
+2026-09-07 08:40:05,096 - voicemode - DEBUG - Loading tool: converse
+2026-09-07 08:40:05,725 - mcp.server.lowlevel.server - DEBUG - Initializing server 'voicemode'
+2026-09-07 08:40:05,725 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListToolsRequest
+2026-09-07 08:40:05,726 - mcp.server.lowlevel.server - DEBUG - Registering handler for ListResourcesRequest
+2026-09-07 08:40:05,726 - mcp.server.lowlevel.server - DEBUG - Registering handler for PromptListRequest
+2026-09-07 08:40:05,726 - mcp.server.lowlevel.server - DEBUG - Registering handler for CallToolRequest
+2026-09-07 08:40:05,726 - mcp.server.lowlevel.server - DEBUG - Registering handler for SetLevelRequest
+2026-09-07 08:40:05,740 - voicemode - INFO - Module loaded with DISABLE_SILENCE_DETECTION=False
+2026-09-07 08:40:05,757 - voicemode - DEBUG - Loading tool: service
+2026-09-07 08:40:05,759 - asyncio - DEBUG - Using selector: KqueueSelector
+✅ Mlx_audio is running locally
+   PID: 35183
+   Port: 8890
+   CPU: 0.0%
+   Memory: 196.8 MB
+   Uptime: 48m 18s
+[exit 0]
+$ launchctl list | grep -i voicemode || echo '(no voicemode jobs)'
+35183	0	com.voicemode.mlx-audio
+27280	0	com.voicemode.whisper
+91355	0	com.voicemode.kokoro
+[exit 0]
+\n===== PORTS =====
+$ lsof -nP -iTCP:2022 -sTCP:LISTEN || echo '(2022 free)'
+(2022 free)
+[exit 0]
+$ lsof -nP -iTCP:2060 -sTCP:LISTEN || echo '(2060 free)'
+COMMAND     PID   USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
+whisper-s 27307 ibhatt    3u  IPv4 0x342473db06d79dcc      0t0  TCP *:2060 (LISTEN)
+[exit 0]
+$ lsof -nP -iTCP:8880 -sTCP:LISTEN || echo '(8880 free)'
+(8880 free)
+[exit 0]
+$ lsof -nP -iTCP:8090 -sTCP:LISTEN || echo '(8090 free)'
+COMMAND     PID   USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
+python3.1 91402 ibhatt   10u  IPv4 0x78ecaba975c64c66      0t0  TCP *:8090 (LISTEN)
+[exit 0]
+$ lsof -nP -iTCP:8890 -sTCP:LISTEN || echo '(8890 free)'
+COMMAND     PID   USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
+python3.1 35183 ibhatt    7u  IPv4 0xe817a56b7ed4b69c      0t0  TCP 127.0.0.1:8890 (LISTEN)
+[exit 0]
+$ lsof -nP -iTCP:8765 -sTCP:LISTEN || echo '(8765 free)'
+(8765 free)
+[exit 0]
+$ lsof -nP -iTCP:8785 -sTCP:LISTEN || echo '(8785 free)'
+(8785 free)
+[exit 0]
+\n===== WHISPER =====
+$ find ~/.voicemode/services/whisper/models -maxdepth 1 -type f -print 2>/dev/null | sort
+/Users/ibhatt/.voicemode/services/whisper/models/.DS_Store
+/Users/ibhatt/.voicemode/services/whisper/models/.gitignore
+/Users/ibhatt/.voicemode/services/whisper/models/convert-h5-to-coreml.py
+/Users/ibhatt/.voicemode/services/whisper/models/convert-h5-to-ggml.py
+/Users/ibhatt/.voicemode/services/whisper/models/convert-parakeet-to-ggml.py
+/Users/ibhatt/.voicemode/services/whisper/models/convert-pt-to-ggml.py
+/Users/ibhatt/.voicemode/services/whisper/models/convert-silero-vad-to-ggml.py
+/Users/ibhatt/.voicemode/services/whisper/models/convert-whisper-to-coreml.py
+/Users/ibhatt/.voicemode/services/whisper/models/convert-whisper-to-openvino.py
+/Users/ibhatt/.voicemode/services/whisper/models/download-coreml-model.sh
+/Users/ibhatt/.voicemode/services/whisper/models/download-ggml-model.cmd
+/Users/ibhatt/.voicemode/services/whisper/models/download-ggml-model.sh
+/Users/ibhatt/.voicemode/services/whisper/models/download-vad-model.cmd
+/Users/ibhatt/.voicemode/services/whisper/models/download-vad-model.sh
+/Users/ibhatt/.voicemode/services/whisper/models/for-tests-ggml-base.bin
+/Users/ibhatt/.voicemode/services/whisper/models/for-tests-ggml-base.en.bin
+/Users/ibhatt/.voicemode/services/whisper/models/for-tests-ggml-large.bin
+/Users/ibhatt/.voicemode/services/whisper/models/for-tests-ggml-medium.bin
+/Users/ibhatt/.voicemode/services/whisper/models/for-tests-ggml-medium.en.bin
+/Users/ibhatt/.voicemode/services/whisper/models/for-tests-ggml-parakeet-tdt-bad-nfft0.bin
+/Users/ibhatt/.voicemode/services/whisper/models/for-tests-ggml-parakeet-tdt.bin
+/Users/ibhatt/.voicemode/services/whisper/models/for-tests-ggml-small.bin
+/Users/ibhatt/.voicemode/services/whisper/models/for-tests-ggml-small.en.bin
+/Users/ibhatt/.voicemode/services/whisper/models/for-tests-ggml-tiny.bin
+/Users/ibhatt/.voicemode/services/whisper/models/for-tests-ggml-tiny.en.bin
+/Users/ibhatt/.voicemode/services/whisper/models/for-tests-silero-v6.2.0-ggml.bin
+/Users/ibhatt/.voicemode/services/whisper/models/generate-coreml-interface.sh
+/Users/ibhatt/.voicemode/services/whisper/models/generate-coreml-model.sh
+/Users/ibhatt/.voicemode/services/whisper/models/generate-parakeet-test-model.py
+/Users/ibhatt/.voicemode/services/whisper/models/ggml_to_pt.py
+/Users/ibhatt/.voicemode/services/whisper/models/ggml-base.bin
+/Users/ibhatt/.voicemode/services/whisper/models/README.md
+/Users/ibhatt/.voicemode/services/whisper/models/requirements-coreml.txt
+/Users/ibhatt/.voicemode/services/whisper/models/requirements-openvino.txt
+/Users/ibhatt/.voicemode/services/whisper/models/requirements-parakeet.txt
+[exit 0]
+$ grep -n -E 'MODEL_NAME|MODEL_PATH|WHISPER_PORT|--port|--model|FALLBACK' ~/.voicemode/services/whisper/bin/start-whisper-server.sh
+72:MODEL_NAME="${VOICEMODE_WHISPER_MODEL:-base}"
+73:MODEL_PATH="$WHISPER_DIR/models/ggml-$MODEL_NAME.bin"
+75:log "Starting whisper-server with model: $MODEL_NAME"
+78:if [ ! -f "$MODEL_PATH" ]; then
+79:    log "Error: Model $MODEL_NAME not found at $MODEL_PATH"
+84:    FALLBACK_MODEL=$(ls -1 "$WHISPER_DIR/models/" 2>/dev/null | grep "^ggml-.*\.bin$" | head -1)
+85:    if [ -n "$FALLBACK_MODEL" ]; then
+86:        MODEL_PATH="$WHISPER_DIR/models/$FALLBACK_MODEL"
+87:        log "Using fallback model: $FALLBACK_MODEL"
+95:WHISPER_PORT="${VOICEMODE_WHISPER_PORT:-2022}"
+113:# COREML_MODEL_DIR="$WHISPER_DIR/models/ggml-${MODEL_NAME}-encoder.mlmodelc"
+136:log "Model path: $MODEL_PATH"
+137:log "Port: $WHISPER_PORT"
+140:COREML_MODEL_DIR="$WHISPER_DIR/models/ggml-${MODEL_NAME}-encoder.mlmodelc"
+144:HEALTH_URL="http://127.0.0.1:${WHISPER_PORT}/health"
+150:    --port "$WHISPER_PORT" \
+151:    --model "$MODEL_PATH" \
+208:    --port "$WHISPER_PORT" \
+209:    --model "$MODEL_PATH" \
+[exit 0]
+$ tail -80 ~/.voicemode/logs/whisper/whisper.out.log
+ffmpeg version 9.0.1 Copyright (c) 2000-2026 the FFmpeg developers
+built with Apple clang version 21.0.0 (clang-2100.1.1.101)
+configuration: --prefix=/opt/homebrew/Cellar/ffmpeg/9.0.1_1 --enable-shared --enable-pthreads --enable-version3 --cc=clang --host-cflags= --host-ldflags= --enable-ffplay --enable-gpl --enable-libsvtav1 --enable-libopus --enable-libx264 --enable-libmp3lame --enable-libdav1d --enable-libvmaf --enable-libvpx --enable-libx265 --enable-openssl --enable-videotoolbox --enable-audiotoolbox --enable-neon
+libavutil      61.  1.101 / 61.  1.101
+libavcodec     63.  1.101 / 63.  1.101
+libavformat    63.  1.101 / 63.  1.101
+libavdevice    63.  1.101 / 63.  1.101
+libavfilter    12.  1.101 / 12.  1.101
+libswscale     10.  1.101 / 10.  1.101
+libswresample   7.  1.101 /  7.  1.101
+
+Exiting with exit code 0
+ffmpeg is available.
+[exit 0]
+$ tail -80 ~/.voicemode/logs/whisper/whisper.err.log
+whisper_init_from_file_with_params_no_state: loading model from '/Users/ibhatt/.voicemode/services/whisper/models/ggml-base.bin'
+whisper_init_with_params_no_state: use gpu    = 1
+whisper_init_with_params_no_state: flash attn = 1
+whisper_init_with_params_no_state: gpu_device = 0
+whisper_init_with_params_no_state: dtw        = 0
+ggml_metal_device_init: tensor API disabled for pre-M5 and pre-A19 devices
+ggml_metal_library_init: using embedded metal library
+ggml_metal_library_init: loaded in 0.011 sec
+ggml_metal_rsets_init: creating a residency set collection (keep_alive = 180 s)
+ggml_metal_device_init: GPU name:   MTL0 (Apple M4 Pro)
+ggml_metal_device_init: GPU family: MTLGPUFamilyApple9  (1009)
+ggml_metal_device_init: GPU family: MTLGPUFamilyCommon3 (3003)
+ggml_metal_device_init: GPU family: MTLGPUFamilyMetal4  (5002)
+ggml_metal_device_init: simdgroup reduction   = true
+ggml_metal_device_init: simdgroup matrix mul. = true
+ggml_metal_device_init: has unified memory    = true
+ggml_metal_device_init: has bfloat            = true
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = true
+ggml_metal_device_init: recommendedMaxWorkingSetSize  = 40200.90 MB
+whisper_init_with_params_no_state: devices    = 3
+whisper_init_with_params_no_state: backends   = 3
+whisper_model_load: loading model
+whisper_model_load: n_vocab       = 51865
+whisper_model_load: n_audio_ctx   = 1500
+whisper_model_load: n_audio_state = 512
+whisper_model_load: n_audio_head  = 8
+whisper_model_load: n_audio_layer = 6
+whisper_model_load: n_text_ctx    = 448
+whisper_model_load: n_text_state  = 512
+whisper_model_load: n_text_head   = 8
+whisper_model_load: n_text_layer  = 6
+whisper_model_load: n_mels        = 80
+whisper_model_load: ftype         = 1
+whisper_model_load: qntvr         = 0
+whisper_model_load: type          = 2 (base)
+whisper_model_load: adding 1608 extra tokens
+whisper_model_load: n_langs       = 99
+whisper_model_load:         MTL0 total size =   147.37 MB
+whisper_model_load: model size    =  147.37 MB
+whisper_backend_init_gpu: device 0: MTL0 (type: 1)
+whisper_backend_init_gpu: found GPU device 0: MTL0 (type: 1, cnt: 0)
+whisper_backend_init_gpu: using MTL0 backend
+ggml_metal_init: allocating
+ggml_metal_init: found device: Apple M4 Pro
+ggml_metal_init: picking default device: Apple M4 Pro
+ggml_metal_init: use fusion         = true
+ggml_metal_init: use concurrency    = true
+ggml_metal_init: use graph optimize = true
+whisper_backend_init: using BLAS backend
+whisper_init_state: kv self size  =    6.29 MB
+whisper_init_state: kv cross size =   18.87 MB
+whisper_init_state: kv pad  size  =    3.15 MB
+whisper_init_state: loading Core ML model from '/Users/ibhatt/.voicemode/services/whisper/models/ggml-base-encoder.mlmodelc'
+whisper_init_state: first run on a device may take a while ...
+whisper_init_state: Core ML model loaded
+whisper_init_state: compute buffer (conv)   =    5.62 MB
+whisper_init_state: compute buffer (cross)  =   41.53 MB
+whisper_init_state: compute buffer (decode) =   97.29 MB
+[exit 0]
+\n===== KOKORO =====
+$ tail -5 ~/.voicemode/services/kokoro/start-gpu_mac.sh
+
+# Run FastAPI with GPU extras using uv run
+uv pip install -e .
+uv run --no-sync python docker/scripts/download_model.py --output api/src/models/v1_0
+uv run --no-sync uvicorn api.src.main:app --host 0.0.0.0 --port 8090
+[exit 0]
+$ tail -60 ~/.voicemode/logs/kokoro/kokoro.out.log
+[38;2;46;139;87m08:39:07 AM[0m | DEBUG    | [38;2;65;105;225mtext_processor:65[0m | Total processing took 0.26ms for chunk: 'Key verdicts:'
+[38;2;46;139;87m08:39:07 AM[0m | DEBUG    | [38;2;65;105;225mtext_processor:65[0m | Total processing took 0.60ms for chunk: '- Unified `service install whisper` is a regressio...'
+[38;2;46;139;87m08:39:07 AM[0m | DEBUG    | [38;2;65;105;225mtext_processor:65[0m | Total processing took 0.76ms for chunk: 'it discarded model selection and always defaults t...'
+[38;2;46;139;87m08:39:07 AM[0m | DEBUG    | [38;2;65;105;225mtext_processor:65[0m | Total processing took 0.58ms for chunk: '- The configured runtime then requests `large-vthr...'
+[38;2;46;139;87m08:39:07 AM[0m | DEBUG    | [38;2;65;105;225mtext_processor:65[0m | Total processing took 0.41ms for chunk: '- MLX Audio is the real upstream server and suppor...'
+[38;2;46;139;87m08:39:07 AM[0m | DEBUG    | [38;2;65;105;225mtext_processor:65[0m | Total processing took 0.34ms for chunk: '- `mlx-lm` supports Qwen-family model internals;'
+[38;2;46;139;87m08:39:07 AM[0m | DEBUG    | [38;2;65;105;225mtext_processor:65[0m | Total processing took 0.34ms for chunk: 'Misaki provides Kokoro phonemes.'
+[38;2;46;139;87m08:39:07 AM[0m | DEBUG    | [38;2;65;105;225mtext_processor:65[0m | Total processing took 0.30ms for chunk: '- The port was not technically ignored:'
+[38;2;46;139;87m08:39:07 AM[0m | DEBUG    | [38;2;65;105;225mtext_processor:65[0m | Total processing took 0.52ms for chunk: 'only `VOICEMODE MLX AUDIO BASE URL equals ...eight...'
+[38;2;46;139;87m08:39:07 AM[0m | DEBUG    | [38;2;65;105;225mtext_processor:65[0m | Total processing took 0.51ms for chunk: 'No `VOICEMODE MLX AUDIO PORT` is configured, so la...'
+[38;2;46;139;87m08:39:07 AM[0m | DEBUG    | [38;2;65;105;225mtext_processor:65[0m | Total processing took 0.34ms for chunk: 'The installer still lacks a `--port` option and do...'
+[38;2;46;139;87m08:39:07 AM[0m | DEBUG    | [38;2;65;105;225mtext_processor:65[0m | Total processing took 0.33ms for chunk: '- The portminus three thousand UI message is misle...'
+[38;2;46;139;87m08:39:07 AM[0m | DEBUG    | [38;2;65;105;225mtext_processor:65[0m | Total processing took 0.31ms for chunk: 'VoiceMode intentionally starts MLX without `--star...'
+[38;2;46;139;87m08:39:07 AM[0m | DEBUG    | [38;2;65;105;225mtext_processor:65[0m | Total processing took 0.48ms for chunk: '- Cached MLX models include Kokoro bfsixteen, Whis...'
+[38;2;46;139;87m08:39:07 AM[0m | DEBUG    | [38;2;65;105;225mtext_processor:65[0m | Total processing took 0.27ms for chunk: '- Current installer choices are mutually exclusive...'
+[38;2;46;139;87m08:39:07 AM[0m | DEBUG    | [38;2;65;105;225mtext_processor:65[0m | Total processing took 0.16ms for chunk: '- Recommended:'
+[38;2;46;139;87m08:39:07 AM[0m | DEBUG    | [38;2;65;105;225mtext_processor:65[0m | Total processing took 0.18ms for chunk: 'Whisper STT plus MLX TTS - Alternate:'
+[38;2;46;139;87m08:39:07 AM[0m | DEBUG    | [38;2;65;105;225mtext_processor:65[0m | Total processing took 0.41ms for chunk: 'Whisper STT plus Kokoro TTS - Kokoro is installed ...'
+[38;2;46;139;87m08:39:07 AM[0m | DEBUG    | [38;2;65;105;225mtext_processor:65[0m | Total processing took 0.44ms for chunk: '- Whisper remains mandatory because MLX Whisper ze...'
+[38;2;46;139;87m08:39:07 AM[0m | DEBUG    | [38;2;65;105;225mtext_processor:65[0m | Total processing took 0.28ms for chunk: '- Unified CLI has no uninstall command.'
+[38;2;46;139;87m08:39:07 AM[0m | DEBUG    | [38;2;65;105;225mtext_processor:65[0m | Total processing took 0.33ms for chunk: 'MLX uninstall code exists but is unreachable from ...'
+[38;2;46;139;87m08:39:07 AM[0m | DEBUG    | [38;2;65;105;225mtext_processor:65[0m | Total processing took 0.38ms for chunk: 'deprecated Whisper documentation points to nonexis...'
+[38;2;46;139;87m08:39:07 AM[0m | DEBUG    | [38;2;65;105;225mtext_processor:65[0m | Total processing took 0.37ms for chunk: '- Removing a backend does not repair configured en...'
+[38;2;46;139;87m08:39:07 AM[0m | DEBUG    | [38;2;65;105;225mtext_processor:65[0m | Total processing took 0.70ms for chunk: 'Therefore, the safest current Apple Silicon arrang...'
+[38;2;46;139;87m08:39:07 AM[0m | DEBUG    | [38;2;65;105;225mtext_processor:65[0m | Total processing took 0.16ms for chunk: 'Run this read-only batch after MLX finishes:'
+[38;2;46;139;87m08:39:07 AM[0m | DEBUG    | [38;2;65;105;225mtext_processor:65[0m | Total processing took 0.74ms for chunk: '```bash zsh inspect slash audit-live-backends-sh `...'
+[38;2;46;139;87m08:39:07 AM[0m | DEBUG    | [38;2;65;105;225mtext_processor:65[0m | Total processing took 0.17ms for chunk: 'Say `done` afterward and I'll validate the report.'
+[38;2;46;139;87m08:39:07 AM[0m | INFO     | [38;2;65;105;225mtext_processor:271[0m | Yielding chunk 1: 'Documented all findings. Key verdicts: - Unified `...' (229 tokens)
+[38;2;46;139;87m08:39:07 AM[0m | DEBUG    | [38;2;65;105;225mkokoro_v1:261[0m | Generating audio for text with lang_code 'a': 'Documented all findings. Key verdicts: - Unified `service install whisper` is a regression: it disca...'
+[38;2;46;139;87m08:39:09 AM[0m | DEBUG    | [38;2;65;105;225mkokoro_v1:268[0m | Got audio chunk with shape: torch.Size([355200])
+[38;2;46;139;87m08:39:09 AM[0m | INFO     | [38;2;65;105;225mtext_processor:271[0m | Yielding chunk 2: '- The configured runtime then requests `large-vthr...' (215 tokens)
+[38;2;46;139;87m08:39:09 AM[0m | DEBUG    | [38;2;65;105;225mkokoro_v1:261[0m | Generating audio for text with lang_code 'a': '- The configured runtime then requests `large-vthree-turbo`, cannot find it, and silently falls back...'
+[38;2;46;139;87m08:39:10 AM[0m | DEBUG    | [38;2;65;105;225mkokoro_v1:268[0m | Got audio chunk with shape: torch.Size([313200])
+[38;2;46;139;87m08:39:10 AM[0m | INFO     | [38;2;65;105;225mtext_processor:271[0m | Yielding chunk 3: '- `mlx-lm` supports Qwen-family model internals; M...' (234 tokens)
+[38;2;46;139;87m08:39:10 AM[0m | DEBUG    | [38;2;65;105;225mkokoro_v1:261[0m | Generating audio for text with lang_code 'a': '- `mlx-lm` supports Qwen-family model internals; Misaki provides Kokoro phonemes. - The port was not...'
+[38;2;46;139;87m08:39:11 AM[0m | DEBUG    | [38;2;65;105;225mkokoro_v1:268[0m | Got audio chunk with shape: torch.Size([347400])
+[38;2;46;139;87m08:39:11 AM[0m | INFO     | [38;2;65;105;225mtext_processor:271[0m | Yielding chunk 4: 'No `VOICEMODE MLX AUDIO PORT` is configured, so la...' (180 tokens)
+[38;2;46;139;87m08:39:11 AM[0m | DEBUG    | [38;2;65;105;225mkokoro_v1:261[0m | Generating audio for text with lang_code 'a': 'No `VOICEMODE MLX AUDIO PORT` is configured, so launchd correctly falls back to eighty-eight ninety....'
+[38;2;46;139;87m08:39:12 AM[0m | DEBUG    | [38;2;65;105;225mkokoro_v1:268[0m | Got audio chunk with shape: torch.Size([273000])
+[38;2;46;139;87m08:39:12 AM[0m | INFO     | [38;2;65;105;225mtext_processor:271[0m | Yielding chunk 5: '- The portminus three thousand UI message is misle...' (261 tokens)
+[38;2;46;139;87m08:39:12 AM[0m | DEBUG    | [38;2;65;105;225mkokoro_v1:261[0m | Generating audio for text with lang_code 'a': '- The portminus three thousand UI message is misleading upstream behavior. VoiceMode intentionally s...'
+[38;2;46;139;87m08:39:13 AM[0m | DEBUG    | [38;2;65;105;225mkokoro_v1:268[0m | Got audio chunk with shape: torch.Size([358200])
+[38;2;46;139;87m08:39:13 AM[0m | INFO     | [38;2;65;105;225mtext_processor:271[0m | Yielding chunk 6: '- Current installer choices are mutually exclusive...' (257 tokens)
+[38;2;46;139;87m08:39:13 AM[0m | DEBUG    | [38;2;65;105;225mkokoro_v1:261[0m | Generating audio for text with lang_code 'a': '- Current installer choices are mutually exclusive: - Recommended: Whisper STT plus MLX TTS - Altern...'
+[38;2;46;139;87m08:39:14 AM[0m | DEBUG    | [38;2;65;105;225mkokoro_v1:268[0m | Got audio chunk with shape: torch.Size([370800])
+[38;2;46;139;87m08:39:14 AM[0m | INFO     | [38;2;65;105;225mtext_processor:271[0m | Yielding chunk 7: '- Whisper remains mandatory because MLX Whisper ze...' (241 tokens)
+[38;2;46;139;87m08:39:14 AM[0m | DEBUG    | [38;2;65;105;225mkokoro_v1:261[0m | Generating audio for text with lang_code 'a': '- Whisper remains mandatory because MLX Whisper zero point four-three has a recorded repetition bug....'
+[38;2;46;139;87m08:39:15 AM[0m | DEBUG    | [38;2;65;105;225mkokoro_v1:268[0m | Got audio chunk with shape: torch.Size([346800])
+[38;2;46;139;87m08:39:28 AM[0m | INFO     | [38;2;65;105;225mtext_processor:271[0m | Yielding chunk 8: 'deprecated Whisper documentation points to nonexis...' (190 tokens)
+[38;2;46;139;87m08:39:28 AM[0m | DEBUG    | [38;2;65;105;225mkokoro_v1:261[0m | Generating audio for text with lang_code 'a': 'deprecated Whisper documentation points to nonexistent `service uninstall`. - Removing a backend doe...'
+[38;2;46;139;87m08:39:29 AM[0m | DEBUG    | [38;2;65;105;225mkokoro_v1:268[0m | Got audio chunk with shape: torch.Size([277200])
+[38;2;46;139;87m08:39:38 AM[0m | INFO     | [38;2;65;105;225mtext_processor:271[0m | Yielding chunk 9: 'Therefore, the safest current Apple Silicon arrang...' (253 tokens)
+[38;2;46;139;87m08:39:38 AM[0m | DEBUG    | [38;2;65;105;225mkokoro_v1:261[0m | Generating audio for text with lang_code 'a': 'Therefore, the safest current Apple Silicon arrangement is likely whisper-cpp STT plus MLX Kokoro TT...'
+[38;2;46;139;87m08:39:39 AM[0m | DEBUG    | [38;2;65;105;225mkokoro_v1:268[0m | Got audio chunk with shape: torch.Size([358200])
+[38;2;46;139;87m08:39:48 AM[0m | INFO     | [38;2;65;105;225mtext_processor:271[0m | Yielding chunk 10: 'Run this read-only batch after MLX finishes: ```ba...' (243 tokens)
+[38;2;46;139;87m08:39:48 AM[0m | DEBUG    | [38;2;65;105;225mkokoro_v1:261[0m | Generating audio for text with lang_code 'a': 'Run this read-only batch after MLX finishes: ```bash zsh inspect slash audit-live-backends-sh ``` It...'
+[38;2;46;139;87m08:39:49 AM[0m | DEBUG    | [38;2;65;105;225mkokoro_v1:268[0m | Got audio chunk with shape: torch.Size([358800])
+[38;2;46;139;87m08:40:03 AM[0m | INFO     | [38;2;65;105;225mtext_processor:308[0m | Yielding final chunk 11 for part: 'Say `done` afterward and I'll validate the report....' (50 tokens)
+[38;2;46;139;87m08:40:03 AM[0m | DEBUG    | [38;2;65;105;225mkokoro_v1:261[0m | Generating audio for text with lang_code 'a': 'Say `done` afterward and I'll validate the report.'
+[38;2;46;139;87m08:40:04 AM[0m | DEBUG    | [38;2;65;105;225mkokoro_v1:268[0m | Got audio chunk with shape: torch.Size([90000])
+[exit 0]
+$ tail -60 ~/.voicemode/logs/kokoro/kokoro.err.log
+ + sudachidict-core==20260723
+ + sudachipy==0.6.11
+ + sympy==1.14.0
+ + termcolor==3.3.0
+ + text2num==3.1.0
+ + thinc==8.3.11
+ + tiktoken==0.8.0
+ + tokenizers==0.22.2
+ + torch==2.14.0
+ + tqdm==4.67.1
+ + transformers==5.3.0
+ + truststore==0.10.4
+ + typeguard==4.6.0
+ + typer==0.27.2
+ + typer-slim==0.24.0
+ + typing-extensions==4.16.0
+ + unidic-lite==1.0.8
+ + uritemplate==4.2.0
+ + urllib3==2.7.0
+ + uvicorn==0.34.0
+ + wasabi==1.1.3
+ + weasel==0.4.3
+ + wrapt==2.4.0
+warning: `spacy==3.8.5` is yanked (reason: "Incorrect python3.13 support specified")
+2026-09-07 07:32:07.787 | INFO     | __main__:download_model:63 - Downloading Kokoro v1.0 model files
+2026-09-07 07:32:07.787 | INFO     | __main__:download_model:71 - Downloading model file...
+2026-09-07 07:32:45.086 | INFO     | __main__:download_model:74 - Downloading config file...
+2026-09-07 07:32:46.413 | INFO     | __main__:download_model:81 - ✓ Model files prepared in api/src/models/v1_0
+INFO:     Started server process [78274]
+INFO:     Waiting for application startup.
+/Users/ibhatt/.voicemode/services/kokoro/.venv/lib/python3.10/site-packages/torch/nn/modules/rnn.py:1011: UserWarning: dropout option adds dropout after all but last recurrent layer, so non-zero dropout expects num_layers greater than 1, but got dropout=0.2 and num_layers=1
+  super().__init__("LSTM", *args, **kwargs)
+/Users/ibhatt/.voicemode/services/kokoro/.venv/lib/python3.10/site-packages/torch/nn/utils/weight_norm.py:145: FutureWarning: `torch.nn.utils.weight_norm` is deprecated in favor of `torch.nn.utils.parametrizations.weight_norm`.
+  WeightNorm.apply(module, name, dim)
+/Users/ibhatt/.voicemode/services/kokoro/.venv/lib/python3.10/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8880 (Press CTRL+C to quit)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [78274]
+Resolved 141 packages in 271ms
+   Building kokoro-fastapi @ file:///Users/ibhatt/.voicemode/services/kokoro
+      Built kokoro-fastapi @ file:///Users/ibhatt/.voicemode/services/kokoro
+Prepared 1 package in 319ms
+Uninstalled 1 package in 1ms
+Installed 1 package in 1ms
+ ~ kokoro-fastapi==0.3.0 (from file:///Users/ibhatt/.voicemode/services/kokoro)
+2026-09-07 07:37:23.898 | INFO     | __main__:download_model:60 - Model files already exist and are valid
+INFO:     Started server process [91402]
+INFO:     Waiting for application startup.
+/Users/ibhatt/.voicemode/services/kokoro/.venv/lib/python3.10/site-packages/torch/nn/modules/rnn.py:1011: UserWarning: dropout option adds dropout after all but last recurrent layer, so non-zero dropout expects num_layers greater than 1, but got dropout=0.2 and num_layers=1
+  super().__init__("LSTM", *args, **kwargs)
+/Users/ibhatt/.voicemode/services/kokoro/.venv/lib/python3.10/site-packages/torch/nn/utils/weight_norm.py:145: FutureWarning: `torch.nn.utils.weight_norm` is deprecated in favor of `torch.nn.utils.parametrizations.weight_norm`.
+  WeightNorm.apply(module, name, dim)
+/Users/ibhatt/.voicemode/services/kokoro/.venv/lib/python3.10/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8090 (Press CTRL+C to quit)
+[exit 0]
+\n===== MLX_AUDIO =====
+$ uv tool list | grep -A3 -B1 'mlx-audio' || true
+mlx-audio v0.4.3
+- mlx_audio.convert
+- mlx_audio.server
+- mlx_audio.sts.generate
+[exit 0]
+$ ls -l ~/.local/bin/mlx_audio.server
+lrwxr-xr-x@ 1 ibhatt  staff  66 Sep  7 07:51 /Users/ibhatt/.local/bin/mlx_audio.server -> /Users/ibhatt/.local/share/uv/tools/mlx-audio/bin/mlx_audio.server
+[exit 0]
+$ plutil -p ~/Library/LaunchAgents/com.voicemode.mlx-audio.plist
+{
+  "EnvironmentVariables" => {
+    "PATH" => "/Users/ibhatt/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin"
+  }
+  "KeepAlive" => true
+  "Label" => "com.voicemode.mlx-audio"
+  "ProgramArguments" => [
+    0 => "/bin/sh"
+    1 => "-c"
+    2 => "set -a; [ -f "$HOME/.voicemode/voicemode.env" ] && . "$HOME/.voicemode/voicemode.env"; set +a; LOG_DIR="$HOME/.voicemode/logs/mlx-audio"; mkdir -p "$LOG_DIR"; cd "$LOG_DIR"; exec "$HOME/.local/bin/mlx_audio.server" --host "${VOICEMODE_MLX_AUDIO_HOST:-127.0.0.1}" --port "${VOICEMODE_MLX_AUDIO_PORT:-8890}" --log-dir "$LOG_DIR""
+  ]
+  "RunAtLoad" => true
+  "StandardErrorPath" => "/Users/ibhatt/.voicemode/logs/mlx-audio/mlx-audio.err.log"
+  "StandardOutPath" => "/Users/ibhatt/.voicemode/logs/mlx-audio/mlx-audio.out.log"
+  "WorkingDirectory" => "/Users/ibhatt/.voicemode/logs/mlx-audio"
+}
+[exit 0]
+$ curl -fsS http://127.0.0.1:8890/ || echo '(mlx root unavailable)'
+{"message":"Welcome to the MLX Audio API server! Visit https://localhost:3000 for the UI."}[exit 0]
+$ curl -fsS http://127.0.0.1:8890/v1/models || echo '(mlx models unavailable)'
+{"object":"list","data":[{"id":"Marvis-AI/marvis-tts-100m-v0.2-MLX-6bit","object":"model","created":1788750606,"owned_by":"system"},{"id":"Marvis-AI/marvis-tts-250m-v0.1-MLX-8bit","object":"model","created":1788750606,"owned_by":"system"},{"id":"mlx-community/Kokoro-82M-bf16","object":"model","created":1788750606,"owned_by":"system"}]}[exit 0]
+$ curl -fsS http://127.0.0.1:8890/openapi.json > /tmp/voicemode-mlx-openapi.json && python3 -c 'import json; d=json.load(open("/tmp/voicemode-mlx-openapi.json")); print("\n".join(sorted(d.get("paths", {}))))' || echo '(mlx OpenAPI unavailable)'
+/
+/v1/audio/separations
+/v1/audio/speech
+/v1/audio/transcriptions
+/v1/models
+[exit 0]
+$ find ~/.cache/huggingface/hub -maxdepth 1 -type d -name 'models--mlx-community--*' -print 2>/dev/null | sort
+/Users/ibhatt/.cache/huggingface/hub/models--mlx-community--Kokoro-82M-bf16
+/Users/ibhatt/.cache/huggingface/hub/models--mlx-community--whisper-large-v3-turbo-asr-fp16
+/Users/ibhatt/.cache/huggingface/hub/models--mlx-community--whisper-tiny
+[exit 0]
+$ du -sh ~/.local/share/uv/tools/mlx-audio ~/.cache/huggingface/hub/models--mlx-community--* 2>/dev/null
+1.4G	/Users/ibhatt/.local/share/uv/tools/mlx-audio
+339M	/Users/ibhatt/.cache/huggingface/hub/models--mlx-community--Kokoro-82M-bf16
+1.5G	/Users/ibhatt/.cache/huggingface/hub/models--mlx-community--whisper-large-v3-turbo-asr-fp16
+ 71M	/Users/ibhatt/.cache/huggingface/hub/models--mlx-community--whisper-tiny
+[exit 0]
+$ tail -120 ~/.voicemode/logs/mlx-audio/mlx-audio.out.log
+INFO:     127.0.0.1:62683 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62683 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51385 - "OPTIONS /v1/audio/speech HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51385 - "POST /v1/audio/speech HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52683 - "OPTIONS /v1/audio/speech HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52683 - "POST /v1/audio/speech HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52685 - "POST /v1/audio/speech HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52838 - "POST /v1/audio/speech HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52917 - "POST /v1/audio/speech HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53066 - "POST /v1/audio/speech HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53450 - "POST /v1/audio/speech HTTP/1.1" 200 OK
+Creating new KokoroPipeline for language: a
+INFO:     127.0.0.1:59002 - "GET /v1/audio/transcriptions/realtime HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59088 - "GET /v1/audio/transcriptions/realtime HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59114 - "GET /v1/audio/transcriptions/realtime HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59124 - "GET /v1/audio/transcriptions/realtime HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59126 - "GET /v1/audio/transcriptions/realtime HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59128 - "GET /v1/audio/transcriptions/realtime HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59131 - "GET /v1/audio/transcriptions/realtime HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:60158 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60159 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60198 - "GET /v1/audio/transcriptions/realtime HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:61254 - "GET /v1/audio/transcriptions/realtime HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:63842 - "OPTIONS /v1/audio/speech HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63842 - "POST /v1/audio/speech HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65503 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65504 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65505 - "GET /openapi.json HTTP/1.1" 200 OK
+[exit 0]
+$ tail -160 ~/.voicemode/logs/mlx-audio/mlx-audio.err.log
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/bin/sh: /Users/ibhatt/.local/bin/mlx_audio.server: No such file or directory
+/bin/sh: line 0: exec: /Users/ibhatt/.local/bin/mlx_audio.server: cannot execute: No such file or directory
+/Users/ibhatt/.local/share/uv/tools/mlx-audio/lib/python3.13/site-packages/webrtcvad.py:1: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  import pkg_resources
+INFO:     Started server process [35183]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8890 (Press CTRL+C to quit)
+Fetching 11 files:   0%|          | 0/11 [00:00<?, ?it/s]Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Fetching 11 files:   9%|▉         | 1/11 [00:00<00:07,  1.26it/s]Fetching 11 files:  18%|█▊        | 2/11 [00:00<00:03,  2.30it/s]Fetching 11 files:  27%|██▋       | 3/11 [00:01<00:02,  3.45it/s]Fetching 11 files:  36%|███▋      | 4/11 [00:01<00:01,  4.07it/s]Fetching 11 files:  73%|███████▎  | 8/11 [00:01<00:00,  8.08it/s]Fetching 11 files:  82%|████████▏ | 9/11 [00:01<00:00,  6.83it/s]Fetching 11 files: 100%|██████████| 11/11 [00:39<00:00,  6.83s/it]Fetching 11 files: 100%|██████████| 11/11 [00:39<00:00,  3.55s/it]
+Fetching 11 files:   0%|          | 0/11 [00:00<?, ?it/s]Fetching 11 files: 100%|██████████| 11/11 [00:00<00:00, 1722.70it/s]
+[transformers] Model config: pad_token_id must be `None` or an integer within the vocabulary (between 0 and 2050), got 128002. This may result in unexpected behavior.
+[transformers] Model config: bos_token_id must be `None` or an integer within the vocabulary (between 0 and 2050), got 128000. This may result in unexpected behavior.
+[transformers] Model config: audio_token_id must be `None` or an integer within the vocabulary (between 0 and 2050), got 128002. This may result in unexpected behavior.
+[transformers] Model config: audio_eos_token_id must be `None` or an integer within the vocabulary (between 0 and 2050), got 128003. This may result in unexpected behavior.
+0it [00:00, ?it/s]1it [00:02,  2.35s/it]3it [00:02,  1.53it/s]8it [00:02,  5.12it/s]13it [00:02,  9.35it/s]18it [00:02, 14.04it/s]23it [00:02, 18.88it/s]28it [00:03, 23.56it/s]33it [00:03, 27.73it/s]38it [00:03, 31.48it/s]43it [00:03, 34.65it/s]48it [00:03, 37.22it/s]53it [00:03, 38.55it/s]53it [00:04, 12.61it/s]
+0it [00:00, ?it/s]1it [00:00,  7.47it/s]6it [00:00, 27.81it/s]11it [00:00, 35.12it/s]16it [00:00, 38.15it/s]21it [00:00, 39.84it/s]26it [00:00, 41.02it/s]31it [00:00, 42.11it/s]36it [00:00, 43.15it/s]41it [00:01, 43.85it/s]42it [00:01, 29.73it/s]
+0it [00:00, ?it/s]1it [00:00,  7.87it/s]6it [00:00, 27.52it/s]11it [00:00, 34.37it/s]16it [00:00, 37.92it/s]21it [00:00, 40.20it/s]26it [00:00, 41.57it/s]31it [00:00, 42.54it/s]36it [00:00, 43.22it/s]41it [00:01, 43.25it/s]46it [00:01, 43.05it/s]51it [00:01, 43.16it/s]51it [00:01, 31.57it/s]
+0it [00:00, ?it/s]1it [00:00,  8.78it/s]6it [00:00, 29.64it/s]11it [00:00, 36.34it/s]16it [00:00, 39.93it/s]21it [00:00, 41.91it/s]26it [00:00, 42.17it/s]31it [00:00, 42.39it/s]36it [00:00, 42.51it/s]41it [00:01, 39.08it/s]41it [00:01, 32.53it/s]
+0it [00:00, ?it/s]1it [00:00,  7.89it/s]6it [00:00, 28.41it/s]11it [00:00, 35.86it/s]16it [00:00, 39.06it/s]21it [00:00, 40.66it/s]26it [00:00, 41.75it/s]31it [00:00, 42.51it/s]36it [00:00, 43.37it/s]41it [00:01, 43.65it/s]42it [00:01, 33.62it/s]
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files:  10%|█         | 1/10 [00:00<00:06,  1.37it/s]Fetching 10 files:  60%|██████    | 6/10 [00:00<00:00,  8.83it/s]Fetching 10 files:  90%|█████████ | 9/10 [00:01<00:00,  5.66it/s]Fetching 10 files:  90%|█████████ | 9/10 [00:17<00:00,  5.66it/s]Fetching 10 files: 100%|██████████| 10/10 [00:40<00:00,  6.74s/it]Fetching 10 files: 100%|██████████| 10/10 [00:40<00:00,  4.05s/it]
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 1491.41it/s]
+0it [00:00, ?it/s]1it [00:00,  4.03it/s]6it [00:00, 19.11it/s]11it [00:00, 27.02it/s]16it [00:00, 31.78it/s]21it [00:00, 34.66it/s]26it [00:00, 36.52it/s]31it [00:00, 37.64it/s]35it [00:01, 38.12it/s]39it [00:01, 38.59it/s]43it [00:01, 24.98it/s]
+Fetching 56 files:   0%|          | 0/56 [00:00<?, ?it/s]Fetching 56 files:   2%|▏         | 1/56 [00:00<00:15,  3.52it/s]Fetching 56 files:   4%|▎         | 2/56 [00:02<01:21,  1.51s/it]Fetching 56 files:   7%|▋         | 4/56 [00:02<00:34,  1.52it/s]Fetching 56 files:  11%|█         | 6/56 [00:03<00:28,  1.75it/s]Fetching 56 files:  12%|█▎        | 7/56 [00:04<00:29,  1.67it/s]Fetching 56 files:  14%|█▍        | 8/56 [00:04<00:25,  1.87it/s]Fetching 56 files:  16%|█▌        | 9/56 [00:07<00:56,  1.20s/it]Fetching 56 files:  18%|█▊        | 10/56 [00:08<00:44,  1.04it/s]Fetching 56 files:  20%|█▉        | 11/56 [00:09<00:51,  1.15s/it]Fetching 56 files:  21%|██▏       | 12/56 [00:10<00:42,  1.04it/s]Fetching 56 files:  25%|██▌       | 14/56 [00:11<00:31,  1.35it/s]Fetching 56 files:  27%|██▋       | 15/56 [00:11<00:24,  1.69it/s]Fetching 56 files:  29%|██▊       | 16/56 [00:12<00:28,  1.38it/s]Fetching 56 files:  32%|███▏      | 18/56 [00:12<00:19,  2.00it/s]Fetching 56 files:  34%|███▍      | 19/56 [00:13<00:15,  2.35it/s]Fetching 56 files:  36%|███▌      | 20/56 [00:14<00:28,  1.28it/s]Fetching 56 files:  38%|███▊      | 21/56 [00:15<00:25,  1.35it/s]Fetching 56 files:  39%|███▉      | 22/56 [00:15<00:19,  1.73it/s]Fetching 56 files:  41%|████      | 23/56 [00:16<00:18,  1.78it/s]Fetching 56 files:  43%|████▎     | 24/56 [00:16<00:16,  1.94it/s]Fetching 56 files:  45%|████▍     | 25/56 [00:17<00:21,  1.43it/s]Fetching 56 files:  46%|████▋     | 26/56 [00:18<00:22,  1.36it/s]Fetching 56 files:  48%|████▊     | 27/56 [00:19<00:26,  1.12it/s]Fetching 56 files:  50%|█████     | 28/56 [00:20<00:22,  1.26it/s]Fetching 56 files:  52%|█████▏    | 29/56 [00:20<00:18,  1.45it/s]Fetching 56 files:  54%|█████▎    | 30/56 [00:21<00:19,  1.32it/s]Fetching 56 files:  55%|█████▌    | 31/56 [00:23<00:23,  1.07it/s]Fetching 56 files:  59%|█████▉    | 33/56 [00:23<00:12,  1.87it/s]Fetching 56 files:  61%|██████    | 34/56 [00:24<00:15,  1.39it/s]Fetching 56 files:  62%|██████▎   | 35/56 [00:24<00:12,  1.74it/s]Fetching 56 files:  64%|██████▍   | 36/56 [00:25<00:10,  1.92it/s]Fetching 56 files:  68%|██████▊   | 38/56 [00:26<00:09,  1.93it/s]Fetching 56 files:  71%|███████▏  | 40/56 [00:26<00:06,  2.40it/s]Fetching 56 files:  73%|███████▎  | 41/56 [00:27<00:06,  2.42it/s]Fetching 56 files:  75%|███████▌  | 42/56 [00:27<00:05,  2.75it/s]Fetching 56 files:  77%|███████▋  | 43/56 [00:27<00:04,  2.94it/s]Fetching 56 files:  79%|███████▊  | 44/56 [00:28<00:05,  2.26it/s]Fetching 56 files:  80%|████████  | 45/56 [00:28<00:04,  2.42it/s]Fetching 56 files:  82%|████████▏ | 46/56 [00:29<00:06,  1.53it/s]Fetching 56 files:  84%|████████▍ | 47/56 [00:30<00:04,  2.00it/s]Fetching 56 files:  86%|████████▌ | 48/56 [00:30<00:03,  2.18it/s]Fetching 56 files:  88%|████████▊ | 49/56 [00:30<00:03,  2.21it/s]Fetching 56 files:  89%|████████▉ | 50/56 [00:31<00:02,  2.53it/s]Fetching 56 files:  91%|█████████ | 51/56 [00:31<00:01,  2.85it/s]Fetching 56 files:  93%|█████████▎| 52/56 [00:31<00:01,  3.31it/s]Fetching 56 files:  95%|█████████▍| 53/56 [00:32<00:01,  2.10it/s]Fetching 56 files:  96%|█████████▋| 54/56 [00:32<00:00,  2.65it/s]Fetching 56 files:  98%|█████████▊| 55/56 [00:32<00:00,  2.84it/s]Fetching 56 files: 100%|██████████| 56/56 [00:43<00:00,  3.57s/it]Fetching 56 files: 100%|██████████| 56/56 [00:43<00:00,  1.27it/s]
+Fetching 56 files:   0%|          | 0/56 [00:00<?, ?it/s]Fetching 56 files: 100%|██████████| 56/56 [00:00<00:00, 2287.19it/s]
+/Users/ibhatt/.local/share/uv/tools/mlx-audio/lib/python3.13/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+Fetching 1 files:   0%|          | 0/1 [00:00<?, ?it/s]Fetching 1 files: 100%|██████████| 1/1 [00:02<00:00,  2.50s/it]Fetching 1 files: 100%|██████████| 1/1 [00:02<00:00,  2.50s/it]
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+0it [00:00, ?it/s]1it [00:00,  1.99it/s]6it [00:00, 12.07it/s]11it [00:00, 20.13it/s]16it [00:00, 26.21it/s]21it [00:00, 30.49it/s]26it [00:01, 33.48it/s]31it [00:01, 35.73it/s]35it [00:01, 36.80it/s]40it [00:01, 37.93it/s]45it [00:01, 38.84it/s]47it [00:02, 21.05it/s]
+[exit 0]

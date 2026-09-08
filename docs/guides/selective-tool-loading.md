@@ -87,7 +87,6 @@ Edit your `.mcp.json` file:
 - `diagnostics` - System diagnostics
 - `voice_registry` - Voice registry management
 
-> **Note**: Pronunciation rules are now configured via environment variables (`VOICEMODE_PRONOUNCE`) in your voicemode.env file. See the Configuration guide for details.
 
 ## Examples
 

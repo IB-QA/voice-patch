@@ -197,9 +197,7 @@ Code settings:
 This enables a **plugin-only install**: install just the plugin on a laptop,
 VM, or container and point it at a full `voicemode serve` running on a
 machine with audio devices — no local `voicemode` install required. Note the
-tool namespace becomes `mcp__voicemode-remote__*` in this mode. Full details,
-the per-mode disable table, and the duplicate-MCP precedence rule are in the
-[Claude Code Plugin guide](claude-code-plugin.md#transport-modes-local-stdio-vs-remote-http).
+tool namespace becomes `mcp__voicemode-remote__*` in this mode.
 
 ### Claude.ai and Claude Cowork
 
@@ -480,12 +478,6 @@ enumerate the TTS voices a connected server can produce by reading the
 per-backend filtering). The response is structured JSON, so apps don't
 have to scrape prose from `voice_registry`.
 
-Impressions/clones are filtered out for remote callers by default —
-see the resource's
-[Privacy section](../reference/voices-resource.md#privacy) for the
-`VOICEMODE_EXPOSE_LOCAL_VOICES_REMOTE` env var and notes on running
-behind a co-located reverse proxy.
-
 Full schema, freshness model, and example responses:
 [`voice://voices` reference](../reference/voices-resource.md).
 
@@ -494,5 +486,4 @@ Full schema, freshness model, and example responses:
 - [`voice://voices` Resource](../reference/voices-resource.md) - Structured voice discovery for HTTP clients
 - [CLI Reference](../reference/cli.md) - Complete serve command documentation
 - [Configuration Guide](configuration.md) - VoiceMode configuration options
-- [Claude Code Plugin](claude-code-plugin.md) - Plugin installation for Claude Code
 - [Tailscale Funnel documentation](https://tailscale.com/kb/1223/funnel) - Official Tailscale Funnel setup guide

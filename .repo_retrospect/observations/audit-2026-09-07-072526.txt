@@ -1,0 +1,777 @@
+VoiceMode stock audit — Mon Sep  7 07:25:26 IST 2026
+
+===== IDENTITY =====
+$ which -a voicemode
+/Users/ibhatt/.local/bin/voicemode
+[exit 0]
+$ voicemode --version
+2026-09-07 07:25:26,561 - voicemode - INFO - Debug logging to file: /Users/ibhatt/voicemode_debug.log
+VoiceMode, version 8.12.0
+[exit 0]
+$ ls -l /Users/ibhatt/.local/bin/voicemode
+lrwxr-xr-x@ 1 ibhatt  staff  60 Sep  7 06:19 /Users/ibhatt/.local/bin/voicemode -> /Users/ibhatt/.local/share/uv/tools/voice-mode/bin/voicemode
+[exit 0]
+$ echo $PATH | tr ":" "\n" | nl
+     1	/usr/local/bin
+     2	/System/Cryptexes/App/usr/bin
+     3	/usr/bin
+     4	/bin
+     5	/usr/sbin
+     6	/sbin
+     7	/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin
+     8	/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin
+     9	/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin
+    10	/pkg/env/global/bin
+    11	/Library/Apple/usr/bin
+    12	/usr/local/MacGPG2/bin
+    13	/Library/TeX/texbin
+    14	/Applications/Wireshark.app/Contents/MacOS
+    15	/usr/local/share/dotnet
+    16	~/.dotnet/tools
+    17	/usr/local/go/bin
+    18	/opt/homebrew/bin
+    19	/Library/Frameworks/Mono.framework/Versions/Current/Commands
+    20	/opt/homebrew/sbin
+    21	/Users/ibhatt/.codeium/windsurf/bin
+    22	/Users/ibhatt/claude-mem/plugin/scripts
+    23	/opt/homebrew/opt/curl/bin
+    24	/Users/ibhatt/.bun/bin
+    25	/Users/ibhatt/.local/bin
+    26	/opt/homebrew/opt/openjdk/bin
+    27	/Users/ibhatt/neo4j/bin
+    28	/Users/ibhatt/.antigravity/antigravity/bin
+    29	/Users/ibhatt/custom_alias_scripts
+    30	/Library/Frameworks/Python.framework/Versions/3.14/bin
+    31	/opt/local/bin
+    32	/opt/local/sbin
+    33	/Users/ibhatt/.cargo/bin
+[exit 0]
+
+===== PORTS =====
+$ lsof -nP -iTCP:2022 -sTCP:LISTEN || echo "(2022 free)"
+(2022 free)
+[exit 0]
+$ lsof -nP -iTCP:2060 -sTCP:LISTEN || echo "(2060 free)"
+(2060 free)
+[exit 0]
+$ lsof -nP -iTCP:8880 -sTCP:LISTEN || echo "(8880 free)"
+(8880 free)
+[exit 0]
+$ lsof -nP -iTCP:8890 -sTCP:LISTEN || echo "(8890 free)"
+(8890 free)
+[exit 0]
+$ lsof -nP -iTCP:8765 -sTCP:LISTEN || echo "(8765 free)"
+(8765 free)
+[exit 0]
+
+===== PROCESSES =====
+$ ps -eo pid,ppid,etime,command | grep -Ei "whisper|kokoro|mlx|voicemode|voice_mode" | grep -v grep || echo "(none)"
+63449 15608    01:06:47 Cursor Helper (Plugin): extension-host (user) voicemode [6-76]                       
+63450 15608    01:06:47 Cursor Helper (Plugin): extension-host (retrieval) voicemode [6-77]                       
+63451 15608    01:06:47 Cursor Helper (Plugin): extension-host (always-local) voicemode [6-78]                       
+63452 15608    01:06:47 Cursor Helper (Plugin): extension-host (agent-exec) voicemode [6-79]                       
+77771 15636       27:52 uv run voicemode
+77775 77771       27:52 /Users/ibhatt/.local/share/uv/tools/voice-mode/bin/python /Users/ibhatt/.local/bin/voicemode
+94527 58095    17:53:32 /Applications/Claude.app/Contents/Helpers/disclaimer --pgroup -- /opt/homebrew/bin/uv run voicemode
+94528 94527    17:53:32 /opt/homebrew/bin/uv run voicemode
+94529 94528    17:53:32 /Users/ibhatt/.local/share/uv/tools/voice-mode/bin/python /Users/ibhatt/.local/bin/voicemode
+24840 24834       11:24 /Users/ibhatt/.npm/_npx/ca048a23c9a56461/node_modules/@ytsuda/ripple-darwin-arm64/bin/ripple --console --proxy-pid 78087 --agent-id default --shell /bin/zsh --cwd /Users/ibhatt/Downloads/voicemode
+[exit 0]
+
+===== LAUNCHD =====
+$ launchctl list | grep -i voicemode || echo "(no voicemode jobs)"
+(no voicemode jobs)
+[exit 0]
+$ ls -l ~/Library/LaunchAgents/ | grep -i voicemode || echo "(no voicemode LaunchAgents)"
+-rw-r--r--@ 1 ibhatt  staff  1231 Aug 18 06:18 com.voicemode.kokoro.plist
+-rw-r--r--@ 1 ibhatt  staff  1663 Jul  2 07:37 com.voicemode.mlx-audio.plist
+-rw-r--r--@ 1 ibhatt  staff  1032 Aug 18 00:17 com.voicemode.whisper.plist
+[exit 0]
+$ test -f ~/Library/LaunchAgents/com.voicemode.whisper.plist && plutil -p ~/Library/LaunchAgents/com.voicemode.whisper.plist || echo '(no whisper plist)'
+{
+  "EnvironmentVariables" => {
+    "PATH" => "/Users/ibhatt/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin"
+  }
+  "KeepAlive" => true
+  "Label" => "com.voicemode.whisper"
+  "ProgramArguments" => [
+    0 => "/Users/ibhatt/.voicemode/services/whisper/bin/start-whisper-server.sh"
+  ]
+  "RunAtLoad" => true
+  "StandardErrorPath" => "/Users/ibhatt/.voicemode/logs/whisper/whisper.err.log"
+  "StandardOutPath" => "/Users/ibhatt/.voicemode/logs/whisper/whisper.out.log"
+}
+[exit 0]
+$ test -f ~/Library/LaunchAgents/com.voicemode.kokoro.plist && plutil -p ~/Library/LaunchAgents/com.voicemode.kokoro.plist || echo '(no kokoro plist)'
+{
+  "EnvironmentVariables" => {
+    "PATH" => "/Users/ibhatt/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin"
+    "UVICORN_LIMIT_MAX_REQUESTS" => "25"
+  }
+  "KeepAlive" => true
+  "Label" => "com.voicemode.kokoro"
+  "ProgramArguments" => [
+    0 => "/Users/ibhatt/.voicemode/services/kokoro/start-gpu_mac.sh"
+  ]
+  "RunAtLoad" => true
+  "StandardErrorPath" => "/Users/ibhatt/.voicemode/logs/kokoro/kokoro.err.log"
+  "StandardOutPath" => "/Users/ibhatt/.voicemode/logs/kokoro/kokoro.out.log"
+  "WorkingDirectory" => "/Users/ibhatt/.voicemode/services/kokoro"
+}
+[exit 0]
+$ test -f ~/Library/LaunchAgents/com.voicemode.mlx-audio.plist && plutil -p ~/Library/LaunchAgents/com.voicemode.mlx-audio.plist || echo '(no mlx-audio plist)'
+{
+  "EnvironmentVariables" => {
+    "PATH" => "/Users/ibhatt/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin"
+  }
+  "KeepAlive" => true
+  "Label" => "com.voicemode.mlx-audio"
+  "ProgramArguments" => [
+    0 => "/bin/sh"
+    1 => "-c"
+    2 => "set -a; [ -f "$HOME/.voicemode/voicemode.env" ] && . "$HOME/.voicemode/voicemode.env"; set +a; LOG_DIR="$HOME/.voicemode/logs/mlx-audio"; mkdir -p "$LOG_DIR"; cd "$LOG_DIR"; exec "$HOME/.local/bin/mlx_audio.server" --host "${VOICEMODE_MLX_AUDIO_HOST:-127.0.0.1}" --port "${VOICEMODE_MLX_AUDIO_PORT:-8890}" --log-dir "$LOG_DIR""
+  ]
+  "RunAtLoad" => true
+  "StandardErrorPath" => "/Users/ibhatt/.voicemode/logs/mlx-audio/mlx-audio.err.log"
+  "StandardOutPath" => "/Users/ibhatt/.voicemode/logs/mlx-audio/mlx-audio.out.log"
+  "WorkingDirectory" => "/Users/ibhatt/.voicemode/logs/mlx-audio"
+}
+[exit 0]
+
+===== SERVICE_TREE =====
+$ ls -la ~/.voicemode/ 2>&1
+total 48
+drwxr-xr-x    8 ibhatt  staff    256 Sep  7 07:24 .
+drwxr-xr-x@ 309 ibhatt  staff   9888 Sep  7 07:22 ..
+-rw-r--r--@   1 ibhatt  staff   6148 Sep  6 16:14 .DS_Store
+drwxr-xr-x@   2 ibhatt  staff     64 Sep  7 06:20 audio
+drwxr-xr-x    7 ibhatt  staff    224 Sep  7 06:40 logs
+drwxr-xr-x@   5 ibhatt  staff    160 Sep  7 06:20 soundfonts
+drwxr-xr-x@   2 ibhatt  staff     64 Sep  7 06:20 transcriptions
+-rw-r--r--@   1 ibhatt  staff  12347 Sep  7 06:20 voicemode.env
+[exit 0]
+$ ls -la ~/.voicemode/services/ 2>&1 || echo "(no services dir)"
+ls: /Users/ibhatt/.voicemode/services/: No such file or directory
+(no services dir)
+[exit 0]
+$ find ~/.voicemode/services -maxdepth 3 -type d 2>/dev/null | head -60 || echo "(none)"
+[exit 0]
+$ ls -la ~/.voicemode/services/whisper/models/ 2>&1 || echo "(no whisper models dir)"
+ls: /Users/ibhatt/.voicemode/services/whisper/models/: No such file or directory
+(no whisper models dir)
+[exit 0]
+$ test -x ~/.voicemode/services/whisper/build/bin/whisper-server && echo "whisper-server EXISTS and is executable" || echo "whisper-server MISSING or not executable"
+whisper-server MISSING or not executable
+[exit 0]
+$ cat ~/.voicemode/services/whisper/bin/start-whisper-server.sh 2>&1 | head -40 || echo "(no start script)"
+cat: /Users/ibhatt/.voicemode/services/whisper/bin/start-whisper-server.sh: No such file or directory
+[exit 0]
+
+===== CONFIG =====
+$ ls -la ~/.voicemode/*.env 2>&1
+-rw-r--r--@ 1 ibhatt  staff  12347 Sep  7 06:20 /Users/ibhatt/.voicemode/voicemode.env
+[exit 0]
+$ cat ~/.voicemode/voicemode.env 2>&1 || echo "(no global voicemode.env)"
+# Voice Mode Configuration File
+# This file is automatically generated and can be customized
+# Environment variables always take precedence over this file
+
+#############
+# Core Configuration
+#############
+
+# Base directory for all voicemode data (default: ~/.voicemode)
+VOICEMODE_BASE_DIR='~/.voicemode'
+
+# Models directory (default: ~/.voicemode/models)
+VOICEMODE_MODELS_DIR='~/.voicemode/models'
+
+# Enable debug mode (true/false)
+VOICEMODE_DEBUG=true
+
+# Enable VAD debug logging (true/false)
+# VOICEMODE_VAD_DEBUG=false
+
+# Save all audio and transcriptions (true/false)
+# VOICEMODE_SAVE_ALL=false
+
+# Save audio files (true/false)
+# VOICEMODE_SAVE_AUDIO=false
+
+# Save transcription files (true/false)
+VOICEMODE_SAVE_TRANSCRIPTIONS=true
+
+# Skip TTS for faster text-only responses (true/false)
+VOICEMODE_SKIP_TTS=false
+
+# Metrics output level in converse results (minimal/summary/verbose)
+# - minimal: Just the response text, no timing (saves tokens)
+# - summary: Response + compact timing string (default)
+# - verbose: Response + detailed metrics breakdown
+VOICEMODE_METRICS_LEVEL=summary
+
+# Enable audio feedback chimes (true/false)
+VOICEMODE_AUDIO_FEEDBACK=true
+
+# Enable sound fonts for tool use hooks (true/false, default: true)
+# VOICEMODE_SOUNDFONTS_ENABLED=true
+
+#############
+# Tool Loading Configuration
+#############
+
+# Control which MCP tools are loaded to reduce token usage
+# Whitelist mode - only load specified tools (most efficient)
+VOICEMODE_TOOLS_ENABLED=converse,service
+
+# Blacklist mode - load all tools except specified ones
+# VOICEMODE_TOOLS_DISABLED=pronunciation_add,pronunciation_remove
+
+# Examples:
+# Minimal (just voice conversation): VOICEMODE_TOOLS_ENABLED=converse
+# Voice + config: VOICEMODE_TOOLS_ENABLED=converse,service,config_get,config_set
+# Load all tools: VOICEMODE_TOOLS_DISABLED=
+# All except pronunciation: VOICEMODE_TOOLS_DISABLED=pronunciation_add,pronunciation_remove,pronunciation_list
+# Default: converse,service (basic voice interaction and service management)
+
+#############
+# Provider Configuration
+#############
+
+# Comma-separated list of TTS endpoints
+VOICEMODE_TTS_BASE_URLS=http://127.0.0.1:8090/v1
+
+# Comma-separated list of STT endpoints
+VOICEMODE_STT_BASE_URLS=http://127.0.0.1:2060/v1
+
+# STT prompt for vocabulary biasing - helps Whisper recognize names and technical terms
+# Use when specific words are consistently misrecognized
+# Example: VOICEMODE_STT_PROMPT=tmux, Tali, kubectl, VoiceMode
+# VOICEMODE_STT_PROMPT=
+
+# Comma-separated list of preferred voices (local-only by default)
+VOICEMODE_VOICES=af_sky
+
+# Comma-separated list of preferred models
+# VOICEMODE_TTS_MODELS=tts-1,tts-1-hd,gpt-4o-mini-tts
+
+# Prefer local providers over cloud (true/false)
+VOICEMODE_PREFER_LOCAL=true
+
+# Always attempt local providers (true/false)
+VOICEMODE_ALWAYS_TRY_LOCAL=true
+
+# Auto-start Kokoro service (true/false)
+VOICEMODE_AUTO_START_KOKORO=true
+
+#############
+# Whisper Configuration
+#############
+
+# Whisper model to use (tiny, base, small, medium, large, large-v2, large-v3)
+VOICEMODE_WHISPER_MODEL=large-v3-turbo
+
+# Whisper server port (default: 2060)
+VOICEMODE_WHISPER_PORT=2060
+
+# Number of threads for Whisper processing (auto-detected if not set)
+VOICEMODE_WHISPER_THREADS=8
+
+# Language for transcription (auto, en, es, fr, de, it, pt, ru, zh, ja, ko, etc.)
+VOICEMODE_WHISPER_LANGUAGE=auto
+
+# Path to Whisper models
+VOICEMODE_WHISPER_MODEL_PATH='~/.voicemode/services/whisper/models'
+
+#############
+# Kokoro Configuration
+#############
+
+# Kokoro server port (default: 8090)
+VOICEMODE_KOKORO_PORT=8090
+
+# Directory for Kokoro models
+VOICEMODE_KOKORO_MODELS_DIR='~/.voicemode/models/kokoro'
+
+# Directory for Kokoro cache
+VOICEMODE_KOKORO_CACHE_DIR='~/.voicemode/cache/kokoro'
+
+# Default Kokoro voice
+VOICEMODE_KOKORO_DEFAULT_VOICE=af_sky
+
+# Max requests before Kokoro worker restarts (mitigates memory leak)
+# See: https://github.com/hexgrad/kokoro/issues/152
+VOICEMODE_KOKORO_MAX_REQUESTS=25
+
+#############
+# Impressions (Qwen3-TTS via mlx-audio)
+#############
+
+# Where voice profile dirs live locally (each subdir is a voice).
+# VOICEMODE_VOICES_DIR=~/.voicemode/voices
+
+# Path on the remote TTS server where VOICES_DIR is mirrored.
+# Required when the mlx-audio server runs on a different machine.
+# Leave unset (or empty) when the mlx-audio server is local.
+# VOICEMODE_REMOTE_VOICES_DIR=
+
+# mlx-audio TTS endpoint (Qwen3-TTS for impressions).
+# Defaults to the local mlx-audio server. Override to point at a remote
+# host (e.g. ms2 on the LAN).
+VOICEMODE_MLX_AUDIO_BASE_URL=http://127.0.0.1:8890/v1
+
+# Qwen3-TTS model (which weights mlx-audio loads on first request).
+# 1.7B-Base-4bit is the chosen default: ~2× realtime, clean audio, ~2.2GB.
+# VOICEMODE_IMPRESSIONS_MODEL=mlx-community/Qwen3-TTS-12Hz-1.7B-Base-4bit
+#
+# Alternatives (uncomment one to switch):
+# VOICEMODE_IMPRESSIONS_MODEL=mlx-community/Qwen3-TTS-12Hz-1.7B-Base-5bit  # ok, slightly larger
+# VOICEMODE_IMPRESSIONS_MODEL=mlx-community/Qwen3-TTS-12Hz-1.7B-Base-6bit  # ok, slightly larger
+# VOICEMODE_IMPRESSIONS_MODEL=mlx-community/Qwen3-TTS-12Hz-1.7B-Base-bf16  # full quality, slow (~1× realtime)
+# VOICEMODE_IMPRESSIONS_MODEL=mlx-community/Qwen3-TTS-12Hz-0.6B-Base-5bit  # smaller (1.7GB), ok quality
+
+#############
+# Recording & Voice Activity Detection
+#############
+
+# Default maximum listening duration in seconds (default: 120)
+VOICEMODE_DEFAULT_LISTEN_DURATION=230
+
+# Disable silence detection for noisy environments (true/false)
+VOICEMODE_DISABLE_SILENCE_DETECTION=false
+
+# VAD aggressiveness level 0-3, higher = more strict (default: 3)
+VOICEMODE_VAD_AGGRESSIVENESS=3
+
+# Silence threshold in milliseconds before stopping (default: 1000)
+VOICEMODE_SILENCE_THRESHOLD_MS=1000
+
+# Minimum recording duration in seconds (default: 0.5)
+VOICEMODE_MIN_RECORDING_DURATION=0.5
+
+# Initial silence grace period before VAD starts (default: 1.0)
+# VOICEMODE_INITIAL_SILENCE_GRACE_PERIOD=1.0
+
+# Audio feedback chime timing
+# Silence before chime in seconds - helps Bluetooth devices wake up (default: 0.1)
+VOICEMODE_CHIME_LEADING_SILENCE=0.1
+
+# Silence after chime in seconds - prevents cutoff (default: 0.2)
+VOICEMODE_CHIME_TRAILING_SILENCE=0.2
+
+#############
+# Audio Format Configuration
+#############
+
+# Global audio format: pcm, opus, mp3, wav, flac, aac (default: pcm)
+VOICEMODE_AUDIO_FORMAT=pcm
+
+# TTS-specific format override (default: pcm for optimal streaming)
+VOICEMODE_TTS_AUDIO_FORMAT=pcm
+
+# STT-specific format override (default: mp3 if global format is pcm, otherwise uses global format)
+VOICEMODE_STT_AUDIO_FORMAT=mp3
+
+# Format-specific quality settings
+# VOICEMODE_OPUS_BITRATE=32000
+# VOICEMODE_MP3_BITRATE=64k
+# VOICEMODE_AAC_BITRATE=64k
+
+#############
+# Streaming Configuration
+#############
+
+# Enable streaming playback for lower latency (true/false, default: true)
+VOICEMODE_STREAMING_ENABLED=true
+
+# Download chunk size in bytes (default: 4096)
+VOICEMODE_STREAM_CHUNK_SIZE=4096
+
+# Initial buffer before playback starts in milliseconds (default: 150)
+VOICEMODE_STREAM_BUFFER_MS=150
+
+# Maximum buffer size in seconds (default: 2.0)
+VOICEMODE_STREAM_MAX_BUFFER=2.0
+
+#############
+# Event Logging
+#############
+
+# Enable comprehensive event logging (true/false, default: true)
+VOICEMODE_EVENT_LOG_ENABLED=true
+
+# Event log directory (default: ~/.voicemode/logs/events)
+VOICEMODE_EVENT_LOG_DIR='~/.voicemode/logs/events'
+
+# Log rotation policy (currently only 'daily' supported)
+VOICEMODE_EVENT_LOG_ROTATION=daily
+
+#############
+# Pronunciation System
+#############
+
+# Enable pronunciation middleware (true/false, default: true)
+# VOICEMODE_PRONUNCIATION_ENABLED=true
+
+# Default pronunciation rules - common technical terms
+# Format: DIRECTION pattern replacement # description
+# See docs for full format details
+VOICEMODE_PRONOUNCE='
+TTS \bJSON\b jason # JSON as jason
+TTS \bYAML\b yammel # YAML as yammel
+TTS \bAPI\b A P I # API as individual letters
+'
+
+# Add custom rules with VOICEMODE_PRONOUNCE_* variables
+# VOICEMODE_PRONOUNCE_CUSTOM=
+
+# Log pronunciation substitutions for debugging (true/false, default: false)
+# VOICEMODE_PRONUNCIATION_LOG_SUBSTITUTIONS=false
+
+#############
+# Think Out Loud Mode (Experimental)
+#############
+
+# Enable multi-voice thinking mode (true/false, default: false)
+VOICEMODE_THINK_OUT_LOUD=false
+
+# Voice persona mappings for thinking roles (role:voice pairs, comma-separated)
+VOICEMODE_THINKING_VOICES=analytical:am_adam,creative:af_sarah,critical:af_bella,synthesis:af_nova
+
+# Thinking presentation style: sequential, debate, or chorus (default: sequential)
+VOICEMODE_THINKING_STYLE=sequential
+
+# Announce which voice is speaking (true/false, default: true)
+VOICEMODE_THINKING_ANNOUNCE_VOICE=true
+
+#############
+# Service Management
+#############
+
+# Auto-enable services after installation (true/false, default: true)
+VOICEMODE_SERVICE_AUTO_ENABLE=true
+
+#############
+# HTTP Serve Configuration
+#############
+
+# Host/IP address to bind the server to (default: 127.0.0.1)
+VOICEMODE_SERVE_HOST=127.0.0.1
+
+# Port to bind the server to (default: 8785)
+VOICEMODE_SERVE_PORT=8785
+
+# Transport protocol: streamable-http or sse (default: streamable-http)
+VOICEMODE_SERVE_TRANSPORT=streamable-http
+
+# Security: Allow connections from local/private IP ranges (default: true)
+VOICEMODE_SERVE_ALLOW_LOCAL=true
+
+# Security: Allow connections from Anthropic IP ranges for Claude Cowork (default: false)
+# VOICEMODE_SERVE_ALLOW_ANTHROPIC=false
+
+# Security: Allow connections from Tailscale IP range 100.64.0.0/10 (default: false)
+# VOICEMODE_SERVE_ALLOW_TAILSCALE=false
+
+# Security: Additional allowed CIDR ranges (comma-separated)
+# VOICEMODE_SERVE_ALLOWED_IPS=
+
+# Security: Trusted reverse-proxy CIDRs (comma-separated). Only requests whose
+# direct TCP peer is within these ranges have their X-Forwarded-For header
+# trusted for the IP allowlist. Leave empty unless VoiceMode sits behind a
+# proxy you control (e.g. Tailscale Funnel). See GHSA-2qvv-vjq9-g5r4.
+# VOICEMODE_SERVE_TRUSTED_PROXIES=
+
+# Authentication: URL secret path segment (e.g., /secret-path/mcp)
+# VOICEMODE_SERVE_SECRET=
+
+# Authentication: Bearer token for Authorization header
+# VOICEMODE_SERVE_TOKEN=
+
+#############
+# Plugin MCP Transport
+#############
+
+# Point the voicemode plugin's single MCP entry at a streamable-HTTP voicemode
+# endpoint instead of spawning the local stdio server. The endpoint can be
+# remote OR a `voicemode serve` running on this same machine. Unset = local
+# stdio (the default, unchanged -- no second server, no manual settings step).
+# Full endpoint URL incl. the /mcp path (and /mcp/<secret> if
+# VOICEMODE_SERVE_SECRET is set on the serve side). When set, the plugin's
+# smart launcher acts as a native stdio<->HTTP bridge to this endpoint --
+# still ONE `voicemode` server / `mcp__voicemode__*` namespace, no
+# `voicemode-remote` second entry, no `disabledMcpjsonServers` edit.
+# Setting it HERE works: the launcher is a voicemode process and reads this
+# file. (A real env var exported into Claude Code's environment also works
+# and takes precedence over this file.)
+# VOICEMODE_MCP_URL=
+
+# Bearer token the plugin's bridge sends as `Authorization: Bearer <token>`
+# when VOICEMODE_MCP_URL is set. Optional -- secret-in-path via
+# VOICEMODE_MCP_URL is the zero-config path. Mirrors VOICEMODE_SERVE_TOKEN on
+# the serve side. Read by the launcher (here or process env); no .mcp.json
+# edit required.
+# VOICEMODE_MCP_TOKEN=
+
+#############
+# Advanced Configuration
+#############
+
+# Download progress style: auto, rich, simple (default: auto)
+VOICEMODE_PROGRESS_STYLE=rich
+
+# Auto-focus tmux pane when speaking (for multi-agent setups)
+# Switches tmux focus to the agent's pane after conch acquisition
+VOICEMODE_AUTO_FOCUS_PANE=true
+
+#
+# Quick toggle (sentinel file ~/.voicemode/autofocus-disabled):
+#   voicemode autofocus off   # disable immediately, overrides env var
+#   voicemode autofocus on    # remove sentinel
+#   voicemode autofocus status
+
+#############
+# Credential Storage
+#############
+
+# Where to store OAuth credentials (keyring or plaintext)
+# keyring uses the OS keychain (macOS Keychain, Linux Secret Service)
+# plaintext stores in ~/.voicemode/credentials (chmod 600)
+# VOICEMODE_CREDENTIAL_STORE=keyring
+
+#############
+# API Keys (set these in your environment for security)
+#############
+
+# OpenAI API key for cloud TTS/STT
+# OPENAI_API_KEY=your-key-here
+[exit 0]
+$ ls -la .voicemode.env voicemode.env .voicemode/ 2>&1 || echo "(no project config here)"
+ls: .voicemode.env: No such file or directory
+ls: .voicemode/: No such file or directory
+ls: voicemode.env: No such file or directory
+(no project config here)
+[exit 0]
+
+===== TILDE_BUG =====
+$ ls -la "/Users/ibhatt/Downloads/voicemode/~" 2>&1 || echo "(no literal tilde dir in workspace)"
+total 0
+drwxr-xr-x@  3 ibhatt  staff    96 Sep  7 06:20 .
+drwxrwxrwx@ 32 ibhatt  staff  1024 Sep  7 06:29 ..
+drwxr-xr-x@  3 ibhatt  staff    96 Sep  7 06:20 .voicemode
+[exit 0]
+$ find /Users/ibhatt/Downloads/voicemode -maxdepth 1 -name "~*" 2>/dev/null || echo "(none at depth 1)"
+/Users/ibhatt/Downloads/voicemode/~
+[exit 0]
+$ ls -la ~/voicemode_debug.log 2>&1 || echo "(no home debug log)"
+-rw-r--r--@ 1 ibhatt  staff  8450216 Sep  7 07:25 /Users/ibhatt/voicemode_debug.log
+[exit 0]
+
+===== LOGS =====
+$ ls -la ~/.voicemode/logs/ 2>&1 || echo "(no logs dir)"
+total 16
+drwxr-xr-x  7 ibhatt  staff   224 Sep  7 06:40 .
+drwxr-xr-x  8 ibhatt  staff   256 Sep  7 07:24 ..
+-rw-r--r--@ 1 ibhatt  staff  6148 Sep  6 16:14 .DS_Store
+drwxr-xr-x@ 2 ibhatt  staff    64 Sep  7 06:40 conversations
+drwxr-xr-x@ 2 ibhatt  staff    64 Sep  7 06:20 debug
+drwxr--r--  2 ibhatt  staff    64 Sep  6 16:13 kokoro
+drwxr--r--  4 ibhatt  staff   128 Sep  6 16:10 mlx-audio
+[exit 0]
+$ ls -la ~/.voicemode/logs/events/ 2>&1 | tail -5
+ls: /Users/ibhatt/.voicemode/logs/events/: No such file or directory
+[exit 0]
+$ ls -la ~/.voicemode/transcriptions/ 2>&1 | tail -5 || echo "(no transcriptions dir)"
+total 0
+drwxr-xr-x@ 2 ibhatt  staff   64 Sep  7 06:20 .
+drwxr-xr-x  8 ibhatt  staff  256 Sep  7 07:24 ..
+[exit 0]
+$ ls -la ~/.voicemode/jobs/ 2>&1 | tail -5 || echo "(no jobs dir)"
+ls: /Users/ibhatt/.voicemode/jobs/: No such file or directory
+[exit 0]
+
+===== CLI_SURFACE =====
+$ voicemode --help
+2026-09-07 07:25:26,938 - voicemode - INFO - Debug logging to file: /Users/ibhatt/voicemode_debug.log
+Usage: voicemode [OPTIONS] [COMMAND] [ARGS]...
+
+  Voice Mode - MCP server and service management.
+
+  Without arguments, starts the MCP server. With subcommands, executes service
+  management operations.
+
+Options:
+  --version              Show the version and exit.
+  -h, --help             Show this message and exit
+  --debug                Enable debug mode and show all warnings
+  --tools-enabled TEXT   Comma-separated list of tools to enable (whitelist)
+  --tools-disabled TEXT  Comma-separated list of tools to disable (blacklist)
+
+Commands:
+  autofocus    Toggle tmux auto-focus on converse.
+  claude       Claude Code integration commands.
+  clone        Voice cloning profile management.
+  completions  Generate or install shell completion scripts.
+  conch        Observe and manage the conch (VoiceMode's single-speaker...
+  config       Manage voicemode configuration.
+  connect      VoiceMode Connect -- remote voice for Claude.
+  control      Pause / resume / stop / skip-back the utterance the server...
+  converse     Have a voice conversation directly from the command line.
+  deps         Check and install system dependencies.
+  diag         Diagnostic tools for voicemode.
+  dj           Background music playback for voice sessions.
+  exchanges    Manage and view conversation exchange logs.
+  reconnect    Reconnect the voicemode MCP server via the Claude Code...
+  serve        Start VoiceMode as an HTTP/SSE server for remote access.
+  service      Manage VoiceMode services.
+  soundfonts   Toggle soundfont playback for Claude Code hooks.
+  status       Show unified VoiceMode status.
+  transcribe   Transcribe audio with optional word-level timestamps.
+[exit 0]
+$ voicemode service --help
+2026-09-07 07:25:27,048 - voicemode - INFO - Debug logging to file: /Users/ibhatt/voicemode_debug.log
+Usage: voicemode service [OPTIONS] COMMAND [ARGS]...
+
+  Manage VoiceMode services.
+
+  Services:
+    whisper    Local speech-to-text (STT) on port 2022
+    kokoro     Local text-to-speech (TTS) on port 8880
+    voicemode  HTTP MCP server for remote access on port 8765
+    mlx-audio  Apple Silicon: unified Whisper + Kokoro + Qwen3-TTS on port 8890
+
+  Quick Start:
+    voicemode service status           # Check all services
+    voicemode service start whisper    # Start Whisper STT
+    voicemode service enable whisper   # Auto-start whisper on login
+
+  Service Lifecycle:
+    install  Install service software (whisper, kokoro, mlx-audio)
+    start    Start a service
+    stop     Stop a service
+    restart  Restart a service
+    status   Show service status
+    enable   Enable auto-start at boot/login
+    disable  Disable auto-start
+    logs     View service logs
+    health   Check if service is responding
+
+Options:
+  -h, --help  Show this message and exit.
+
+Commands:
+  disable  Disable a service from starting at boot/login.
+  enable   Enable a service to start at boot/login.
+  health   Check the health endpoint of a service.
+  install  Install a voice service.
+  logs     View service logs.
+  restart  Restart a voice service.
+  start    Start a voice service.
+  status   Show service status.
+  stop     Stop a voice service.
+[exit 0]
+$ voicemode whisper --help
+2026-09-07 07:25:27,163 - voicemode - INFO - Debug logging to file: /Users/ibhatt/voicemode_debug.log
+Usage: voicemode whisper [OPTIONS] COMMAND [ARGS]...
+
+  Manage Whisper STT service. [DEPRECATED: Use 'voicemode service' instead]
+
+Options:
+  -h, --help  Show this message and exit
+
+Commands:
+  model    Show, set, or list Whisper models.
+  service  Manage Whisper service.
+[exit 0]
+$ voicemode kokoro --help
+2026-09-07 07:25:27,276 - voicemode - INFO - Debug logging to file: /Users/ibhatt/voicemode_debug.log
+Usage: voicemode kokoro [OPTIONS] COMMAND [ARGS]...
+
+  Manage Kokoro TTS service. [DEPRECATED: Use 'voicemode service' instead]
+
+Options:
+  -h, --help  Show this message and exit
+
+Commands:
+  install    Install kokoro-fastapi TTS service.
+  uninstall  Uninstall kokoro-fastapi service and optionally remove data.
+[exit 0]
+$ voicemode config --help
+2026-09-07 07:25:27,389 - voicemode - INFO - Debug logging to file: /Users/ibhatt/voicemode_debug.log
+Usage: voicemode config [OPTIONS] COMMAND [ARGS]...
+
+  Manage voicemode configuration.
+
+Options:
+  -h, --help  Show this message and exit
+
+Commands:
+  edit  Open the configuration file in your default editor.
+  get   Get a configuration value.
+  list  List all configuration keys with their descriptions.
+  set   Set a configuration value.
+[exit 0]
+
+===== STATUS =====
+$ voicemode status
+2026-09-07 07:25:27,502 - voicemode - INFO - Debug logging to file: /Users/ibhatt/voicemode_debug.log
+{
+  "version": "8.12.0",
+  "runtime": {
+    "mode": "mcp",
+    "command": "uvx voice-mode"
+  },
+  "tts": {
+    "active": "none",
+    "providers": {
+      "kokoro": {
+        "status": "not_installed",
+        "port": 8090,
+        "voice": null,
+        "version": null,
+        "memory": null,
+        "uptime": null,
+        "auto_start": true,
+        "health": null
+      },
+      "openai": {
+        "status": "not_configured",
+        "api_key_set": false,
+        "model": "tts-1-hd"
+      }
+    }
+  },
+  "stt": {
+    "active": "none",
+    "providers": {
+      "whisper": {
+        "status": "not_installed",
+        "port": 2060,
+        "model": null,
+        "coreml": false,
+        "version": null,
+        "memory": null,
+        "uptime": null,
+        "auto_start": true,
+        "health": null
+      },
+      "openai": {
+        "status": "not_configured",
+        "api_key_set": false
+      }
+    }
+  },
+  "config": {
+    "file": "/Users/ibhatt/.voicemode/voicemode.env",
+    "voices": [
+      "af_sky"
+    ],
+    "audio_feedback": true
+  },
+  "dependencies": {
+    "ffmpeg": true,
+    "portaudio": true,
+    "uv": true
+  }
+}
+[exit 0]
