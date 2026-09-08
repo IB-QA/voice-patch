@@ -976,16 +976,15 @@ async def play_chime_captured(
         return False
 
 
-async def play_system_audio(message_key: str, fallback_text: Optional[str] = None, soundfont: str = "default") -> bool:
+async def play_system_audio(message_key: str, fallback_text: Optional[str] = None) -> bool:
     """Play a pre-recorded system audio message with fallback to TTS.
 
-    System audio files should be stored in voice_mode/data/soundfonts/{soundfont}/system-messages/
-    with the naming pattern: {message_key}.mp3 (or .wav, .opus, .opus, etc.)
+    System audio files live in voice_mode/data/system-messages/ with the
+    naming pattern: {message_key}.mp3 (or .wav, .opus, .m4a).
 
     Args:
         message_key: Key for the system message (e.g., "waiting-1-minute", "ready-to-listen", "repeating")
         fallback_text: Text to speak if audio file doesn't exist (falls back to TTS)
-        soundfont: Name of the soundfont to use (default: "default")
 
     Returns:
         True if audio was played successfully, False otherwise
@@ -994,8 +993,7 @@ async def play_system_audio(message_key: str, fallback_text: Optional[str] = Non
     from pydub import AudioSegment
     import numpy as np
 
-    # Get path to system messages directory in soundfonts
-    system_audio_dir = Path(__file__).parent / "data" / "soundfonts" / soundfont / "system-messages"
+    system_audio_dir = Path(__file__).parent / "data" / "system-messages"
 
     # Try to find the audio file (support multiple formats)
     audio_file = None

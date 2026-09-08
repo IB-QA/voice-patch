@@ -18,7 +18,6 @@ authority (VM-1610 epic):
   is already wired into ``Conch.try_acquire``/``release``; this CLI only reads
   that state and, for give/bump/release, writes the grant or clears the lock.
 
-Mirrors the ``autofocus.py`` / ``soundfonts.py`` Click-group pattern.
 """
 
 import json
