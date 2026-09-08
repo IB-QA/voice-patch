@@ -121,7 +121,6 @@ def load_voicemode_env():
 # VOICEMODE_CANCEL_ANNOUNCEMENT=true
 
 # Enable sound fonts for tool use hooks (true/false, default: true)
-# VOICEMODE_SOUNDFONTS_ENABLED=true
 
 #############
 # Tool Loading Configuration
@@ -846,8 +845,6 @@ SERVICE_AUTO_ENABLE = env_bool("VOICEMODE_SERVICE_AUTO_ENABLE", True)
 # ==================== SOUND FONTS CONFIGURATION ====================
 
 # Sound fonts are enabled by default for audio feedback during tool calls
-# Set VOICEMODE_SOUNDFONTS_ENABLED=false to disable
-SOUNDFONTS_ENABLED = env_bool("VOICEMODE_SOUNDFONTS_ENABLED", True)
 
 # ==================== AUDIO CONFIGURATION ====================
 
@@ -1111,155 +1108,6 @@ def initialize_directories():
     if EVENT_LOG_ENABLED:
         Path(EVENT_LOG_DIR).mkdir(parents=True, exist_ok=True)
     
-    # Initialize sound fonts if not present
-    initialize_soundfonts()
-
-# ==================== SOUND FONTS INITIALIZATION ====================
-
-def initialize_soundfonts():
-    """Install package sound fonts and set up soundfonts directory structure.
-
-    Directory structure:
-        ~/.voicemode/soundfonts/
-            voicemode/     - Package-managed soundfonts (synced from package)
-            current -> voicemode  - Relative symlink to active soundfont
-            .version       - Package version that last synced soundfonts
-
-    Users can create custom soundfont directories and point 'current' to them.
-    The 'voicemode' directory is synced only when the package version changes.
-    """
-    from voice_mode.__version__ import __version__
-
-    soundfonts_dir = BASE_DIR / "soundfonts"
-    package_soundfont_dir = soundfonts_dir / "voicemode"
-    current_symlink = soundfonts_dir / "current"
-    version_file = soundfonts_dir / ".version"
-
-    # Migration: rename old 'default' directory to 'voicemode'
-    old_default_dir = soundfonts_dir / "default"
-    if old_default_dir.exists() and not package_soundfont_dir.exists():
-        try:
-            old_default_dir.rename(package_soundfont_dir)
-            # Update symlink if it pointed to default
-            if current_symlink.is_symlink():
-                link_target = str(current_symlink.readlink())
-                if "default" in link_target:
-                    current_symlink.unlink()
-                    # Use relative symlink
-                    current_symlink.symlink_to("voicemode")
-        except OSError:
-            pass  # Migration failed, will recreate below
-
-    # Fix absolute symlinks: convert to relative
-    if current_symlink.is_symlink():
-        try:
-            link_target = str(current_symlink.readlink())
-            # If it's an absolute path pointing to voicemode, make it relative
-            if link_target.startswith("/") and link_target.endswith("/voicemode"):
-                current_symlink.unlink()
-                current_symlink.symlink_to("voicemode")
-        except OSError:
-            pass
-
-    # Check if sync is needed (version mismatch or missing)
-    needs_sync = True
-    if version_file.exists():
-        try:
-            installed_version = version_file.read_text().strip()
-            if installed_version == __version__:
-                needs_sync = False
-        except (IOError, OSError):
-            pass  # Can't read version, sync needed
-
-    if not needs_sync:
-        return  # Skip sync, soundfonts already up to date
-
-    try:
-        # Create soundfonts directory
-        soundfonts_dir.mkdir(exist_ok=True)
-
-        # Sync package soundfonts to 'voicemode' directory incrementally
-        # Only update files that are missing or different
-        try:
-            # For Python 3.9+
-            from importlib.resources import files
-            package_soundfonts = files("voice_mode.data.soundfonts.default")
-
-            if package_soundfonts.is_dir():
-                # Files/dirs to skip (Python package artifacts)
-                skip_names = {"__init__.py", "__pycache__"}
-
-                def sync_tree(src, dst, depth=0):
-                    """Sync directory tree, only updating changed files.
-
-                    Skips __init__.py and __pycache__ (Python package artifacts).
-                    Limits recursion depth to prevent runaway loops.
-                    """
-                    if depth > 10:  # Reasonable max depth for soundfonts
-                        return
-                    dst.mkdir(exist_ok=True)
-                    for item in src.iterdir():
-                        # Skip Python package artifacts
-                        if item.name in skip_names:
-                            continue
-                        if item.is_file():
-                            target = dst / item.name
-                            # Skip if destination is a symlink (could cause issues)
-                            if target.is_symlink():
-                                continue
-                            new_content = item.read_bytes()
-                            # Only write if file doesn't exist or content differs
-                            if not target.exists():
-                                target.write_bytes(new_content)
-                            else:
-                                try:
-                                    existing_content = target.read_bytes()
-                                    if existing_content != new_content:
-                                        target.write_bytes(new_content)
-                                except (IOError, OSError):
-                                    # Can't read existing, overwrite
-                                    target.write_bytes(new_content)
-                        elif item.is_dir():
-                            target_dir = dst / item.name
-                            # Skip if destination is a symlink (could be cycle)
-                            if target_dir.exists() and target_dir.is_symlink():
-                                continue
-                            sync_tree(item, target_dir, depth + 1)
-
-                # Sync tree structure incrementally
-                sync_tree(package_soundfonts, package_soundfont_dir)
-
-                # Update version file after successful sync
-                version_file.write_text(__version__)
-        except ImportError:
-            # Fallback for older Python versions
-            import pkg_resources
-
-            package_soundfont_dir.mkdir(exist_ok=True)
-
-            # List all resources in the soundfonts directory
-            resource_dir = "data/soundfonts/default"
-            if pkg_resources.resource_exists("voice_mode", resource_dir):
-                # This is a bit more complex with pkg_resources
-                # We'll need to manually copy the structure
-                pass
-
-        # Create relative symlink to current soundfont (points to voicemode)
-        # Only create if it doesn't exist - user may have customized it
-        if package_soundfont_dir.exists() and not current_symlink.exists():
-            try:
-                # Use relative path, not absolute
-                current_symlink.symlink_to("voicemode")
-            except OSError:
-                # Symlinks might not work on all systems (e.g., Windows without admin)
-                pass
-
-    except Exception as e:
-        # Don't fail initialization if soundfonts can't be installed
-        # They're optional and disabled by default
-        if DEBUG:
-            import logging
-            logging.getLogger("voicemode").debug(f"Could not initialize soundfonts: {e}")
 
 # ==================== UTILITY FUNCTIONS ====================
 

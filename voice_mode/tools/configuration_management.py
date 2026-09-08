@@ -201,8 +201,8 @@ def write_env_file(file_path: Path, config: Dict[str, str], preserve_comments: b
                     # active line for the key has already been emitted in
                     # this pass. Otherwise we'd duplicate the key -- e.g.
                     # the voicemode.env template ships with both
-                    #     VOICEMODE_SOUNDFONTS_ENABLED=true
-                    #     # VOICEMODE_SOUNDFONTS_ENABLED=true   (docs)
+                    #     VOICEMODE_TTS_AUDIO_FORMAT=pcm
+                    #     # VOICEMODE_TTS_AUDIO_FORMAT=pcm   (docs)
                     # and writing the key would produce two active lines,
                     # silently breaking downstream consumers that don't
                     # handle dotenv duplicates.

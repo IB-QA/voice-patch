@@ -34,7 +34,6 @@ Still covered here:
 """
 import json
 import os
-import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -44,7 +43,6 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MCP_JSON = REPO_ROOT / ".mcp.json"
 CONFIG_PY = REPO_ROOT / "voice_mode" / "config.py"
-HOOK_RECEIVER = REPO_ROOT / "voice_mode" / "data" / "hooks" / "voicemode-hook-receiver.sh"
 
 # VM-1364 (temporary revert): the launcher binary `voicemode-mcp-launcher` is
 # present in this branch but NOT yet shipped in the latest PyPI release
@@ -139,65 +137,3 @@ class TestConfigTemplate:
         mcp_url = config_src.index("# VOICEMODE_MCP_URL=")
         advanced = config_src.index("# Advanced Configuration")
         assert serve_token < mcp_url < advanced
-
-
-@pytest.mark.skipif(
-    shutil.which("bash") is None, reason="bash required for hook receiver test"
-)
-class TestHookReceiverNamespace:
-    """R2: converse feedback must work under both MCP namespaces."""
-
-    def _run(self, tool_name):
-        # Isolated HOME so the real ~/.voicemode/soundfonts-disabled sentinel
-        # (a circuit-breaker that exits before the converse-skip logic) does
-        # not make this test environment-dependent.
-        with tempfile.TemporaryDirectory() as home:
-            env = dict(
-                os.environ, HOME=home, VOICEMODE_HOOK_DEBUG="1"
-            )
-            return subprocess.run(
-                [
-                    "bash",
-                    str(HOOK_RECEIVER),
-                    "--tool-name",
-                    tool_name,
-                    "--event",
-                    "PreToolUse",
-                ],
-                input="",
-                capture_output=True,
-                text=True,
-                env=env,
-                timeout=15,
-            )
-
-    @pytest.mark.parametrize(
-        "tool_name",
-        [
-            "mcp__voicemode__converse",  # legacy / local stdio
-            "mcp__voicemode-remote__converse",  # VM-1292 remote mode
-            "mcp__plugin_voicemode_voicemode__converse",  # plugin-namespaced
-        ],
-    )
-    def test_converse_skipped_for_all_namespaces(self, tool_name):
-        """Converse provides its own audio -> receiver must skip the sound
-        for every voicemode converse namespace, exit 0."""
-        result = self._run(tool_name)
-        assert result.returncode == 0, result.stderr
-        assert "Skipping sound for voicemode converse tool" in result.stderr
-
-    def test_non_converse_tool_not_skipped_as_converse(self):
-        """Negative control: the glob must not match arbitrary tools."""
-        result = self._run("Task")
-        assert "Skipping sound for voicemode converse tool" not in result.stderr
-
-    def test_static_gates_are_namespace_agnostic(self):
-        """The PostToolUse filler/rate-limit gates must not hard-match only
-        ``mcp__voicemode__converse`` (would silently break remote mode)."""
-        src = HOOK_RECEIVER.read_text()
-        # Old brittle exact-match gate must be gone.
-        assert '"$tool_lower" == "mcp__voicemode__converse"' not in src
-        # Glob gate present instead.
-        assert '"$tool_lower" == *voicemode*converse*' in src
-        # Rate-limit log scan must also match the remote namespace.
-        assert "voicemode[a-z0-9_-]*converse" in src
