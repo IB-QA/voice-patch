@@ -235,7 +235,7 @@ async def test_pipeline_plays_all_turns_in_order():
          patch("voice_mode.tools.converse.asyncio.sleep", new=AsyncMock()) as mock_sleep:
         results = await _speak_turns_pipeline(
             turns, tts_model=None, tts_provider=None, audio_format=None,
-            resolved_ref_text=None, should_skip_tts=False,
+            should_skip_tts=False,
         )
 
     # Synthesis happened for every turn, in order, with the resolved voice.
@@ -271,7 +271,7 @@ async def test_pipeline_continues_past_a_failed_turn():
          patch("voice_mode.tools.converse.asyncio.sleep", new=AsyncMock()):
         results = await _speak_turns_pipeline(
             turns, tts_model=None, tts_provider=None, audio_format=None,
-            resolved_ref_text=None, should_skip_tts=False,
+            should_skip_tts=False,
         )
 
     # Only the two good turns played; the sequence did NOT abort.
@@ -288,7 +288,7 @@ async def test_pipeline_skip_tts_plays_nothing():
          patch("voice_mode.tools.converse.asyncio.sleep", new=AsyncMock()):
         results = await _speak_turns_pipeline(
             turns, tts_model=None, tts_provider=None, audio_format=None,
-            resolved_ref_text=None, should_skip_tts=True,
+            should_skip_tts=True,
         )
     msynth.assert_not_awaited()
     mplay.assert_not_called()

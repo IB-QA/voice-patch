@@ -51,9 +51,7 @@ async def voice_registry() -> str:
     This allows the LLM to see what voice services are currently available.
     """
     # Voice list comes from the shared enumerator -- same source as voice://voices.
-    # include_local_only=False keeps impressions out of the prose, matching this
-    # tool's prior behaviour (the tool never surfaced clones).
-    enumerated = await enumerate_voices(include_local_only=False)
+    enumerated = await enumerate_voices()
     voices_by_provider: dict[str, list[str]] = {}
     for entry in enumerated:
         voices_by_provider.setdefault(entry["provider"], []).append(entry["voice"])

@@ -1,9 +1,7 @@
 """Tests for ``voice_mode/voices.py`` — the ``enumerate_voices()`` helper.
 
-Covers AC11 cases (empty / single / multi / no-voices / unhealthy /
-cross-provider id collision / stdio-vs-remote impression filtering) plus
-the same-provider impression-vs-builtin collision that research-001's
-peer review flagged as a missing test case.
+Covers AC11 cases: empty / single / multi / no-voices / unhealthy
+providers, and cross-provider id collision.
 
 ``asyncio_mode = "auto"`` in ``pyproject.toml`` means async test
 functions run automatically — no ``@pytest.mark.asyncio`` needed.
@@ -38,33 +36,25 @@ def _entry_ids(entries):
     return [e["id"] for e in entries]
 
 
-def _fake_profile(name):
-    p = MagicMock()
-    p.name = name
-    return p
-
-
 # ---------- shape & basic enumeration --------------------------------------
 
 
 async def test_empty_tts_base_urls_no_impressions(voices_mod, monkeypatch):
     monkeypatch.setattr(voices_mod, "TTS_BASE_URLS", [])
-    monkeypatch.setattr(voices_mod, "list_profiles", lambda: {})
 
-    result = await voices_mod.enumerate_voices(include_local_only=True)
+    result = await voices_mod.enumerate_voices()
 
     assert result == []
 
 
 async def test_single_kokoro_provider(voices_mod, monkeypatch):
     monkeypatch.setattr(voices_mod, "TTS_BASE_URLS", ["http://127.0.0.1:8880/v1"])
-    monkeypatch.setattr(voices_mod, "list_profiles", lambda: {})
     monkeypatch.setattr(
         voices_mod, "_fetch_audio_voices",
         AsyncMock(return_value=["af_beta", "af_alpha"]),
     )
 
-    result = await voices_mod.enumerate_voices(include_local_only=False)
+    result = await voices_mod.enumerate_voices()
 
     assert _entry_ids(result) == ["kokoro:af_alpha", "kokoro:af_beta"]
     for e in result:
@@ -81,13 +71,12 @@ async def test_multiple_providers_in_config_order(voices_mod, monkeypatch):
         "http://127.0.0.1:8880/v1",       # kokoro
         "https://api.openai.com/v1",      # openai
     ])
-    monkeypatch.setattr(voices_mod, "list_profiles", lambda: {})
     monkeypatch.setattr(
         voices_mod, "_fetch_audio_voices",
         AsyncMock(return_value=["af_beta", "af_alpha"]),
     )
 
-    result = await voices_mod.enumerate_voices(include_local_only=False)
+    result = await voices_mod.enumerate_voices()
     ids = _entry_ids(result)
 
     assert ids[:2] == ["kokoro:af_alpha", "kokoro:af_beta"]
@@ -103,13 +92,12 @@ async def test_provider_with_no_voices(voices_mod, monkeypatch):
         "http://127.0.0.1:8880/v1",
         "https://api.openai.com/v1",
     ])
-    monkeypatch.setattr(voices_mod, "list_profiles", lambda: {})
     monkeypatch.setattr(
         voices_mod, "_fetch_audio_voices",
         AsyncMock(return_value=[]),
     )
 
-    ids = _entry_ids(await voices_mod.enumerate_voices(include_local_only=False))
+    ids = _entry_ids(await voices_mod.enumerate_voices())
 
     assert all(not i.startswith("kokoro:") for i in ids)
     assert any(i.startswith("openai:") for i in ids)
@@ -121,14 +109,13 @@ async def test_provider_unhealthy_silently_skipped(voices_mod, monkeypatch, capl
         "http://127.0.0.1:8880/v1",
         "https://api.openai.com/v1",
     ])
-    monkeypatch.setattr(voices_mod, "list_profiles", lambda: {})
     monkeypatch.setattr(
         voices_mod, "_fetch_audio_voices",
         AsyncMock(side_effect=httpx.ConnectError("refused")),
     )
 
     with caplog.at_level("WARNING", logger="voicemode"):
-        ids = _entry_ids(await voices_mod.enumerate_voices(include_local_only=False))
+        ids = _entry_ids(await voices_mod.enumerate_voices())
 
     assert all(not i.startswith("kokoro:") for i in ids)
     assert "openai:alloy" in ids   # openai is hardcoded, exempt from probe
@@ -141,13 +128,12 @@ async def test_id_collision_cross_provider(voices_mod, monkeypatch):
         "https://api.openai.com/v1",
         "http://127.0.0.1:8880/v1",
     ])
-    monkeypatch.setattr(voices_mod, "list_profiles", lambda: {})
     monkeypatch.setattr(
         voices_mod, "_fetch_audio_voices",
         AsyncMock(return_value=["nova"]),
     )
 
-    ids = _entry_ids(await voices_mod.enumerate_voices(include_local_only=False))
+    ids = _entry_ids(await voices_mod.enumerate_voices())
 
     assert "openai:nova" in ids
     assert "kokoro:nova" in ids
@@ -155,112 +141,40 @@ async def test_id_collision_cross_provider(voices_mod, monkeypatch):
     assert ids.count("kokoro:nova") == 1
 
 
-# ---------- impressions / include_local_only -------------------------------
-
-
-async def test_include_local_only_false_omits_impressions(voices_mod, monkeypatch):
-    """AC8: impressions hidden over remote HTTP by default."""
-    monkeypatch.setattr(voices_mod, "TTS_BASE_URLS", [])
-    monkeypatch.setattr(
-        voices_mod, "list_profiles",
-        lambda: {"samantha": _fake_profile("samantha")},
-    )
-
-    result = await voices_mod.enumerate_voices(include_local_only=False)
-
-    assert result == []
-
-
-async def test_include_local_only_true_returns_impressions(voices_mod, monkeypatch):
-    """AC8: impressions included over stdio (or env-var override)."""
-    monkeypatch.setattr(voices_mod, "TTS_BASE_URLS", [])
-    monkeypatch.setattr(
-        voices_mod, "list_profiles",
-        lambda: {
-            "samantha": _fake_profile("samantha"),
-            "marvin": _fake_profile("marvin"),
-        },
-    )
-
-    ids = _entry_ids(await voices_mod.enumerate_voices(include_local_only=True))
-
-    # Alphabetical (case-insensitive) within the voice_profiles block.
-    assert ids == ["mlx-audio:marvin", "mlx-audio:samantha"]
-
-
-async def test_same_provider_collision_impression_wins(voices_mod, monkeypatch):
-    """mlx-audio /audio/voices and impressions both expose 'samantha' (research-001 review).
-
-    Per design §6 the impression wins (richer metadata), and per §7 the
-    voice_profiles block comes after the HTTP block — so the impression
-    appears once, in the trailing position.
-    """
-    monkeypatch.setattr(voices_mod, "TTS_BASE_URLS", ["http://ms2:8890/v1"])
-    monkeypatch.setattr(
-        voices_mod, "list_profiles",
-        lambda: {"samantha": _fake_profile("samantha")},
-    )
-    monkeypatch.setattr(
-        voices_mod, "_fetch_audio_voices",
-        AsyncMock(return_value=["samantha", "yvonne"]),
-    )
-
-    ids = _entry_ids(await voices_mod.enumerate_voices(include_local_only=True))
-
-    assert ids.count("mlx-audio:samantha") == 1   # AC5: id unique within response
-    assert ids == ["mlx-audio:yvonne", "mlx-audio:samantha"]
-
-
-# ---------- cache behaviour (design §4) ------------------------------------
+# ---------- caching ---------------------------------------------------------
 
 
 async def test_cache_within_ttl_reuses_result(voices_mod, monkeypatch):
     monkeypatch.setattr(voices_mod, "TTS_BASE_URLS", ["http://127.0.0.1:8880/v1"])
-    monkeypatch.setattr(voices_mod, "list_profiles", lambda: {})
     fetch = AsyncMock(return_value=["af_alpha"])
     monkeypatch.setattr(voices_mod, "_fetch_audio_voices", fetch)
 
-    a = await voices_mod.enumerate_voices(include_local_only=False)
-    b = await voices_mod.enumerate_voices(include_local_only=False)
+    a = await voices_mod.enumerate_voices()
+    b = await voices_mod.enumerate_voices()
 
     assert _entry_ids(a) == _entry_ids(b)
     assert fetch.await_count == 1
 
 
-async def test_cache_separates_local_only_keys(voices_mod, monkeypatch):
-    """Two cache entries — stdio caller's reply does not poison HTTP caller's reply."""
-    monkeypatch.setattr(voices_mod, "TTS_BASE_URLS", [])
-    monkeypatch.setattr(
-        voices_mod, "list_profiles",
-        lambda: {"samantha": _fake_profile("samantha")},
-    )
-
-    remote = await voices_mod.enumerate_voices(include_local_only=False)
-    local = await voices_mod.enumerate_voices(include_local_only=True)
-
-    assert remote == []
-    assert _entry_ids(local) == ["mlx-audio:samantha"]
-
-
 async def test_returned_list_is_isolated_from_cache(voices_mod, monkeypatch):
-    monkeypatch.setattr(voices_mod, "TTS_BASE_URLS", [])
+    """Mutating a returned list must not corrupt the cached one."""
+    monkeypatch.setattr(voices_mod, "TTS_BASE_URLS", ["http://127.0.0.1:8880/v1"])
     monkeypatch.setattr(
-        voices_mod, "list_profiles",
-        lambda: {"samantha": _fake_profile("samantha")},
+        voices_mod, "_fetch_audio_voices", AsyncMock(return_value=["af_alpha"]),
     )
 
-    a = await voices_mod.enumerate_voices(include_local_only=True)
+    a = await voices_mod.enumerate_voices()
     a.clear()
-    b = await voices_mod.enumerate_voices(include_local_only=True)
+    b = await voices_mod.enumerate_voices()
 
-    assert _entry_ids(b) == ["mlx-audio:samantha"]
+    assert _entry_ids(b) == ["kokoro:af_alpha"]
 
 
 def test_reset_cache_seam(voices_mod):
-    voices_mod._cache[True] = (0.0, [{"id": "stale:x"}])
+    voices_mod._cache = (0.0, [{"id": "stale:x"}])
     voices_mod._reset_cache()
 
-    assert voices_mod._cache == {}
+    assert voices_mod._cache is None
 
 
 # ---------- failure modes (design §5) --------------------------------------
@@ -268,14 +182,13 @@ def test_reset_cache_seam(voices_mod):
 
 async def test_malformed_json_logs_error_and_skips(voices_mod, monkeypatch, caplog):
     monkeypatch.setattr(voices_mod, "TTS_BASE_URLS", ["http://127.0.0.1:8880/v1"])
-    monkeypatch.setattr(voices_mod, "list_profiles", lambda: {})
     monkeypatch.setattr(
         voices_mod, "_fetch_audio_voices",
         AsyncMock(side_effect=ValueError("expected JSON object")),
     )
 
     with caplog.at_level("ERROR", logger="voicemode"):
-        result = await voices_mod.enumerate_voices(include_local_only=False)
+        result = await voices_mod.enumerate_voices()
 
     assert result == []
     assert any("malformed JSON" in r.message for r in caplog.records)
@@ -283,14 +196,13 @@ async def test_malformed_json_logs_error_and_skips(voices_mod, monkeypatch, capl
 
 async def test_timeout_skipped_with_warning(voices_mod, monkeypatch, caplog):
     monkeypatch.setattr(voices_mod, "TTS_BASE_URLS", ["http://127.0.0.1:8880/v1"])
-    monkeypatch.setattr(voices_mod, "list_profiles", lambda: {})
     monkeypatch.setattr(
         voices_mod, "_fetch_audio_voices",
         AsyncMock(side_effect=httpx.ReadTimeout("slow")),
     )
 
     with caplog.at_level("WARNING", logger="voicemode"):
-        result = await voices_mod.enumerate_voices(include_local_only=False)
+        result = await voices_mod.enumerate_voices()
 
     assert result == []
     assert any("timeout" in r.message.lower() for r in caplog.records)
@@ -298,7 +210,6 @@ async def test_timeout_skipped_with_warning(voices_mod, monkeypatch, caplog):
 
 async def test_http_status_error_skipped_with_warning(voices_mod, monkeypatch, caplog):
     monkeypatch.setattr(voices_mod, "TTS_BASE_URLS", ["http://127.0.0.1:8880/v1"])
-    monkeypatch.setattr(voices_mod, "list_profiles", lambda: {})
     request = httpx.Request("GET", "http://127.0.0.1:8880/v1/audio/voices")
     response = httpx.Response(503, request=request)
     monkeypatch.setattr(
@@ -309,7 +220,7 @@ async def test_http_status_error_skipped_with_warning(voices_mod, monkeypatch, c
     )
 
     with caplog.at_level("WARNING", logger="voicemode"):
-        result = await voices_mod.enumerate_voices(include_local_only=False)
+        result = await voices_mod.enumerate_voices()
 
     assert result == []
     assert any("HTTP 503" in r.message for r in caplog.records)
@@ -321,32 +232,13 @@ async def test_whisper_endpoint_skipped_without_probe(voices_mod, monkeypatch):
         "http://127.0.0.1:2022/v1",
         "https://api.openai.com/v1",
     ])
-    monkeypatch.setattr(voices_mod, "list_profiles", lambda: {})
     fetch = AsyncMock(side_effect=AssertionError("whisper must not be probed"))
     monkeypatch.setattr(voices_mod, "_fetch_audio_voices", fetch)
 
-    ids = _entry_ids(await voices_mod.enumerate_voices(include_local_only=False))
+    ids = _entry_ids(await voices_mod.enumerate_voices())
 
     assert all(not i.startswith("whisper:") for i in ids)
     assert "openai:alloy" in ids
-
-
-async def test_list_profiles_failure_does_not_break_enumeration(
-    voices_mod, monkeypatch, caplog,
-):
-    def boom():
-        raise RuntimeError("voice_profiles broke")
-    monkeypatch.setattr(voices_mod, "TTS_BASE_URLS", [])
-    monkeypatch.setattr(voices_mod, "list_profiles", boom)
-
-    with caplog.at_level("ERROR", logger="voicemode"):
-        result = await voices_mod.enumerate_voices(include_local_only=True)
-
-    assert result == []
-    assert any("list_profiles" in r.message for r in caplog.records)
-
-
-# ---------- _fetch_audio_voices parsing ------------------------------------
 
 
 class _FakeResponse:

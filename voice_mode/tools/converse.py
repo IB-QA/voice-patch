@@ -316,32 +316,6 @@ async def get_stt_config(provider: Optional[str] = None):
 
 
 
-def resolve_ref_text(ref_text: Optional[str]) -> Optional[str]:
-    """Resolve a ``ref_text`` argument that may be a file path OR literal text.
-
-    Auto-detect: if the value names an existing file, its contents (stripped)
-    are used as the transcript; otherwise the value is treated as the literal
-    transcript text. Returns ``None`` when no override was supplied, so callers
-    can distinguish "use the profile/sidecar transcript" from an explicit
-    override.
-
-    Note: path detection is local-only. For a remote TTS host the *audio*
-    path must exist on that host, but ``ref_text`` is sent as a string, so
-    reading the transcript file locally here is always correct.
-    """
-    if ref_text is None:
-        return None
-    candidate = os.path.expanduser(ref_text)
-    try:
-        if os.path.isfile(candidate):
-            with open(candidate, "r") as fh:
-                return fh.read().strip()
-    except OSError:
-        # Fall through and treat the value as literal text.
-        pass
-    return ref_text
-
-
 async def text_to_speech_with_failover(
     message: str,
     voice: Optional[str] = None,
@@ -350,7 +324,6 @@ async def text_to_speech_with_failover(
     audio_format: Optional[str] = None,
     initial_provider: Optional[str] = None,
     speed: Optional[float] = None,
-    ref_text: Optional[str] = None
 ) -> Tuple[bool, Optional[dict], Optional[dict]]:
     """
     Text to speech with automatic failover to next available endpoint.
@@ -372,7 +345,6 @@ async def text_to_speech_with_failover(
         save_audio=SAVE_AUDIO,
         audio_dir=AUDIO_DIR if SAVE_AUDIO else None,
         speed=speed,
-        ref_text=ref_text
     )
 
 
@@ -384,7 +356,6 @@ async def synthesize_turn_with_failover(
     audio_format: Optional[str] = None,
     initial_provider: Optional[str] = None,
     speed: Optional[float] = None,
-    ref_text: Optional[str] = None,
 ):
     """Synthesize one turn to decoded audio samples WITHOUT playing it (VM-1772).
 
@@ -407,7 +378,6 @@ async def synthesize_turn_with_failover(
         save_audio=SAVE_AUDIO,
         audio_dir=AUDIO_DIR if SAVE_AUDIO else None,
         speed=speed,
-        ref_text=ref_text,
     )
 
 
@@ -623,7 +593,6 @@ async def _speak_turns_pipeline(
     tts_model,
     tts_provider,
     audio_format,
-    resolved_ref_text,
     should_skip_tts,
     lookahead: int = 1,
 ) -> list:
@@ -663,7 +632,6 @@ async def _speak_turns_pipeline(
                     audio_format=audio_format,
                     initial_provider=tts_provider,
                     speed=turn["speed"],
-                    ref_text=resolved_ref_text,
                 )
             except Exception as e:
                 logger.error(f"Turn {idx} synthesis raised: {e}")
@@ -2352,7 +2320,6 @@ async def _ask_turns_pipeline(
     tts_model,
     tts_provider,
     audio_format,
-    resolved_ref_text,
     should_skip_tts,
     control_state,
     disable_silence_detection: bool = False,
@@ -2443,7 +2410,6 @@ async def _ask_turns_pipeline(
                     audio_format=audio_format,
                     initial_provider=tts_provider,
                     speed=turn["speed"],
-                    ref_text=resolved_ref_text,
                 )
             except Exception as e:
                 logger.error(f"Survey turn {idx} synthesis raised: {e}")
@@ -2921,7 +2887,6 @@ async def _converse_core(
     conch_hold_timeout: Optional[Union[float, str]] = None,
     skip_conch: Union[bool, str] = False,
     session_id: Optional[str] = None,
-    ref_text: Optional[str] = None,
     ack: Union[bool, str] = False,
 ) -> str:
     """Have an ongoing voice conversation - speak a message and optionally listen for response.
@@ -2975,13 +2940,9 @@ KEY PARAMETERS:
 • wait_for_response (bool, default: true): Listen for response after speaking
 • voice (string): TTS voice name (auto-selected unless specified)
   - To list available voices, read MCP resource voice://voices
-  - An absolute path to a .wav clones from that clip directly (no profile needed)
   - The chosen voice is recorded in the conch, so in a multi-agent session you
     can read another agent's voice (Conch.get_holder) and pick a different one
     to avoid a voice clash.
-• ref_text (string): Reference transcript for clip-based cloning. A file path
-  is read; anything else is the literal transcript. Overrides any sidecar.
-  Only used with a clone voice (abs-path clip or registered profile).
 • tts_provider ("openai"|"kokoro"): Provider selection (auto-selected unless specified)
 • disable_silence_detection (bool, default: false): Disable auto-stop on silence
 • vad_aggressiveness (0-3, default: 3): Voice detection strictness (0=permissive, 3=strict)
@@ -3166,9 +3127,6 @@ consult the MCP resources listed above.
     # holder's voice and choose a different one.
     resolved_voice = voice or (TTS_VOICES[0] if TTS_VOICES else None)
 
-    # Resolve ref_text override once (path-vs-inline auto-detect). None means
-    # "no override" — fall back to the resolved profile/sidecar transcript.
-    resolved_ref_text = resolve_ref_text(ref_text)
 
     # Convert vad_aggressiveness to integer if provided as string
     if vad_aggressiveness is not None and isinstance(vad_aggressiveness, str):
@@ -3573,7 +3531,6 @@ consult the MCP resources listed above.
                         tts_model=tts_model,
                         tts_provider=tts_provider,
                         audio_format=audio_format,
-                        resolved_ref_text=resolved_ref_text,
                         should_skip_tts=should_skip_tts,
                         control_state=control_state,
                         disable_silence_detection=disable_silence_detection,
@@ -3613,7 +3570,6 @@ consult the MCP resources listed above.
                         tts_model=tts_model,
                         tts_provider=tts_provider,
                         audio_format=audio_format,
-                        resolved_ref_text=resolved_ref_text,
                         should_skip_tts=should_skip_tts,
                     )
                     result, success = _format_turns_result(turn_results, effective_metrics_level)
@@ -3648,7 +3604,6 @@ consult the MCP resources listed above.
                         audio_format=audio_format,
                         initial_provider=tts_provider,
                         speed=speed,
-                        ref_text=resolved_ref_text
                     )
                 
                 # Add TTS sub-metrics
@@ -3899,8 +3854,7 @@ consult the MCP resources listed above.
                                     audio_format=audio_format,
                                     initial_provider=tts_provider,
                                     speed=speed,
-                                    ref_text=resolved_ref_text
-                                )
+                                            )
                                 if not tts_success:
                                     logger.error("Failed to replay audio via TTS regeneration")
                         else:
@@ -3914,8 +3868,7 @@ consult the MCP resources listed above.
                                 audio_format=audio_format,
                                 initial_provider=tts_provider,
                                 speed=speed,
-                                ref_text=resolved_ref_text
-                            )
+                                    )
                             if not tts_success:
                                 logger.error("Failed to replay audio via TTS regeneration")
 
@@ -4294,7 +4247,6 @@ async def converse(
     conch_hold_timeout: Optional[Union[float, str]] = None,
     skip_conch: Union[bool, str] = False,
     session_id: Optional[str] = None,
-    ref_text: Optional[str] = None,
     ack: Union[bool, str] = False,
     continuation_wait: Optional[float] = None,
     time_in_response: Optional[Union[bool, str]] = None,
@@ -4350,13 +4302,9 @@ KEY PARAMETERS:
 • wait_for_response (bool, default: true): Listen for response after speaking
 • voice (string): TTS voice name (auto-selected unless specified)
   - To list available voices, read MCP resource voice://voices
-  - An absolute path to a .wav clones from that clip directly (no profile needed)
   - The chosen voice is recorded in the conch, so in a multi-agent session you
     can read another agent's voice (Conch.get_holder) and pick a different one
     to avoid a voice clash.
-• ref_text (string): Reference transcript for clip-based cloning. A file path
-  is read; anything else is the literal transcript. Overrides any sidecar.
-  Only used with a clone voice (abs-path clip or registered profile).
 • tts_provider ("openai"|"kokoro"): Provider selection (auto-selected unless specified)
 • disable_silence_detection (bool, default: false): Disable auto-stop on silence
 • vad_aggressiveness (0-3, default: 3): Voice detection strictness (0=permissive, 3=strict)
@@ -4492,7 +4440,6 @@ consult the MCP resources listed above.
         conch_hold_timeout=conch_hold_timeout,
         skip_conch=skip_conch,
         session_id=session_id,
-        ref_text=ref_text,
         ack=ack,
     )
     effective_continuation_wait = resolve_continuation_wait(

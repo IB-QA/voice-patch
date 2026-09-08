@@ -19,8 +19,6 @@ from ..config import (
     KOKORO_PORT, KOKORO_MODELS_DIR, KOKORO_CACHE_DIR, KOKORO_DEFAULT_VOICE,
     # MLX Audio Service settings
     MLX_AUDIO_HOST, MLX_AUDIO_PORT,
-    # Impressions settings
-    CLONE_MODEL,
     # Audio settings
     AUDIO_FORMAT, TTS_AUDIO_FORMAT, STT_AUDIO_FORMAT,
     TTS_TRAILING_SILENCE,
@@ -296,14 +294,10 @@ async def environment_variables() -> str:
         ("VOICEMODE_KOKORO_MODELS_DIR", "Directory for Kokoro models"),
         ("VOICEMODE_KOKORO_CACHE_DIR", "Directory for Kokoro cache"),
         ("VOICEMODE_KOKORO_DEFAULT_VOICE", "Default Kokoro voice"),
-        # MLX Audio Service (powers Impressions)
+        # MLX Audio Service
         ("VOICEMODE_MLX_AUDIO_HOST", "mlx-audio server bind host (default 127.0.0.1)"),
         ("VOICEMODE_MLX_AUDIO_PORT", "mlx-audio server port (default 8890)"),
         ("VOICEMODE_MLX_AUDIO_BASE_URL", "mlx-audio OpenAI-compatible endpoint URL"),
-        # Impressions (voice cloning -- preview)
-        ("VOICEMODE_VOICES_DIR", "Local voice profile directory (default ~/.voicemode/voices)"),
-        ("VOICEMODE_REMOTE_VOICES_DIR", "Mirror of VOICES_DIR on a remote mlx-audio host"),
-        ("VOICEMODE_IMPRESSIONS_MODEL", "Qwen3-TTS quant for impressions (e.g. mlx-community/Qwen3-TTS-12Hz-1.7B-Base-4bit)"),
         # Silence Detection
         ("VOICEMODE_DISABLE_SILENCE_DETECTION", "Disable silence detection (true/false)"),
         ("VOICEMODE_VAD_AGGRESSIVENESS", "Voice activity detection aggressiveness (0-3)"),
@@ -406,21 +400,11 @@ async def environment_template() -> str:
         f"export VOICEMODE_KOKORO_CACHE_DIR=\"{KOKORO_CACHE_DIR}\"",
         f"export VOICEMODE_KOKORO_DEFAULT_VOICE=\"{KOKORO_DEFAULT_VOICE}\"",
         "",
-        "# MLX Audio Service (Apple Silicon TTS backend powering Impressions)",
+        "# MLX Audio Service (Apple Silicon TTS/STT backend, also a TTS failover target)",
         "# Local mlx-audio server. Install with: voicemode service install mlx-audio",
         f"export VOICEMODE_MLX_AUDIO_HOST=\"{MLX_AUDIO_HOST}\"",
         f"export VOICEMODE_MLX_AUDIO_PORT=\"{MLX_AUDIO_PORT}\"",
         f"export VOICEMODE_MLX_AUDIO_BASE_URL=\"{os.environ.get('VOICEMODE_MLX_AUDIO_BASE_URL', f'http://{MLX_AUDIO_HOST}:{MLX_AUDIO_PORT}/v1')}\"",
-        "",
-        "# Impressions (voice cloning -- preview)",
-        "# Custom voice profiles. Each voice lives at $VOICEMODE_VOICES_DIR/<name>/default.wav.",
-        "# Use voice=\"<name>\" in converse to speak with that voice.",
-        "# REMOTE_VOICES_DIR is the path on a remote mlx-audio server (e.g. ms2)",
-        "# where VOICES_DIR is mirrored -- for talking to a remote impressions backend.",
-        f"export VOICEMODE_VOICES_DIR=\"{os.environ.get('VOICEMODE_VOICES_DIR', '$HOME/.voicemode/voices')}\"",
-        f"export VOICEMODE_REMOTE_VOICES_DIR=\"{os.environ.get('VOICEMODE_REMOTE_VOICES_DIR', '')}\"",
-        "# Quants: 4bit (default) / 5bit / 6bit / bf16 (full quality, ~1x realtime)",
-        f"export VOICEMODE_IMPRESSIONS_MODEL=\"{CLONE_MODEL}\"",
         "",
         "# Silence Detection",
         f"export VOICEMODE_DISABLE_SILENCE_DETECTION=\"{str(DISABLE_SILENCE_DETECTION).lower()}\"",

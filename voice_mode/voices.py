@@ -21,7 +21,6 @@ import httpx
 
 from .config import TTS_BASE_URLS
 from .provider_discovery import detect_provider_type
-from .voice_profiles import list_profiles
 
 logger = logging.getLogger("voicemode")
 
@@ -37,10 +36,9 @@ OPENAI_TTS_VOICES = (
 
 _PROBE_TIMEOUT = 5.0
 _CACHE_TTL = 60.0
-_IMPRESSION_PROVIDER = "mlx-audio"
 
-# Cache keyed by include_local_only → (monotonic timestamp, voice list).
-_cache: dict[bool, tuple[float, list[dict[str, Any]]]] = {}
+# (monotonic timestamp, voice list), or None before the first probe.
+_cache: tuple[float, list[dict[str, Any]]] | None = None
 
 
 def _make_entry(provider: str, voice: str) -> dict[str, Any]:
@@ -130,39 +128,18 @@ async def _voices_for_endpoint(url: str) -> tuple[str, list[str]] | None:
     return provider, voices
 
 
-def _impression_entries() -> list[dict[str, Any]]:
-    """Materialise impression voices from ``voice_profiles.list_profiles``."""
-    try:
-        profiles = list_profiles()
-    except Exception as exc:  # noqa: BLE001 — never let this break enumeration
-        logger.error("voice_profiles.list_profiles() failed: %s", exc)
-        return []
-    return [
-        _make_entry(_IMPRESSION_PROVIDER, name)
-        for name in sorted(profiles, key=str.casefold)
-    ]
-
-
-async def enumerate_voices(*, include_local_only: bool) -> list[dict[str, Any]]:
+async def enumerate_voices() -> list[dict[str, Any]]:
     """Return TTS voices the server can produce, as schema-shaped dicts.
-
-    Parameters
-    ----------
-    include_local_only:
-        When True, append local impressions/clones from ``VOICES_DIR``
-        (the stdio default). When False, omit them — the safe default
-        for remote streamable HTTP clients (AC8).
 
     Returns
     -------
     A fresh shallow copy of the cached voice list. Mutating the returned
-    list does not affect future calls. The TTL cache (60 s) is keyed
-    independently per ``include_local_only`` value.
+    list does not affect future calls. Results are TTL-cached for 60 s.
     """
+    global _cache
     now = time.monotonic()
-    cached = _cache.get(include_local_only)
-    if cached is not None and (now - cached[0]) < _CACHE_TTL:
-        return list(cached[1])
+    if _cache is not None and (now - _cache[0]) < _CACHE_TTL:
+        return list(_cache[1])
 
     probes = [_voices_for_endpoint(url) for url in TTS_BASE_URLS]
     results = await asyncio.gather(*probes) if probes else []
@@ -176,21 +153,12 @@ async def enumerate_voices(*, include_local_only: bool) -> list[dict[str, Any]]:
             entry = _make_entry(provider, voice)
             merged[entry["id"]] = entry
 
-    if include_local_only:
-        for entry in _impression_entries():
-            existing = merged.pop(entry["id"], None)
-            if existing is not None:
-                logger.debug(
-                    "voice id collision %s: impression replaces %s entry",
-                    entry["id"], existing["provider"],
-                )
-            merged[entry["id"]] = entry
-
     voices_list = list(merged.values())
-    _cache[include_local_only] = (now, voices_list)
+    _cache = (now, voices_list)
     return list(voices_list)
 
 
 def _reset_cache() -> None:
     """Test seam — clear the in-process voice cache."""
-    _cache.clear()
+    global _cache
+    _cache = None

@@ -86,7 +86,7 @@ class TestDiagnosticTools:
         endpoint URLs come from ``TTS_BASE_URLS`` / ``STT_BASE_URLS`` via
         config, which we also patch for hermeticity.
         """
-        async def fake_enumerate(*, include_local_only):
+        async def fake_enumerate():
             return [
                 {
                     "id": "kokoro:af_sky",

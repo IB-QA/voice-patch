@@ -276,11 +276,10 @@ def _model_compatible(provider_type: str, model_id: str) -> bool:
 def _select_tts_model_for_endpoint(provider_type: str, requested_model: Optional[str] = None) -> str:
     """Select the TTS model id to send to an endpoint of ``provider_type`` (VM-1390).
 
-    Resolution order (non-clone; clone voices bypass this entirely and use their
-    profile's pinned model):
+    Resolution order:
 
-      1. Explicit caller model (``converse(model=...)``) -> sent as-is. Trust the
-         caller; impression/clone flows already pass raw repo ids.
+      1. Explicit caller model (``converse(model=...)``) -> sent as-is; trust the
+         caller.
       2. Per-provider env ``VOICEMODE_TTS_MODELS_<PROVIDER>`` (first entry).
       3. First global ``TTS_MODELS`` entry compatible with this provider type
          (see :func:`_model_compatible`).
