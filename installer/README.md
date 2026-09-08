@@ -90,6 +90,7 @@ Logs are saved to `~/.voicemode/install.log` in JSONL format:
 ### VoiceMode command not found after installation
 
 Restart your shell or run:
+
 ```bash
 source ~/.bashrc  # or ~/.zshrc for zsh
 ```
@@ -97,6 +98,7 @@ source ~/.bashrc  # or ~/.zshrc for zsh
 ### Permission denied during package installation
 
 The installer needs sudo access to install system packages. Run:
+
 ```bash
 sudo -v  # Refresh sudo credentials
 uvx voice-mode-install
@@ -133,7 +135,7 @@ voice-mode-install --dry-run
 
 ### Project Structure
 
-```
+```wrk-folder-tree
 installer/
 ├── pyproject.toml          # Package definition
 ├── voicemode_install/
@@ -151,6 +153,7 @@ installer/
 ## Design Decisions
 
 See `DECISIONS.md` in the task directory for detailed rationale behind:
+
 - Version management strategy
 - Dependency synchronization approach
 - Error handling philosophy
