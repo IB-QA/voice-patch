@@ -3111,6 +3111,8 @@ _TURNS_PARAM_DESCRIPTION = (
 async def _converse_core(
     message: Optional[str] = None,
     turns: Annotated[Optional[list], Field(description=_TURNS_PARAM_DESCRIPTION)] = None,
+    transport: Literal["local", "livekit"] = "local",
+    room_name: Optional[str] = None,
     pause_after_ms: int = 150,
     wait_for_response: Union[bool, str] = True,
     listen_duration_max: float = DEFAULT_LISTEN_DURATION,
@@ -3296,6 +3298,16 @@ consult the MCP resources listed above.
         skip_tts = skip_tts.lower() in ('true', '1', 'yes', 'on')
     if isinstance(ack, str):
         ack = ack.lower() in ('true', '1', 'yes', 'on')
+    if transport not in ("local", "livekit"):
+        return (
+            f"Error: transport must be 'local' or 'livekit' "
+            f"(got {transport!r})"
+        )
+    if transport == "livekit" and turns is not None:
+        return (
+            "Error [livekit:turns_unsupported]: `turns` is not supported by "
+            "LiveKit transport yet; pass one scalar `message`."
+        )
     # wait_for_conch accepts bool | str | number. A positive number means
     # "wait at most that many seconds" (and implies waiting); truthy strings
     # use the configured default timeout.
@@ -3481,27 +3493,6 @@ consult the MCP resources listed above.
 
     logger.info(f"Converse: '{message[:50]}{'...' if len(message) > 50 else ''}' (wait_for_response: {wait_for_response})")
 
-    # Check if FFmpeg is available
-    ffmpeg_available = getattr(voice_mode.config, 'FFMPEG_AVAILABLE', True)  # Default to True if not set
-    if not ffmpeg_available:
-        from ..utils.ffmpeg_check import get_install_instructions
-        error_msg = (
-            "FFmpeg is required for voice features but is not installed.\n\n"
-            f"{get_install_instructions()}\n\n"
-            "Voice features cannot work without FFmpeg."
-        )
-        logger.error(error_msg)
-        return f"❌ Error: {error_msg}"
-    
-    # Run startup initialization if needed
-    await startup_initialization()
-    
-    # Refresh audio device cache to pick up any device changes (AirPods, etc.)
-    # This takes ~1ms and ensures we use the current default device
-    import sounddevice as sd
-    sd._terminate()
-    sd._initialize()
-    
     # Get event logger and start session
     event_logger = get_event_logger()
     session_id = None
@@ -3709,8 +3700,91 @@ consult the MCP resources listed above.
             if AUTO_FOCUS_PANE and is_tmux():
                 focus_tmux_pane()
 
+        if transport == "livekit":
+            # Optional imports are intentionally lazy: selecting local transport
+            # must never probe the LiveKit installation.
+            from voice_mode.livekit.errors import LiveKitError
+            from voice_mode.livekit.models import LiveKitConversationRequest
+            from voice_mode.livekit.transport import converse_livekit
+
+            try:
+                livekit_result = await converse_livekit(
+                    LiveKitConversationRequest(
+                        message=message,
+                        room_name=room_name,
+                        wait_for_response=bool(wait_for_response),
+                        listen_duration_max=listen_duration_max,
+                        voice=voice,
+                        tts_model=tts_model,
+                        tts_provider=tts_provider,
+                        vad_aggressiveness=vad_aggressiveness,
+                    )
+                )
+            except asyncio.CancelledError:
+                raise
+            except LiveKitError as error:
+                result = f"Error [livekit:{error.code}]: {error}"
+                if event_logger and session_id:
+                    event_logger.end_session()
+                return result
+
+            timing_parts = [
+                f"{name} {duration:.1f}s"
+                for name, duration in livekit_result.timings.items()
+            ]
+            timing_str = ", ".join(timing_parts)
+            actual_response = livekit_result.response_text or "[no speech detected]"
+            track_voice_interaction(
+                message=message,
+                response=actual_response,
+                timing_str=timing_str,
+                transport="livekit",
+                voice_provider=livekit_result.tts_provider,
+                voice_name=livekit_result.voice,
+                model=livekit_result.tts_model,
+                success=True,
+                error_message=None,
+            )
+            if livekit_result.response_text:
+                base_result = f"Voice response: {livekit_result.response_text}"
+            else:
+                base_result = (
+                    "No speech detected"
+                    if wait_for_response
+                    else f"Spoke in LiveKit room: {livekit_result.room_name}"
+                )
+            if effective_metrics_level == "minimal":
+                result = base_result
+            else:
+                result = (
+                    f"{base_result} | Timing: {timing_str} | "
+                    f"LiveKit room: {livekit_result.room_name}, "
+                    f"TTS: {livekit_result.tts_provider}, "
+                    f"STT: {livekit_result.stt_provider}"
+                )
+            success = True
+            if event_logger and session_id:
+                event_logger.end_session()
+            return result
+
+        # Everything below is the unchanged local device transport. Keep its
+        # dependency checks and device reset after the LiveKit dispatch.
+        ffmpeg_available = getattr(voice_mode.config, 'FFMPEG_AVAILABLE', True)
+        if not ffmpeg_available:
+            from ..utils.ffmpeg_check import get_install_instructions
+            error_msg = (
+                "FFmpeg is required for voice features but is not installed.\n\n"
+                f"{get_install_instructions()}\n\n"
+                "Voice features cannot work without FFmpeg."
+            )
+            logger.error(error_msg)
+            return f"❌ Error: {error_msg}"
+
+        await startup_initialization()
+        sd._terminate()
+        sd._initialize()
+
         # Local microphone approach with timing
-        transport = "local"
         timings = {}
         try:
             # VM-1676: bring the control channel up around the audio op. The
@@ -4492,6 +4566,8 @@ consult the MCP resources listed above.
 async def converse(
     message: Optional[str] = None,
     turns: Annotated[Optional[list], Field(description=_TURNS_PARAM_DESCRIPTION)] = None,
+    transport: Literal["local", "livekit"] = "local",
+    room_name: Optional[str] = None,
     pause_after_ms: int = 150,
     wait_for_response: Union[bool, str] = True,
     listen_duration_max: float = DEFAULT_LISTEN_DURATION,
@@ -4688,6 +4764,8 @@ consult the MCP resources listed above.
     operation = _converse_core(
         message=message,
         turns=turns,
+        transport=transport,
+        room_name=room_name,
         pause_after_ms=pause_after_ms,
         wait_for_response=wait_for_response,
         listen_duration_max=listen_duration_max,

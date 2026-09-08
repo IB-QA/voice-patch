@@ -171,17 +171,29 @@ Have a voice conversation directly from the command line
 voicemode converse [OPTIONS]
 
 Options:
-  --voice TEXT          Override TTS voice
-  --model TEXT          Override TTS model
-  --debug               Enable debug mode
-  --skip-tts            Text-only output (skip TTS)
-  --skip-stt            Speak only; skip listening for a response (replaces --no-wait)
-  --timeout INTEGER     Recording timeout in seconds
+  --transport [local|livekit]  Voice audio transport (default: local)
+  --room TEXT                  Exact LiveKit room name
+  --voice TEXT                 Override TTS voice
+  --tts-model TEXT             Override TTS model
+  --skip-tts                   Text-only output (skip TTS)
+  --skip-stt                   Speak only; skip listening for a response
+  --duration FLOAT             Maximum listen duration in seconds
 ```
 
 > `--no-wait` is deprecated. It still works (and is still completed by the shell)
 > but prints a deprecation notice and will be removed in a future release. Use
 > `--skip-stt` instead.
+
+LiveKit is opt-in and supports one scalar message per command:
+
+```bash
+voicemode converse "Hello from the room" \
+  --transport livekit \
+  --room "<exact-room-name>"
+```
+
+`--continuous`, `--say`, `--ask`, and `--script` are not supported with
+LiveKit. See [Self-hosted LiveKit browser rooms](../guides/livekit-setup.md).
 
 ### transcribe
 Transcribe audio with optional word-level timestamps
@@ -277,28 +289,35 @@ voicemode kokoro logs [--follow]
 ```
 
 ### livekit
-Manage LiveKit RTC service
+Manage the optional self-hosted LiveKit SFU, loopback browser gateway, and
+rooms. The service lifecycle uses `voicemode service`; room/browser commands
+use `voicemode livekit`.
 
 ```bash
 # Installation and setup
-voicemode livekit install
-voicemode livekit uninstall [--remove-all-data]
+voicemode service install livekit [--force] [--rotate-credentials]
+voicemode service uninstall livekit [--remove-all-data]
 
-# Service control
-voicemode livekit start
-voicemode livekit stop
-voicemode livekit restart
-voicemode livekit status
+# SFU service control
+voicemode service start|stop|restart|status livekit
+voicemode service enable|disable livekit
+voicemode service logs livekit [-n LINES]
 
-# Service management
-voicemode livekit enable
-voicemode livekit disable
+# Browser gateway service control
+voicemode service start|stop|restart|status livekit-web
+voicemode service enable|disable livekit-web
+voicemode service logs livekit-web [-n LINES]
 
-# Configuration
-voicemode livekit update    # Update service files
-voicemode livekit logs [--follow]
+# Browser and rooms
+voicemode livekit browser serve [--host HOST] [--port PORT]
+voicemode livekit browser open
+voicemode livekit rooms list
 ```
 
+The supported managed deployment binds both components to loopback. The
+browser open command carries its sensitive bearer in a URL fragment; the
+client removes the fragment before connecting. See the
+[LiveKit setup guide](../guides/livekit-setup.md).
 
 ## Soundfonts
 

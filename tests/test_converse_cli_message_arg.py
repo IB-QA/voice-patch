@@ -199,3 +199,41 @@ class TestConverseHelpSurface:
         assert positional_idx < flag_idx, (
             "positional example should come before the -m example in help"
         )
+
+
+class TestConverseLiveKitOptions:
+    def test_transport_and_exact_room_are_forwarded(self, patched_converse):
+        runner = CliRunner()
+        result = runner.invoke(
+            voice_mode_main_cli,
+            [
+                "converse",
+                "hello browser",
+                "--transport",
+                "livekit",
+                "--room",
+                "vm-exact",
+                "--skip-stt",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        kwargs = patched_converse.await_args.kwargs
+        assert kwargs["transport"] == "livekit"
+        assert kwargs["room_name"] == "vm-exact"
+
+    @pytest.mark.parametrize(
+        "arguments",
+        [
+            ["--transport", "livekit", "--continuous"],
+            ["--transport", "livekit", "--say", "hello"],
+            ["--transport", "livekit", "--ask", "question"],
+        ],
+    )
+    def test_livekit_rejects_unsupported_cli_modes(
+        self, patched_converse, arguments
+    ):
+        runner = CliRunner()
+        result = runner.invoke(voice_mode_main_cli, ["converse", *arguments])
+        assert result.exit_code != 0
+        assert "does not support" in result.output
+        patched_converse.assert_not_awaited()

@@ -4,6 +4,7 @@
 import logging
 import os
 import platform
+from contextlib import asynccontextmanager
 
 # Note: audioop deprecation warning is suppressed in tools/__init__.py
 # (right before pydub is imported) to ensure it's applied after numpy/scipy
@@ -23,7 +24,17 @@ from fastmcp import FastMCP
 
 logger = logging.getLogger("voicemode")
 
-mcp = FastMCP("voicemode")
+
+@asynccontextmanager
+async def server_lifespan(_server):
+    """Release process-owned clients and services during MCP shutdown."""
+    try:
+        yield
+    finally:
+        await cleanup_on_shutdown()
+
+
+mcp = FastMCP("voicemode", lifespan=server_lifespan)
 
 # Import shared configuration and utilities
 from . import config
@@ -33,6 +44,7 @@ from . import config
 from . import tools
 from . import prompts 
 from . import resources
+from .shared import cleanup_on_shutdown
 
 # Main entry point
 def main():

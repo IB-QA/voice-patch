@@ -105,6 +105,30 @@ are unaffected — they always use their profile's pinned model.
 | `VOICEMODE_KOKORO_CACHE_DIR` | Kokoro cache directory | `~/.voicemode/cache/kokoro` | `/cache/kokoro` |
 | `VOICEMODE_KOKORO_DEFAULT_VOICE` | Default Kokoro voice | `af_sky` | `am_adam` |
 
+### Self-hosted LiveKit
+
+LiveKit is an optional, explicit browser-room transport. The managed installer
+generates and preserves credentials in `~/.voicemode/voicemode.env`; the
+examples below are placeholders, not recommended fixed values.
+
+| Variable | Description | Default | Example |
+|----------|-------------|---------|---------|
+| `VOICEMODE_LIVEKIT_URL` | LiveKit SFU URL; insecure `ws`/`http` is accepted only on loopback | `ws://127.0.0.1:7880` | `wss://livekit.example.internal` |
+| `VOICEMODE_LIVEKIT_API_KEY` | LiveKit server API key; sensitive | None | `<generated-key>` |
+| `VOICEMODE_LIVEKIT_API_SECRET` | LiveKit server API secret; highly sensitive | None | `<generated-secret>` |
+| `VOICEMODE_LIVEKIT_ROOM_PREFIX` | Prefix eligible for implicit room resolution and browser room creation | `voicemode-` | `private-room-` |
+| `VOICEMODE_LIVEKIT_BROWSER_HOST` | Browser gateway bind host; loopback addresses only | `127.0.0.1` | `localhost` |
+| `VOICEMODE_LIVEKIT_BROWSER_PORT` | Browser gateway port | `7890` | `7891` |
+| `VOICEMODE_LIVEKIT_BROWSER_ORIGIN` | Exact allowed browser origin; must match configured host and port | derived | `http://localhost:7891` |
+| `VOICEMODE_LIVEKIT_BROWSER_TOKEN` | Sensitive bearer used to request a browser room session | None | `<generated-bearer>` |
+
+Compatible fallback names are `LIVEKIT_URL`, `LIVEKIT_API_KEY`,
+`LIVEKIT_API_SECRET`, and `LIVEKIT_ROOM_PREFIX`; a `VOICEMODE_*` value wins.
+There are no implemented `LIVEKIT_PORT`, `VOICEMODE_LIVEKIT_AUTO_CREATE`, or
+auto-routing variables. See the
+[LiveKit setup guide](../guides/livekit-setup.md) for the security model,
+installer behavior, and current loopback-only limitation.
+
 ## Soundfonts
 
 | Variable | Description | Default | Example |

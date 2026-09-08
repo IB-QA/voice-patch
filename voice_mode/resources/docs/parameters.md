@@ -33,7 +33,7 @@ Minimum recording time before silence detection can stop.
 - Quick responses: 0.5-1 second
 
 ### timeout (DEPRECATED)
-Use `listen_duration_max` instead. Only applies to LiveKit transport.
+Use `listen_duration_max` instead.
 
 ## Voice & TTS Parameters
 
@@ -241,20 +241,27 @@ Skip text-to-speech, show text only.
 ## Transport Parameters
 
 ### transport
-**Type:** "auto" | "local" | "livekit" (default: "auto")
+**Type:** "local" | "livekit" (default: "local")
 Transport method selection.
 
 **Options:**
-- `auto` - Try LiveKit first, fallback to local
 - `local` - Direct microphone access
-- `livekit` - Room-based communication
+- `livekit` - Explicit self-hosted browser-room communication
+
+There is no automatic LiveKit route or fallback. LiveKit supports one scalar
+`message` per call; `turns` is rejected and continuous mode is not available.
 
 ### room_name
 **Type:** string (optional)
-LiveKit room name.
+Exact LiveKit room name.
 
 **Only for:** livekit transport
-**Default:** Auto-discovered if empty
+**Default:** If omitted, resolve only when exactly one room matches
+`VOICEMODE_LIVEKIT_ROOM_PREFIX`; otherwise return an error.
+
+The restored historical room transport is a loopback-only self-hosted feature,
+not hosted VoiceMode Connect/Auth0. See the main LiveKit setup guide for
+installation, credentials, browser flow, and security limits.
 
 ## Endpoint Requirements
 

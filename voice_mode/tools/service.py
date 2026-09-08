@@ -5,20 +5,31 @@ import logging
 import os
 import platform
 import subprocess
+import sys
 import time
 from pathlib import Path
-from typing import Literal, Optional, Dict, Any, Union
+from typing import Any, Dict, Literal, Optional, Union
 
 import psutil
 
-from voice_mode.server import mcp
 from voice_mode.config import WHISPER_PORT, KOKORO_PORT, MLX_AUDIO_PORT, SERVICE_AUTO_ENABLE
+from voice_mode.server import mcp
 from voice_mode.utils.services.common import find_process_by_port, check_service_status
+from voice_mode.utils.services.whisper_helpers import find_whisper_server, find_whisper_model
+from voice_mode.utils.services.kokoro_helpers import find_kokoro_fastapi, has_gpu_support, is_kokoro_starting_up
+from voice_mode.utils.services.livekit_helpers import (
+    find_livekit_process,
+    livekit_health,
+    livekit_browser_start_script_path,
+    livekit_log_dir,
+    livekit_service_dir,
+    livekit_start_script_path,
+    read_livekit_port,
+    read_livekit_browser_port,
+)
 
 # Default port for VoiceMode serve command (HTTP MCP server)
 VOICEMODE_SERVE_PORT = 8765
-from voice_mode.utils.services.whisper_helpers import find_whisper_server, find_whisper_model
-from voice_mode.utils.services.kokoro_helpers import find_kokoro_fastapi, has_gpu_support, is_kokoro_starting_up
 
 logger = logging.getLogger("voicemode")
 
@@ -30,6 +41,7 @@ logger = logging.getLogger("voicemode")
 _SERVICE_FILE_NAMES: Dict[str, str] = {
     "voicemode": "serve",
     "mlx_audio": "mlx-audio",
+    "livekit_web": "livekit-web",
 }
 
 
@@ -110,6 +122,20 @@ def get_service_config_vars(service_name: str) -> Dict[str, Any]:
         return {
             "HOME": home,
             "START_SCRIPT": start_script,
+        }
+    elif service_name == "livekit":
+        return {
+            "HOME": home,
+            "START_SCRIPT": str(livekit_start_script_path()),
+            "LIVEKIT_DIR": str(livekit_service_dir()),
+            "LOG_DIR": str(livekit_log_dir()),
+        }
+    elif service_name == "livekit_web":
+        return {
+            "HOME": home,
+            "START_SCRIPT": str(livekit_browser_start_script_path()),
+            "LIVEKIT_DIR": str(livekit_service_dir()),
+            "LOG_DIR": str(livekit_log_dir()),
         }
     else:
         raise ValueError(f"Unknown service: {service_name}")
@@ -236,11 +262,24 @@ async def status_service(service_name: str) -> str:
     elif service_name == "voicemode":
         port = VOICEMODE_SERVE_PORT
         process_name = None
+    elif service_name == "livekit":
+        port = read_livekit_port()
+        process_name = "livekit-server"
+    elif service_name == "livekit_web":
+        port = read_livekit_browser_port()
+        process_name = None
     else:
         port = 3000
         process_name = None
 
-    status, proc = check_service_status(port, process_name=process_name)
+    if service_name == "livekit":
+        health = livekit_health()
+        proc = find_livekit_process(port)
+        status = "local" if proc is not None and health["port_reachable"] else (
+            "initializing" if proc is not None else "not_available"
+        )
+    else:
+        status, proc = check_service_status(port, process_name=process_name)
 
     if status == "initializing":
         return f"⏳ {service_name.capitalize()} is initializing (process running, waiting for server to be ready)"
@@ -384,9 +423,18 @@ async def start_service(service_name: str) -> str:
         port = MLX_AUDIO_PORT
     elif service_name == "voicemode":
         port = VOICEMODE_SERVE_PORT
+    elif service_name == "livekit":
+        port = read_livekit_port()
+    elif service_name == "livekit_web":
+        port = read_livekit_browser_port()
     else:
         port = 3000
-    if find_process_by_port(port):
+    existing_process = (
+        find_livekit_process(port)
+        if service_name == "livekit"
+        else find_process_by_port(port)
+    )
+    if existing_process:
         return f"{service_name.capitalize()} is already running on port {port}"
 
     system = platform.system()
@@ -396,6 +444,8 @@ async def start_service(service_name: str) -> str:
 
     # Helper to check if service is running
     def is_service_running():
+        if service_name == "livekit":
+            return find_livekit_process(port) is not None
         return find_process_by_port(port) is not None
 
     # Check if managed by service manager
@@ -532,8 +582,25 @@ async def start_service(service_name: str) -> str:
     elif service_name == "voicemode":
         # Start voicemode serve command directly
         # Use sys.executable to ensure we use the same Python that's running this script
-        import sys
         cmd = [sys.executable, "-m", "voice_mode", "serve", "--port", str(port)]
+
+    elif service_name == "livekit":
+        start_script = livekit_start_script_path()
+        if not start_script.exists():
+            return (
+                "❌ LiveKit start script not found. Run "
+                "`voicemode service install livekit` first."
+            )
+        cmd = [str(start_script)]
+
+    elif service_name == "livekit_web":
+        start_script = livekit_browser_start_script_path()
+        if not start_script.exists():
+            return (
+                "❌ LiveKit browser start script not found. Run "
+                "`voicemode service install livekit` first."
+            )
+        cmd = [str(start_script)]
 
     else:
         return f"❌ Unknown service: {service_name}"
@@ -562,7 +629,12 @@ async def start_service(service_name: str) -> str:
             return f"❌ {service_name.capitalize()} failed to start: {stderr}"
 
         # Verify it's running
-        if find_process_by_port(port):
+        running_process = (
+            find_livekit_process(port)
+            if service_name == "livekit"
+            else find_process_by_port(port)
+        )
+        if running_process:
             return f"✅ {service_name.capitalize()} started successfully (PID: {process.pid})"
         else:
             return f"⚠️ {service_name.capitalize()} process started but not listening on port {port} yet"
@@ -582,6 +654,10 @@ async def stop_service(service_name: str) -> str:
         port = MLX_AUDIO_PORT
     elif service_name == "voicemode":
         port = VOICEMODE_SERVE_PORT
+    elif service_name == "livekit":
+        port = read_livekit_port()
+    elif service_name == "livekit_web":
+        port = read_livekit_browser_port()
     else:
         port = 3000
     system = platform.system()
@@ -625,7 +701,11 @@ async def stop_service(service_name: str) -> str:
                 return f"❌ Failed to stop {service_name}: {error}"
 
     # Fallback to process termination
-    proc = find_process_by_port(port)
+    proc = (
+        find_livekit_process(port)
+        if service_name == "livekit"
+        else find_process_by_port(port)
+    )
     if not proc:
         return f"{service_name.capitalize()} is not running"
     
@@ -704,6 +784,21 @@ async def enable_service(service_name: str) -> str:
                 start_script = install_result.get("start_script", "")
                 logger.info(f"Auto-installed VoiceMode start script at {start_script}")
 
+        elif service_name == "livekit":
+            start_script = config_vars.get("START_SCRIPT", "")
+            if not start_script or not Path(start_script).exists():
+                return (
+                    "❌ LiveKit start script not found. Run "
+                    "`voicemode service install livekit` first."
+                )
+        elif service_name == "livekit_web":
+            start_script = config_vars.get("START_SCRIPT", "")
+            if not start_script or not Path(start_script).exists():
+                return (
+                    "❌ LiveKit browser start script not found. Run "
+                    "`voicemode service install livekit` first."
+                )
+
         # Create parent directories
         service_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -726,7 +821,7 @@ async def enable_service(service_name: str) -> str:
 
         else:  # Linux
             # Map service name to file name (voicemode uses "serve" in file names)
-            file_name = "serve" if service_name == "voicemode" else service_name
+            file_name = _service_file_name(service_name)
             service_unit = f"voicemode-{file_name}.service"
 
             # Reload and enable systemd
@@ -755,7 +850,7 @@ async def disable_service(service_name: str) -> str:
     system = platform.system()
 
     # Map service name to file name (voicemode uses "serve" in file names)
-    file_name = "serve" if service_name == "voicemode" else service_name
+    file_name = _service_file_name(service_name)
 
     try:
         if system == "Darwin":
@@ -819,13 +914,36 @@ async def view_logs(service_name: str, lines: Optional[int] = None) -> str:
     lines = lines or 50
 
     # Map service name to file/log name (voicemode uses "serve" in file names)
-    log_name = "serve" if service_name == "voicemode" else service_name
+    log_name = _service_file_name(service_name)
 
     try:
+        if service_name in {"livekit", "livekit_web"}:
+            logs = []
+            stem = "livekit-web" if service_name == "livekit_web" else "livekit"
+            for label, path in (
+                ("stdout", livekit_log_dir() / f"{stem}.out.log"),
+                ("stderr", livekit_log_dir() / f"{stem}.err.log"),
+            ):
+                if path.exists():
+                    selected = path.read_text(
+                        encoding="utf-8", errors="replace"
+                    ).splitlines(keepends=True)[-lines:]
+                    if selected:
+                        logs.append(f"=== {label} (last {len(selected)} lines) ===\n")
+                        logs.extend(selected)
+            if logs:
+                return "".join(logs).rstrip()
+
         if system == "Darwin":
             # Use log show command
             if service_name == "voicemode":
                 process_name = "voicemode-serve"
+            elif service_name in {"livekit", "livekit_web"}:
+                process_name = (
+                    "livekit-server"
+                    if service_name == "livekit"
+                    else "python"
+                )
             else:
                 process_name = f"{service_name}-server"
             cmd = [
@@ -890,13 +1008,20 @@ async def view_logs(service_name: str, lines: Optional[int] = None) -> str:
 
 @mcp.tool()
 async def service(
-    service_name: Literal["whisper", "kokoro", "mlx_audio", "voicemode"],
+    service_name: Literal[
+        "whisper",
+        "kokoro",
+        "mlx_audio",
+        "voicemode",
+        "livekit",
+        "livekit_web",
+    ],
     action: Literal["status", "start", "stop", "restart", "enable", "disable", "logs"] = "status",
     lines: Optional[Union[int, str]] = None
 ) -> str:
     """Unified service management tool for voice mode services.
 
-    Manage Whisper (STT), Kokoro (TTS), and VoiceMode (HTTP MCP server) services.
+    Manage Whisper, Kokoro, mlx-audio, VoiceMode, and LiveKit services.
 
     Args:
         service_name: The service to manage ("whisper", "kokoro", or "voicemode")

@@ -1,6 +1,7 @@
 # Service Management Commands
 
-Voice Mode now includes built-in service management commands for Kokoro and Whisper services.
+VoiceMode provides one service lifecycle for Whisper, Kokoro, mlx-audio, the
+VoiceMode HTTP server, and the self-hosted LiveKit services.
 
 ## Usage
 
@@ -13,7 +14,22 @@ voicemode              # Starts MCP server (existing behavior)
 
 ### Service Management
 
-New subcommands allow direct service control without starting the MCP server:
+Use the unified command form:
+
+```bash
+voicemode service status [SERVICE]
+voicemode service start SERVICE
+voicemode service stop SERVICE
+voicemode service restart SERVICE
+voicemode service enable SERVICE
+voicemode service disable SERVICE
+voicemode service logs SERVICE [-n LINES]
+voicemode service install SERVICE
+voicemode service uninstall SERVICE
+```
+
+The older top-level Kokoro and Whisper groups shown below remain available for
+backward compatibility.
 
 #### Kokoro TTS Service
 ```bash
@@ -42,6 +58,30 @@ voicemode whisper logs --lines 100 # View last 100 log lines
 voicemode whisper health          # Check health endpoint
 voicemode whisper update-service-files # Update service files to latest
 ```
+
+#### LiveKit SFU and browser gateway
+
+Installing `livekit` creates both the loopback SFU (`livekit`) and loopback
+browser gateway (`livekit-web`). Manage their processes separately:
+
+```bash
+voicemode service install livekit
+voicemode service status livekit
+voicemode service status livekit-web
+voicemode service start livekit
+voicemode service start livekit-web
+voicemode service logs livekit -n 100
+voicemode service logs livekit-web -n 100
+voicemode service enable livekit
+voicemode service enable livekit-web
+voicemode service uninstall livekit
+```
+
+`voicemode service install livekit --rotate-credentials` rotates the LiveKit
+API key and secret. `voicemode service uninstall livekit --remove-all-data`
+also removes LiveKit logs. See the
+[LiveKit setup guide](../../guides/livekit-setup.md) before changing network
+settings; the supported managed deployment is loopback-only.
 
 ## Examples
 

@@ -212,7 +212,8 @@ class TestServerStructure:
             
             # Handle docstrings
             if '"""' in line_stripped:
-                in_docstring = not in_docstring
+                if line_stripped.count('"""') % 2:
+                    in_docstring = not in_docstring
                 continue
             if in_docstring:
                 continue

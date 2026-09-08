@@ -87,6 +87,7 @@ docs/voicemode-brand/
 # Node modules (for livekit frontend)
 node_modules/
 .npm/
+.vite/
 
 # Next.js build artifacts
 .next/

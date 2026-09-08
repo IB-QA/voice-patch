@@ -46,6 +46,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+livekit = [
+    "livekit-api>=1.2,<2",
+    "livekit-agents>=1.6.8,<2",
+    "livekit-plugins-openai>=1.6,<2",
+    "livekit-plugins-silero>=1.6,<2",
+]
 dev = [
     "build>=1.0.0",
     "twine>=4.0.0",
@@ -122,6 +128,9 @@ include = [
   "voice_mode/**/*.sh",
   "voice_mode/**/*.plist",
   "voice_mode/**/*.service",
+  "voice_mode/livekit/frontend/**/*.html",
+  "voice_mode/livekit/frontend/**/*.js",
+  "voice_mode/livekit/frontend/**/*.css",
   "voice_mode/templates/**/*",
   "voice_mode/data/**/*.yaml",
   "voice_mode/data/**/*.json",
