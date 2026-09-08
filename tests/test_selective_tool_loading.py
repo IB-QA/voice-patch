@@ -24,8 +24,8 @@ from voice_mode import tools
 loaded_modules = [m for m in sys.modules.keys() if 'voice_mode.tools' in m]
 print('LOADED:', sorted(loaded_modules))
 
-# Verify statistics module is NOT loaded
-assert 'voice_mode.tools.statistics' not in sys.modules
+# Verify a non-essential tool is NOT loaded
+assert 'voice_mode.tools.diagnostics' not in sys.modules
 assert 'voice_mode.tools.converse' in sys.modules
 print('SUCCESS')
 """],
@@ -36,7 +36,7 @@ print('SUCCESS')
     assert result.returncode == 0, f"Failed: {result.stderr}"
     assert "SUCCESS" in result.stdout
     assert "voice_mode.tools.converse" in result.stdout
-    assert "voice_mode.tools.statistics" not in result.stdout.replace("LOADED:", "")
+    assert "voice_mode.tools.diagnostics" not in result.stdout.replace("LOADED:", "")
 
 
 def test_selective_loading_multiple_tools():
@@ -45,7 +45,7 @@ def test_selective_loading_multiple_tools():
         [sys.executable, "-c", """
 import os
 import sys
-os.environ['VOICEMODE_TOOLS_ENABLED'] = 'converse,statistics'
+os.environ['VOICEMODE_TOOLS_ENABLED'] = 'converse,diagnostics'
 
 from voice_mode import tools
 
@@ -53,7 +53,7 @@ loaded_modules = [m for m in sys.modules.keys() if 'voice_mode.tools' in m]
 print('LOADED:', sorted(loaded_modules))
 
 assert 'voice_mode.tools.converse' in sys.modules
-assert 'voice_mode.tools.statistics' in sys.modules
+assert 'voice_mode.tools.diagnostics' in sys.modules
 print('SUCCESS')
 """],
         capture_output=True,
@@ -126,32 +126,6 @@ print('SUCCESS')
     assert "not found" in result.stderr.lower() or "WARNING" in result.stderr
 
 
-def test_statistics_tracking_without_loading_tools():
-    """Test that statistics tracking can be imported without loading statistics tools."""
-    result = subprocess.run(
-        [sys.executable, "-c", """
-import os
-import sys
-os.environ['VOICEMODE_TOOLS'] = 'converse'
-
-# Import the tracking function
-from voice_mode.statistics_tracking import track_voice_interaction
-
-# Verify statistics tools module is not loaded
-assert 'voice_mode.tools.statistics' not in sys.modules
-
-# Verify the function exists and is callable
-assert callable(track_voice_interaction)
-print('SUCCESS')
-"""],
-        capture_output=True,
-        text=True
-    )
-    
-    assert result.returncode == 0, f"Failed: {result.stderr}"
-    assert "SUCCESS" in result.stdout
-
-
 @pytest.mark.skip(reason="Flaky test - passes individually but fails in full suite due to environment pollution from other tests")
 def test_empty_voicemode_tools():
     """Test that empty VOICEMODE_TOOLS_ENABLED loads all tools (same as not set)."""
@@ -185,12 +159,12 @@ def test_whitespace_handling_in_tool_list():
 import os
 import sys
 
-os.environ['VOICEMODE_TOOLS_ENABLED'] = ' converse , statistics '
+os.environ['VOICEMODE_TOOLS_ENABLED'] = ' converse , diagnostics '
 
 from voice_mode import tools
 
 assert 'voice_mode.tools.converse' in sys.modules
-assert 'voice_mode.tools.statistics' in sys.modules
+assert 'voice_mode.tools.diagnostics' in sys.modules
 print('SUCCESS')
 """],
         capture_output=True,

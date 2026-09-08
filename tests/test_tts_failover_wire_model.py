@@ -222,7 +222,7 @@ class TestConverseNoModelCollapse:
 
         with patch(
             "voice_mode.simple_failover.simple_tts_failover", side_effect=fake_failover
-        ), patch.object(converse_mod, "pronounce_enabled", return_value=False):
+        ):
             await converse_mod.text_to_speech_with_failover(message="hello")
 
         assert "model" in captured

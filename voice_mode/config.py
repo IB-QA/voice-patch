@@ -336,44 +336,6 @@ VOICEMODE_VOICES=af_sky
 # VOICEMODE_EVENT_LOG_ROTATION=daily
 
 #############
-# Pronunciation System
-#############
-
-# Enable pronunciation middleware (true/false, default: true)
-# VOICEMODE_PRONUNCIATION_ENABLED=true
-
-# Default pronunciation rules - common technical terms
-# Format: DIRECTION pattern replacement # description
-# See docs for full format details
-VOICEMODE_PRONOUNCE="
-TTS \\bJSON\\b jason # JSON as jason
-TTS \\bYAML\\b yammel # YAML as yammel
-TTS \\bAPI\\b A P I # API as individual letters
-"
-
-# Add custom rules with VOICEMODE_PRONOUNCE_* variables
-# VOICEMODE_PRONOUNCE_CUSTOM=
-
-# Log pronunciation substitutions for debugging (true/false, default: false)
-# VOICEMODE_PRONUNCIATION_LOG_SUBSTITUTIONS=false
-
-#############
-# Think Out Loud Mode (Experimental)
-#############
-
-# Enable multi-voice thinking mode (true/false, default: false)
-# VOICEMODE_THINK_OUT_LOUD=false
-
-# Voice persona mappings for thinking roles (role:voice pairs, comma-separated)
-# VOICEMODE_THINKING_VOICES=analytical:am_adam,creative:af_sarah,critical:af_bella,synthesis:af_nova
-
-# Thinking presentation style: sequential, debate, or chorus (default: sequential)
-# VOICEMODE_THINKING_STYLE=sequential
-
-# Announce which voice is speaking (true/false, default: true)
-# VOICEMODE_THINKING_ANNOUNCE_VOICE=true
-
-#############
 # Service Management
 #############
 
@@ -448,15 +410,6 @@ TTS \\bAPI\\b A P I # API as individual letters
 
 # Download progress style: auto, rich, simple (default: auto)
 # VOICEMODE_PROGRESS_STYLE=auto
-
-# Auto-focus tmux pane when speaking (for multi-agent setups)
-# Switches tmux focus to the agent's pane after conch acquisition
-# VOICEMODE_AUTO_FOCUS_PANE=false
-#
-# Quick toggle (sentinel file ~/.voicemode/autofocus-disabled):
-#   voicemode autofocus off   # disable immediately, overrides env var
-#   voicemode autofocus on    # remove sentinel
-#   voicemode autofocus status
 
 #############
 # API Keys (set these in your environment for security)
@@ -670,10 +623,6 @@ CONCH_GRANT_TTL = float(os.getenv("VOICEMODE_CONCH_GRANT_TTL", "30"))
 # bounded by this cap (and by any smaller per-call timeout) well under typical
 # client timeouts. On timeout the waiter is deregistered cleanly.
 CONCH_MCP_WAIT_CAP = float(os.getenv("VOICEMODE_CONCH_MCP_WAIT_CAP", "25"))
-
-# Auto-focus tmux pane when conch is acquired (for multi-agent setups)
-# When enabled, automatically switches tmux focus to the speaking agent's pane
-AUTO_FOCUS_PANE = env_bool("VOICEMODE_AUTO_FOCUS_PANE", False)
 
 # ==================== CONTROL CHANNEL CONFIGURATION ====================
 # VM-1676: a side control channel into the running server so an external trigger
@@ -1667,27 +1616,3 @@ SERVE_TOKEN = os.getenv("VOICEMODE_SERVE_TOKEN", "")
 # Transport protocol (streamable-http or sse)
 SERVE_TRANSPORT = os.getenv("VOICEMODE_SERVE_TRANSPORT", "streamable-http")
 
-# ==================== THINK OUT LOUD CONFIGURATION ====================
-
-# Enable Think Out Loud mode
-THINK_OUT_LOUD_ENABLED = env_bool("VOICEMODE_THINK_OUT_LOUD", False)
-
-# Voice persona mappings for thinking roles (role:voice pairs)
-# Default: analytical:am_adam,creative:af_sarah,critical:af_bella,synthesis:af_nova
-THINKING_VOICES_STR = os.getenv(
-    "VOICEMODE_THINKING_VOICES",
-    "analytical:am_adam,creative:af_sarah,critical:af_bella,synthesis:af_nova"
-)
-
-# Parse thinking voices into a dictionary
-THINKING_VOICES = {}
-for pair in THINKING_VOICES_STR.split(","):
-    if ":" in pair:
-        role, voice = pair.strip().split(":", 1)
-        THINKING_VOICES[role.strip()] = voice.strip()
-
-# Thinking presentation style: sequential, debate, or chorus
-THINKING_STYLE = os.getenv("VOICEMODE_THINKING_STYLE", "sequential")
-
-# Whether to announce which voice is speaking
-THINKING_ANNOUNCE_VOICE = env_bool("VOICEMODE_THINKING_ANNOUNCE_VOICE", True)

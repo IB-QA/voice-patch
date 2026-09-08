@@ -35,7 +35,6 @@ async def test_livekit_dispatch_precedes_local_audio_initialization(monkeypatch)
         "voice_mode.livekit.transport.converse_livekit",
         livekit_call,
     )
-    monkeypatch.setattr(converse_module, "track_voice_interaction", lambda **kwargs: None)
 
     result = await converse_module._converse_core(
         message="hello",

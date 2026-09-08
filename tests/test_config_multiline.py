@@ -11,8 +11,8 @@ def test_config_multiline_quoted_values():
     # Create a temporary config file with multiline value
     with tempfile.NamedTemporaryFile(mode='w', suffix='.env', delete=False) as f:
         f.write("""VOICEMODE_VOICES=af_nicole
-VOICEMODE_PRONOUNCE='TTS bag carrier
-TTS bottle drink'
+VOICEMODE_TTS_NOTES='first note line
+second note line'
 VOICEMODE_DEBUG=false
 """)
         config_file = f.name
@@ -74,20 +74,12 @@ VOICEMODE_DEBUG=false
         assert os.environ['VOICEMODE_DEBUG'] == 'false'
 
         # Verify multiline value was properly loaded
-        assert 'VOICEMODE_PRONOUNCE' in os.environ
-        pronounce_value = os.environ['VOICEMODE_PRONOUNCE']
-        assert 'TTS bag carrier' in pronounce_value
-        assert 'TTS bottle drink' in pronounce_value
-        assert '\n' in pronounce_value  # Should contain newline
-
-        # Verify it can be parsed as pronunciation rules
-        from voice_mode.pronounce import parse_compact_rules
-        rules = parse_compact_rules(pronounce_value)
-        assert len(rules['tts']) == 2
-        assert rules['tts'][0].pattern == 'bag'
-        assert rules['tts'][0].replacement == 'carrier'
-        assert rules['tts'][1].pattern == 'bottle'
-        assert rules['tts'][1].replacement == 'drink'
+        assert 'VOICEMODE_TTS_NOTES' in os.environ
+        multiline_value = os.environ['VOICEMODE_TTS_NOTES']
+        assert 'first note line' in multiline_value
+        assert 'second note line' in multiline_value
+        assert '\n' in multiline_value  # Should contain newline
+        assert multiline_value.splitlines() == ['first note line', 'second note line']
 
     finally:
         # Clean up
@@ -100,7 +92,7 @@ VOICEMODE_DEBUG=false
 def test_config_single_line_quoted_values():
     """Test that config loader handles single-line quoted values."""
     with tempfile.NamedTemporaryFile(mode='w', suffix='.env', delete=False) as f:
-        f.write("""VOICEMODE_PRONOUNCE='TTS bag carrier'
+        f.write("""VOICEMODE_TTS_NOTES='single note line'
 VOICEMODE_TEST="STT foo bar"
 """)
         config_file = f.name
@@ -151,7 +143,7 @@ VOICEMODE_TEST="STT foo bar"
                 i += 1
 
         # Verify quotes were stripped from single-line values
-        assert os.environ['VOICEMODE_PRONOUNCE'] == 'TTS bag carrier'
+        assert os.environ['VOICEMODE_TTS_NOTES'] == 'single note line'
         assert os.environ['VOICEMODE_TEST'] == 'STT foo bar'
 
     finally:
