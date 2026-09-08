@@ -1648,7 +1648,6 @@ from voice_mode.cli_commands import transcribe as transcribe_cmd
 from voice_mode.cli_commands import status as status_cmd
 from voice_mode.cli_commands import claude as claude_cmd
 from voice_mode.cli_commands import soundfonts as soundfonts_cmd
-from voice_mode.cli_commands import autofocus as autofocus_cmd
 from voice_mode.cli_commands import conch as conch_cmd
 from voice_mode.cli_commands import livekit as livekit_cmd
 
@@ -1663,8 +1662,6 @@ voice_mode_main_cli.add_command(claude_cmd.claude)
 # Add soundfonts toggle commands
 voice_mode_main_cli.add_command(soundfonts_cmd.soundfonts)
 
-# Add autofocus toggle commands
-voice_mode_main_cli.add_command(autofocus_cmd.autofocus)
 
 # Add conch management commands
 voice_mode_main_cli.add_command(conch_cmd.conch)

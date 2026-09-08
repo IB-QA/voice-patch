@@ -553,7 +553,7 @@ _INJECTION_PAYLOADS = [
     "a${IFS}b",                    # parameter expansion sidesteps the space check
     'x"; touch /tmp/y; "',         # quote-break attempt against the old double-quoting
     "it's a 'test'",               # embedded single quotes -> '\'' escaping
-    "TTS (?i)\\badcb\\b 'to do'",  # realistic pronounce value with quote + regex
+    "TTS (?i)\\badcb\\b 'to do'",  # realistic value with quote + regex
 ]
 
 

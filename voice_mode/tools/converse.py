@@ -82,7 +82,6 @@ from voice_mode.config import (
     CONCH_TIMEOUT,
     CONCH_CHECK_INTERVAL,
     CONCH_MODE,
-    AUTO_FOCUS_PANE
 )
 import voice_mode.config
 from voice_mode.provider_discovery import provider_registry
@@ -96,7 +95,6 @@ from voice_mode.core import (
     play_system_audio
 )
 from voice_mode.audio_player import NonBlockingAudioPlayer
-from voice_mode.statistics_tracking import track_voice_interaction
 from voice_mode.utils import (
     get_event_logger,
     log_recording_start,
@@ -107,7 +105,6 @@ from voice_mode.utils import (
     log_tool_request_end,
     update_latest_symlinks
 )
-from voice_mode.pronounce import get_manager as get_pronounce_manager, is_enabled as pronounce_enabled
 from voice_mode.control_channel import get_control_state, intent_sentence, COMMAND_SKIP_BACK
 from voice_mode.control_socket import start_control_listener, stop_control_listener
 from voice_mode.history_buffer import get_history_buffer
@@ -116,210 +113,6 @@ logger = logging.getLogger("voicemode")
 
 # Log silence detection config at module load time
 logger.info(f"Module loaded with DISABLE_SILENCE_DETECTION={DISABLE_SILENCE_DETECTION}")
-
-
-def is_tmux() -> bool:
-    """Check if the current process is running inside a tmux session."""
-    return bool(os.environ.get("TMUX"))
-
-
-def _is_focus_held() -> bool:
-    """Check if another tool recently took visual focus (the 'visual conch').
-
-    Returns True if ~/.voicemode/focus-hold exists and was modified within
-    the hold period, meaning auto-focus should be suppressed to let the
-    user view what was shown (e.g. a file opened by show-me).
-
-    The hold duration is read from the file contents (written by show-me's
-    --hold flag), falling back to VOICEMODE_FOCUS_HOLD_SECONDS env var,
-    then 30 seconds.
-    """
-    hold_file = os.path.expanduser("~/.voicemode/focus-hold")
-    default_hold = float(os.environ.get("VOICEMODE_FOCUS_HOLD_SECONDS", "30"))
-    try:
-        age = time.time() - os.path.getmtime(hold_file)
-        # Read hold duration from file (written by show-me --hold)
-        try:
-            with open(hold_file) as f:
-                hold_seconds = float(f.read().strip())
-        except (ValueError, OSError):
-            hold_seconds = default_hold
-        return age < hold_seconds
-    except (OSError, ValueError):
-        return False
-
-
-def focus_tmux_pane() -> None:
-    """Make the agent's tmux window visible, and optionally switch a client.
-
-    Steps:
-    1. Check autofocus-disabled sentinel — skip if user has toggled autofocus off
-    2. Check focus-hold sentinel — skip if another tool recently took focus
-    3. select-window: make the agent's window current (without changing active pane)
-    4. Check if any client is already showing this session — if so, stop
-    5. If no client is showing the session, switch the focused client to it
-
-    Deliberately does NOT call select-pane — this avoids stealing focus from
-    whichever pane the user is currently working in.  The window becomes
-    visible so the user can see the agent is speaking, but their cursor stays
-    where it was.
-
-    Silent no-op if not in tmux, TMUX_PANE is unset, or tmux is not found.
-    """
-    import subprocess
-
-    tmux_pane = os.environ.get("TMUX_PANE", "")
-    if not tmux_pane:
-        return
-
-    # Respect the autofocus quick-toggle sentinel — user disabled via
-    # `voicemode autofocus off`. Overrides VOICEMODE_AUTO_FOCUS_PANE.
-    from voice_mode.cli_commands.autofocus import is_autofocus_disabled_by_sentinel
-    if is_autofocus_disabled_by_sentinel():
-        return
-
-    # Respect the visual conch — another tool recently took focus
-    if _is_focus_held():
-        return
-
-    try:
-        # Select the window containing our pane (without changing active pane).
-        # This makes the window visible but doesn't steal focus from whichever
-        # pane the user is currently looking at.
-        subprocess.run(["tmux", "select-window", "-t", tmux_pane], capture_output=True)
-
-        # Find which session owns this pane
-        r = subprocess.run(
-            ["tmux", "display-message", "-t", tmux_pane, "-p", "#{session_name}"],
-            capture_output=True, text=True
-        )
-        if r.returncode != 0:
-            return
-        session_name = r.stdout.strip()
-
-        # Check if any client is already attached to this session
-        r = subprocess.run(
-            ["tmux", "list-clients", "-t", session_name, "-F", "#{client_tty}"],
-            capture_output=True, text=True
-        )
-        if r.returncode == 0 and r.stdout.strip():
-            # Session already visible in a terminal — don't steal focus
-            return
-
-        # No client is showing our session — switch the focused client to it
-        r = subprocess.run(
-            ["tmux", "list-clients", "-F", "#{client_tty} #{client_flags}"],
-            capture_output=True, text=True
-        )
-        for line in r.stdout.strip().split("\n"):
-            parts = line.split(" ", 1)
-            if len(parts) == 2 and "focused" in parts[1]:
-                client_tty = parts[0]
-                subprocess.run(
-                    ["tmux", "switch-client", "-c", client_tty, "-t", session_name],
-                    capture_output=True
-                )
-                break
-    except FileNotFoundError:
-        pass  # tmux binary not installed
-
-
-# DJ Ducking Configuration
-DJ_SOCKET_PATH = "/tmp/voicemode-mpv.sock"
-DJ_VOLUME_DUCK_AMOUNT = int(os.environ.get("VOICEMODE_DJ_DUCK_AMOUNT", "20"))  # Volume reduction during TTS
-
-
-def _dj_command(cmd: str) -> Optional[str]:
-    """Send a command to mpv-dj via IPC socket.
-
-    Args:
-        cmd: JSON command to send (e.g., '{ "command": ["get_property", "volume"] }')
-
-    Returns:
-        Response string from mpv, or None if DJ not running
-    """
-    import subprocess
-    import json
-
-    if not os.path.exists(DJ_SOCKET_PATH):
-        return None
-
-    try:
-        result = subprocess.run(
-            ["socat", "-", DJ_SOCKET_PATH],
-            input=cmd + "\n",
-            capture_output=True,
-            text=True,
-            timeout=2
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            return result.stdout.strip()
-    except (subprocess.TimeoutExpired, FileNotFoundError):
-        pass
-    return None
-
-
-def get_dj_volume() -> Optional[float]:
-    """Get current DJ volume level.
-
-    Returns:
-        Current volume (0-100) or None if DJ not running
-    """
-    import json
-    response = _dj_command('{ "command": ["get_property", "volume"] }')
-    if response:
-        try:
-            data = json.loads(response)
-            if "data" in data:
-                return float(data["data"])
-        except (json.JSONDecodeError, ValueError, KeyError):
-            pass
-    return None
-
-
-def set_dj_volume(volume: float) -> bool:
-    """Set DJ volume level.
-
-    Args:
-        volume: Volume level (0-100)
-
-    Returns:
-        True if successful, False otherwise
-    """
-    import json
-    volume = max(0, min(100, volume))  # Clamp to valid range
-    response = _dj_command(f'{{ "command": ["set_property", "volume", {volume}] }}')
-    if response:
-        try:
-            data = json.loads(response)
-            return data.get("error") == "success"
-        except json.JSONDecodeError:
-            pass
-    return False
-
-
-class DJDucker:
-    """Context manager for ducking DJ volume during TTS playback."""
-
-    def __init__(self, duck_amount: int = None):
-        self.duck_amount = duck_amount if duck_amount is not None else DJ_VOLUME_DUCK_AMOUNT
-        self.original_volume: Optional[float] = None
-        self.ducked = False
-
-    def __enter__(self):
-        self.original_volume = get_dj_volume()
-        if self.original_volume is not None:
-            ducked_volume = max(0, self.original_volume - self.duck_amount)
-            if set_dj_volume(ducked_volume):
-                self.ducked = True
-                logger.debug(f"DJ ducked: {self.original_volume:.0f}% -> {ducked_volume:.0f}%")
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.ducked and self.original_volume is not None:
-            if set_dj_volume(self.original_volume):
-                logger.debug(f"DJ restored: {self.original_volume:.0f}%")
-        return False  # Don't suppress exceptions
 
 
 def _matching_trailing_phrase(text: str, phrases, max_leading_words: int):
@@ -565,10 +358,6 @@ async def text_to_speech_with_failover(
     Returns:
         Tuple of (success, tts_metrics, tts_config)
     """
-    # Apply pronunciation rules if enabled
-    if pronounce_enabled():
-        pronounce_mgr = get_pronounce_manager()
-        message = pronounce_mgr.process_tts(message)
 
     # Always use simple failover (the only mode now)
     from voice_mode.simple_failover import simple_tts_failover
@@ -605,10 +394,6 @@ async def synthesize_turn_with_failover(
     Returns:
         Tuple of (success, samples, sample_rate, metrics, config).
     """
-    # Apply pronunciation rules if enabled (parity with the play path).
-    if pronounce_enabled():
-        pronounce_mgr = get_pronounce_manager()
-        message = pronounce_mgr.process_tts(message)
 
     from voice_mode.simple_failover import simple_tts_synthesize
     return await simple_tts_synthesize(
@@ -2919,7 +2704,6 @@ async def _ask_turns_pipeline(
                 # single-message listen path's own log_stt call keeps passing
                 # the real STT transport, unchanged. This makes survey
                 # replies queryable/distinguishable in the conversation log
-                # (matching track_voice_interaction's own transport="survey"
                 # tagging at the dispatch call site) and is what
                 # scripts/verify-survey.sh's check_convo_log filters on.
                 try:
@@ -3684,8 +3468,6 @@ consult the MCP resources listed above.
                 })
 
             # Auto-focus tmux pane after conch acquisition, before audio playback
-            if AUTO_FOCUS_PANE and is_tmux():
-                focus_tmux_pane()
         elif CONCH_ENABLED and skip_conch:
             # Conch is enabled but the caller asked to bypass it.
             if event_logger:
@@ -3697,8 +3479,6 @@ consult the MCP resources listed above.
                     "holder_agent": holder.get('agent') if holder else None,
                 })
             # Still auto-focus tmux pane -- pane focus is unrelated to the conch.
-            if AUTO_FOCUS_PANE and is_tmux():
-                focus_tmux_pane()
 
         if transport == "livekit":
             # Optional imports are intentionally lazy: selecting local transport
@@ -3734,17 +3514,6 @@ consult the MCP resources listed above.
             ]
             timing_str = ", ".join(timing_parts)
             actual_response = livekit_result.response_text or "[no speech detected]"
-            track_voice_interaction(
-                message=message,
-                response=actual_response,
-                timing_str=timing_str,
-                transport="livekit",
-                voice_provider=livekit_result.tts_provider,
-                voice_name=livekit_result.voice,
-                model=livekit_result.tts_model,
-                success=True,
-                error_message=None,
-            )
             if livekit_result.response_text:
                 base_result = f"Voice response: {livekit_result.response_text}"
             else:
@@ -3799,23 +3568,22 @@ consult the MCP resources listed above.
                 # survey pipeline + JSON return contract instead.
                 if normalized_turns is not None and any(t["verb"] == "ask" for t in normalized_turns):
                     n_ask = sum(1 for t in normalized_turns if t["verb"] == "ask")
-                    with DJDucker():
-                        survey_results, stopped_at = await _ask_turns_pipeline(
-                            normalized_turns,
-                            tts_model=tts_model,
-                            tts_provider=tts_provider,
-                            audio_format=audio_format,
-                            resolved_ref_text=resolved_ref_text,
-                            should_skip_tts=should_skip_tts,
-                            control_state=control_state,
-                            disable_silence_detection=disable_silence_detection,
-                            chime_enabled=chime_enabled,
-                            chime_leading_silence=chime_leading_silence,
-                            chime_trailing_silence=chime_trailing_silence,
-                            transport=transport,
-                            event_logger=event_logger,
-                            session_id=resolved_session_id,
-                        )
+                    survey_results, stopped_at = await _ask_turns_pipeline(
+                        normalized_turns,
+                        tts_model=tts_model,
+                        tts_provider=tts_provider,
+                        audio_format=audio_format,
+                        resolved_ref_text=resolved_ref_text,
+                        should_skip_tts=should_skip_tts,
+                        control_state=control_state,
+                        disable_silence_detection=disable_silence_detection,
+                        chime_enabled=chime_enabled,
+                        chime_leading_silence=chime_leading_silence,
+                        chime_trailing_silence=chime_trailing_silence,
+                        transport=transport,
+                        event_logger=event_logger,
+                        session_id=resolved_session_id,
+                    )
                     result, success = _format_survey_result(
                         survey_results, stopped_at, n_ask, effective_metrics_level,
                     )
@@ -3825,21 +3593,6 @@ consult the MCP resources listed above.
                         f"turn{r['index'] + 1} gen {r['generation']:.1f}s play {r['playback']:.1f}s"
                         + (f" record {r['record']:.1f}s stt {r['stt']:.1f}s" if r["verb"] == "ask" else "")
                         for r in survey_results
-                    )
-                    track_voice_interaction(
-                        message=f"[survey x{len(survey_results)}, {n_ask} ask] "
-                                + " | ".join(t["say"][:40] for t in normalized_turns),
-                        response=f"[survey: {n_answered}/{n_ask} answered]",
-                        timing_str=timing_str,
-                        transport="survey",
-                        voice_provider=tts_provider,
-                        voice_name=voice,
-                        model=tts_model,
-                        success=success,
-                        error_message=(
-                            None if stopped_at is None
-                            else f"stopped at turn {stopped_at['turn']} ({stopped_at['reason']})"
-                        ),
                     )
                     logger.info(
                         f"Survey result: completed={stopped_at is None}, "
@@ -3855,33 +3608,20 @@ consult the MCP resources listed above.
                 # so we return the multi-turn summary without entering the
                 # record/listen path (regardless of wait_for_response).
                 if normalized_turns is not None:
-                    with DJDucker():
-                        turn_results = await _speak_turns_pipeline(
-                            normalized_turns,
-                            tts_model=tts_model,
-                            tts_provider=tts_provider,
-                            audio_format=audio_format,
-                            resolved_ref_text=resolved_ref_text,
-                            should_skip_tts=should_skip_tts,
-                        )
+                    turn_results = await _speak_turns_pipeline(
+                        normalized_turns,
+                        tts_model=tts_model,
+                        tts_provider=tts_provider,
+                        audio_format=audio_format,
+                        resolved_ref_text=resolved_ref_text,
+                        should_skip_tts=should_skip_tts,
+                    )
                     result, success = _format_turns_result(turn_results, effective_metrics_level)
 
                     n_ok = sum(1 for r in turn_results if r["success"])
                     timing_str = ", ".join(
                         f"turn{r['index'] + 1} gen {r['generation']:.1f}s play {r['playback']:.1f}s"
                         for r in turn_results
-                    )
-                    track_voice_interaction(
-                        message=f"[turns x{len(turn_results)}] "
-                                + " | ".join(t["say"][:40] for t in normalized_turns),
-                        response="[speak-only]",
-                        timing_str=timing_str,
-                        transport="speak-only",
-                        voice_provider=tts_provider,
-                        voice_name=voice,
-                        model=tts_model,
-                        success=success,
-                        error_message=None if success else f"{len(turn_results) - n_ok} turn(s) failed",
                     )
                     logger.info(f"Turns result: {result}")
                     return result
@@ -3900,17 +3640,16 @@ consult the MCP resources listed above.
                     tts_config = {'provider': 'no-op', 'voice': 'none'}
                 else:
                     # Duck DJ volume during TTS playback
-                    with DJDucker():
-                        tts_success, tts_metrics, tts_config = await text_to_speech_with_failover(
-                            message=message,
-                            voice=voice,
-                            model=tts_model,
-                            instructions=tts_instructions,
-                            audio_format=audio_format,
-                            initial_provider=tts_provider,
-                            speed=speed,
-                            ref_text=resolved_ref_text
-                        )
+                    tts_success, tts_metrics, tts_config = await text_to_speech_with_failover(
+                        message=message,
+                        voice=voice,
+                        model=tts_model,
+                        instructions=tts_instructions,
+                        audio_format=audio_format,
+                        initial_provider=tts_provider,
+                        speed=speed,
+                        ref_text=resolved_ref_text
+                    )
                 
                 # Add TTS sub-metrics
                 if tts_metrics:
@@ -4032,19 +3771,6 @@ consult the MCP resources listed above.
                             timing_parts.append(f"tts_play {timings['tts_play']:.1f}s")
                         timing_str = ", ".join(timing_parts)
 
-                    # Track statistics for speak-only interaction
-                    track_voice_interaction(
-                        message=message,
-                        response="[speak-only]",
-                        timing_str=timing_str,
-                        transport="speak-only",
-                        voice_provider=tts_provider,
-                        voice_name=voice,
-                        model=tts_model,
-                        success=tts_success,
-                        error_message=None if tts_success else "TTS failed"
-                    )
-
                     # Format result based on metrics level
                     if effective_metrics_level == "minimal":
                         result = "✓ Message spoken successfully"
@@ -4165,23 +3891,6 @@ consult the MCP resources listed above.
                             except Exception as e:
                                 logger.warning(f"Failed to replay cached audio: {e}. Regenerating...")
                                 # Fall back to regenerating TTS
-                                with DJDucker():
-                                    tts_success, new_tts_metrics, _ = await text_to_speech_with_failover(
-                                        message=message,
-                                        voice=voice,
-                                        model=tts_model,
-                                        instructions=tts_instructions,
-                                        audio_format=audio_format,
-                                        initial_provider=tts_provider,
-                                        speed=speed,
-                                        ref_text=resolved_ref_text
-                                    )
-                                if not tts_success:
-                                    logger.error("Failed to replay audio via TTS regeneration")
-                        else:
-                            # No cached audio, regenerate TTS
-                            logger.info("No cached audio available, regenerating...")
-                            with DJDucker():
                                 tts_success, new_tts_metrics, _ = await text_to_speech_with_failover(
                                     message=message,
                                     voice=voice,
@@ -4192,6 +3901,21 @@ consult the MCP resources listed above.
                                     speed=speed,
                                     ref_text=resolved_ref_text
                                 )
+                                if not tts_success:
+                                    logger.error("Failed to replay audio via TTS regeneration")
+                        else:
+                            # No cached audio, regenerate TTS
+                            logger.info("No cached audio available, regenerating...")
+                            tts_success, new_tts_metrics, _ = await text_to_speech_with_failover(
+                                message=message,
+                                voice=voice,
+                                model=tts_model,
+                                instructions=tts_instructions,
+                                audio_format=audio_format,
+                                initial_provider=tts_provider,
+                                speed=speed,
+                                ref_text=resolved_ref_text
+                            )
                             if not tts_success:
                                 logger.error("Failed to replay audio via TTS regeneration")
 
@@ -4377,17 +4101,6 @@ consult the MCP resources listed above.
             
             # Track statistics for full conversation interaction
             actual_response = response_text or "[no speech detected]"
-            track_voice_interaction(
-                message=message,
-                response=actual_response,
-                timing_str=timing_str,
-                transport=transport,
-                voice_provider=tts_provider,
-                voice_name=voice,
-                model=tts_model,
-                success=bool(response_text),  # Success if we got a response
-                error_message=None if response_text else "No speech detected"
-            )
             
             # End event logging session
             if event_logger and session_id:
@@ -4442,17 +4155,6 @@ consult the MCP resources listed above.
                 logger.error(f"Traceback: {traceback.format_exc()}")
             
             # Track failed conversation interaction
-            track_voice_interaction(
-                message=message,
-                response="[error]",
-                timing_str=None,
-                transport=transport,
-                voice_provider=tts_provider,
-                voice_name=voice,
-                model=tts_model,
-                success=False,
-                error_message=str(e)
-            )
             
             result = f"Error: {str(e)}"
             return result
