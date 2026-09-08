@@ -90,7 +90,8 @@ This recovery technique allows you to retrieve the transcription without asking 
 - **Provider Selection** - Failover and discovery (coming soon)
 - **Whisper Problems** - Local STT service (coming soon)
 - **Kokoro Problems** - Local TTS service (coming soon)
-- **LiveKit Issues** - Room-based communication (coming soon)
+- **[LiveKit Issues](../guides/livekit-setup.md#troubleshooting)** - Self-hosted
+  browser rooms, services, credentials, and microphone access
 
 ### Audio Device Problems
 - **Microphone Access** - Permissions and detection (coming soon)

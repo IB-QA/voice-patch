@@ -21,6 +21,7 @@ from .config import (
     audio_operation_lock, service_processes,
     logger, disable_sounddevice_stderr_redirect
 )
+from .core import cleanup as cleanup_clients
 
 # All configuration imported from config.py
 # Track if startup has been initialized
@@ -83,13 +84,10 @@ async def startup_initialization():
     logger.info("Service initialization complete")
 
 
-def cleanup_on_shutdown():
-    """Cleanup function called on shutdown"""
-    from voice_mode.core import cleanup as cleanup_clients
-    
-    # Cleanup OpenAI clients
-    cleanup_clients()
-    
+async def cleanup_on_shutdown() -> None:
+    """Close shared clients and stop services started by this process."""
+    await cleanup_clients()
+
     # Stop any services we started
     for name, process in service_processes.items():
         if process and process.poll() is None:

@@ -1,0 +1,23 @@
+[Unit]
+Description=VoiceMode LiveKit browser gateway
+After=network-online.target voicemode-livekit.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart={START_SCRIPT}
+WorkingDirectory={LIVEKIT_DIR}
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+KillSignal=SIGTERM
+StandardOutput=append:{LOG_DIR}/livekit-web.out.log
+StandardError=append:{LOG_DIR}/livekit-web.err.log
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths={LIVEKIT_DIR} {LOG_DIR}
+
+[Install]
+WantedBy=default.target

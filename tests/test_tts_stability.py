@@ -122,7 +122,29 @@ class TestTTSStability:
         
         # Verify HTTP clients were closed
         assert mock_openai_client._client.aclose.called
-        assert mock_openai_client._client.aclose.call_count == 2  # Once for STT, once for TTS
+        # The same client may appear under multiple roles; close it only once.
+        assert mock_openai_client._client.aclose.call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_cleanup_without_argument_closes_registered_clients(self):
+        """Process shutdown closes clients created by get_openai_clients."""
+        stt_client = MagicMock()
+        stt_client._client.aclose = AsyncMock()
+        tts_client = MagicMock()
+        tts_client._client.aclose = AsyncMock()
+
+        with patch.dict(
+            "voice_mode.core._managed_openai_clients",
+            clear=True,
+        ), patch(
+            "voice_mode.core.AsyncOpenAI",
+            side_effect=[stt_client, tts_client],
+        ):
+            get_openai_clients(api_key="test-key")
+            await cleanup()
+
+        stt_client._client.aclose.assert_awaited_once()
+        tts_client._client.aclose.assert_awaited_once()
     
     @pytest.mark.skip(reason="httpx.Timeout API changed")
     @pytest.mark.asyncio

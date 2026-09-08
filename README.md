@@ -75,6 +75,8 @@ For manual setup, see the [Getting Started Guide](docs/tutorials/getting-started
 - **Low latency** - fast enough to feel like a real conversation
 - **Smart silence detection** - stops recording when you stop speaking
 - **Privacy options** - run entirely locally or use cloud services
+- **Self-hosted browser rooms** - optional loopback LiveKit SFU and browser
+  microphone transport, restored in this private fork
 
 ## Compatibility
 
@@ -118,8 +120,11 @@ For privacy or offline use, install local speech services:
 
 - **[Whisper.cpp](docs/guides/whisper-setup.md)** - Local speech-to-text
 - **[Kokoro](docs/guides/kokoro-setup.md)** - Local text-to-speech with multiple voices
+- **[LiveKit browser rooms](docs/guides/livekit-setup.md)** - Self-hosted,
+  loopback browser microphone rooms with explicit LiveKit transport
 
-These provide the same API as OpenAI, so VoiceMode switches seamlessly between them.
+Whisper and Kokoro expose OpenAI-compatible APIs, so VoiceMode can switch
+between local and cloud speech providers.
 
 ## Installation Details
 
@@ -205,6 +210,7 @@ export VOICEMODE_SAVE_AUDIO=true
 - [Configuration](docs/guides/configuration.md) - All environment variables
 - [Whisper Setup](docs/guides/whisper-setup.md) - Local speech-to-text
 - [Kokoro Setup](docs/guides/kokoro-setup.md) - Local text-to-speech
+- [LiveKit Browser Rooms](docs/guides/livekit-setup.md) - Optional self-hosted room transport
 - [Development Setup](docs/tutorials/development-setup.md) - Contributing guide
 
 Full documentation: [voicemode.dev](https://voicemode.dev)

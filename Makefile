@@ -13,7 +13,8 @@
 	test-installer-pypi test-installer-pypi-ubuntu test-installer-pypi-fedora \
 	test-installer-pypi-all \
 	vm-ubuntu vm-fedora vm-macos vm-ubuntu-quick vm-fedora-quick vm-macos-quick vm-clean vm-list \
-	audit-deps audit-deps-critical audit-deps-json
+	audit-deps audit-deps-critical audit-deps-json \
+	livekit-web-build livekit-web-check
 
 # Default target
 help:
@@ -107,9 +108,23 @@ dev-install:
 # Build Python package
 build-package:
 	@echo "Building voice-mode package..."
+	@$(MAKE) livekit-web-check
 	@uv build
 	@echo "✅ Package built: dist/"
 	@ls -lh dist/
+
+livekit-web-build:
+	@cd web/livekit && npm ci
+	@cd web/livekit && npm run build -- --outDir ../../voice_mode/livekit/frontend --emptyOutDir
+
+livekit-web-check:
+	@test -f voice_mode/livekit/frontend/index.html || \
+		(echo "LiveKit browser assets are missing; run 'make livekit-web-build'." && exit 1)
+	@tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
+		cd web/livekit && npm ci --ignore-scripts >/dev/null && \
+		npm run build -- --outDir "$$tmp" --emptyOutDir >/dev/null && \
+		diff -qr "$$tmp" ../../voice_mode/livekit/frontend >/dev/null || \
+		(echo "LiveKit browser assets are stale; run 'make livekit-web-build'." && exit 1)
 
 # Build development package with auto-versioning
 build-dev:

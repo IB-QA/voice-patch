@@ -113,17 +113,30 @@
 **Problem:** LiveKit or local transport failing.
 
 **Solutions:**
-1. Try different transport:
+1. Confirm the transport was selected explicitly:
    ```python
-   # Force local transport
+   # Local audio devices (default)
    converse("Test", transport="local")
 
-   # Force LiveKit
-   converse("Test", transport="livekit")
+   # Existing self-hosted room
+   converse("Test", transport="livekit", room_name="voicemode-browser-...")
    ```
 
-2. Check LiveKit room configuration
-3. Verify microphone permissions
+2. For LiveKit, check both managed services:
+   ```bash
+   voicemode service status livekit
+   voicemode service status livekit-web
+   ```
+3. Open the browser with `voicemode livekit browser open`, choose **Connect**,
+   then choose **Turn on microphone** and grant permission.
+4. Run `voicemode livekit rooms list` and pass the exact room name when more
+   than one prefixed room exists.
+5. Check `voicemode service logs livekit` and
+   `voicemode service logs livekit-web`.
+
+LiveKit does not auto-route or fall back from local transport. The current
+self-hosted browser gateway is loopback-only; LAN/Tailscale and TURN exposure
+are not supported yet. This is not hosted VoiceMode Connect/Auth0.
 
 ### Timeout issues
 

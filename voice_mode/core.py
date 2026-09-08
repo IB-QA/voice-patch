@@ -32,6 +32,11 @@ from .audio_player import NonBlockingAudioPlayer
 
 logger = logging.getLogger("voicemode")
 
+# AsyncOpenAI owns the injected httpx clients, but the module-level converse
+# clients outlive individual tool calls. Keep a small lifecycle registry so
+# server and CLI shutdown can close exactly the clients this module created.
+_managed_openai_clients: dict[int, AsyncOpenAI] = {}
+
 # VM-1676 control channel: poll cadence while waiting on the buffered (non-
 # streaming) player. ~50ms keeps the stop reaction well under the 200ms target
 # without busy-spinning.
@@ -182,7 +187,7 @@ def get_openai_clients(api_key: str, stt_base_url: Optional[str] = None, tts_bas
     stt_http_client = httpx.AsyncClient(**http_client_config)
     tts_http_client = httpx.AsyncClient(**http_client_config)
 
-    return {
+    clients = {
         'stt': AsyncOpenAI(
             api_key=api_key,
             base_url=stt_base_url,
@@ -196,6 +201,8 @@ def get_openai_clients(api_key: str, stt_base_url: Optional[str] = None, tts_bas
             max_retries=tts_max_retries
         )
     }
+    _managed_openai_clients.update((id(client), client) for client in clients.values())
+    return clients
 
 
 async def text_to_speech(
@@ -1069,20 +1076,35 @@ async def play_system_audio(message_key: str, fallback_text: Optional[str] = Non
     return False
 
 
-async def cleanup(openai_clients: dict):
-    """Cleanup function to close HTTP clients and resources"""
+async def cleanup(openai_clients: Optional[dict] = None):
+    """Close managed OpenAI HTTP clients and release process resources.
+
+    With no argument, close all clients created by :func:`get_openai_clients`.
+    An explicit mapping remains supported for focused callers and tests.
+    """
     logger.info("Shutting down Voice Mode Server...")
-    
-    # Close OpenAI HTTP clients
-    try:
-        # Close all clients (including provider-specific ones)
-        for client_name, client in openai_clients.items():
-            if hasattr(client, '_client'):
+
+    clients = (
+        list(openai_clients.values())
+        if openai_clients is not None
+        else list(_managed_openai_clients.values())
+    )
+    closed_ids: set[int] = set()
+    for client in clients:
+        client_id = id(client)
+        if client_id in closed_ids:
+            continue
+        closed_ids.add(client_id)
+        try:
+            if hasattr(client, "_client"):
                 await client._client.aclose()
-                logger.debug(f"Closed {client_name} HTTP client")
-    except Exception as e:
-        logger.error(f"Error closing HTTP clients: {e}")
-    
+                logger.debug("Closed OpenAI HTTP client")
+        except Exception as exc:
+            logger.error("Error closing OpenAI HTTP client: %s", exc)
+
+    for client_id in closed_ids:
+        _managed_openai_clients.pop(client_id, None)
+
     # Final garbage collection
     gc.collect()
     logger.info("Cleanup completed")

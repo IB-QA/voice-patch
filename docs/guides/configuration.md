@@ -83,11 +83,12 @@ When used as an MCP server, add to your Claude or other MCP client configuration
 ```bash
 # OpenAI API Key (for cloud TTS/STT)
 OPENAI_API_KEY=sk-...
-
-# LiveKit credentials (for room-based voice)
-LIVEKIT_API_KEY=devkey          # Default for local dev
-LIVEKIT_API_SECRET=secret        # Default for local dev
 ```
+
+LiveKit API credentials and the browser bearer are sensitive. The managed
+installer generates and preserves random values in
+`~/.voicemode/voicemode.env`; do not use fixed development credentials. See
+[Self-hosted LiveKit browser rooms](livekit-setup.md).
 
 ### Voice Services
 
@@ -272,15 +273,30 @@ queue management to remote agents via `VOICEMODE_TOOLS_ENABLED` (whitelist) or
 
 ### LiveKit Configuration
 
-```bash
-# Server settings
-LIVEKIT_URL=ws://127.0.0.1:7880
-LIVEKIT_PORT=7880
+LiveKit is an optional explicit room transport; it is not auto-selected. The
+managed installer supplies the URL and credentials below. VoiceMode-specific
+names take precedence over the compatible `LIVEKIT_*` fallbacks.
 
-# Room settings
-VOICEMODE_LIVEKIT_ROOM_PREFIX=voicemode
-VOICEMODE_LIVEKIT_AUTO_CREATE=true
+```bash
+# SFU connection (generated credentials omitted)
+VOICEMODE_LIVEKIT_URL=ws://127.0.0.1:7880
+VOICEMODE_LIVEKIT_API_KEY=...
+VOICEMODE_LIVEKIT_API_SECRET=...
+VOICEMODE_LIVEKIT_ROOM_PREFIX=voicemode-
+
+# Loopback browser gateway
+VOICEMODE_LIVEKIT_BROWSER_HOST=127.0.0.1
+VOICEMODE_LIVEKIT_BROWSER_PORT=7890
+VOICEMODE_LIVEKIT_BROWSER_ORIGIN=http://127.0.0.1:7890
+VOICEMODE_LIVEKIT_BROWSER_TOKEN=...
 ```
+
+Compatible fallbacks are `LIVEKIT_URL`, `LIVEKIT_API_KEY`,
+`LIVEKIT_API_SECRET`, and `LIVEKIT_ROOM_PREFIX`. The API secret and browser
+token must not be logged or committed. There are no implemented
+`LIVEKIT_PORT`, `VOICEMODE_LIVEKIT_AUTO_CREATE`, or automatic transport
+selection variables. The browser gateway rejects non-loopback hosts. See the
+[LiveKit setup guide](livekit-setup.md) for installation and security details.
 
 ### HTTP Server Configuration
 
@@ -378,9 +394,10 @@ VoiceMode automatically discovers running local services:
 
 1. **Whisper STT**: Checks `http://127.0.0.1:2022/v1`
 2. **Kokoro TTS**: Checks `http://127.0.0.1:8880/v1`
-3. **LiveKit**: Checks `ws://127.0.0.1:7880`
 
-No configuration needed when services run on default ports!
+No speech-provider configuration is needed when these services run on their
+default ports. LiveKit is not a speech provider and is used only when explicitly
+selected with `transport="livekit"` or `--transport livekit`.
 
 ## Configuration Philosophy
 

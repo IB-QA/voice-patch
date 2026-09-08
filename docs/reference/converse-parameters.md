@@ -10,6 +10,25 @@ The message to speak to the user.
 **Type:** boolean (default: true)
 Whether to listen for a voice response after speaking.
 
+### transport
+**Type:** `"local" | "livekit"` (default: `"local"`)
+
+Select the audio transport explicitly. `local` uses the machine's audio
+devices. `livekit` joins a self-hosted browser room, publishes the message as
+TTS, and optionally returns the first final room transcript. There is no
+`auto` mode or fallback to LiveKit.
+
+LiveKit currently accepts one scalar `message` per call. The `turns` parameter
+is rejected, and CLI continuous mode is unavailable. See
+[Self-hosted LiveKit browser rooms](../guides/livekit-setup.md).
+
+### room_name
+**Type:** string (optional)
+
+Exact LiveKit room name. If omitted, VoiceMode resolves the room only when
+exactly one room matches `VOICEMODE_LIVEKIT_ROOM_PREFIX`; no match or multiple
+matches returns an error. Ignored by local transport.
+
 ## Timing Parameters
 
 ### listen_duration_max

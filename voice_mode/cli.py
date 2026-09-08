@@ -2,6 +2,7 @@
 CLI entry points for voice-mode package.
 """
 import asyncio
+import importlib
 import sys
 import os
 import warnings
@@ -338,7 +339,14 @@ def remove(name, keep_audio):
 
 # Public CLI service names. ``mlx-audio`` uses kebab-case for ergonomics
 # at the command line; the internal Python identifier is ``mlx_audio``.
-VALID_SERVICES = ['whisper', 'kokoro', 'voicemode', 'mlx-audio']
+VALID_SERVICES = [
+    'whisper',
+    'kokoro',
+    'voicemode',
+    'mlx-audio',
+    'livekit',
+    'livekit-web',
+]
 
 
 def _normalize_service_name(name: str) -> str:
@@ -361,6 +369,8 @@ def service():
       kokoro     Local text-to-speech (TTS) on port 8880
       voicemode  HTTP MCP server for remote access on port 8765
       mlx-audio  Apple Silicon: unified Whisper + Kokoro + Qwen3-TTS on port 8890
+      livekit    Managed local LiveKit SFU on port 7880
+      livekit-web Local VoiceMode browser gateway on port 7890
 
     \b
     Quick Start:
@@ -370,7 +380,8 @@ def service():
 
     \b
     Service Lifecycle:
-      install  Install service software (whisper, kokoro, mlx-audio)
+      install  Install service software
+      uninstall Remove service software and configuration
       start    Start a service
       stop     Stop a service
       restart  Restart a service
@@ -606,8 +617,13 @@ def _echo_missing_dependencies(result):
 @service.command('install')
 @click.argument('service_name', type=click.Choice(VALID_SERVICES, case_sensitive=False), metavar='SERVICE')
 @click.option('--force', '-f', is_flag=True, help='Force reinstall even if already installed')
+@click.option(
+    '--rotate-credentials',
+    is_flag=True,
+    help='Generate new LiveKit API credentials (LiveKit only)',
+)
 @click.help_option('-h', '--help')
-def service_install(service_name, force):
+def service_install(service_name, force, rotate_credentials):
     """Install a voice service.
 
     \b
@@ -616,12 +632,14 @@ def service_install(service_name, force):
       kokoro     Kokoro text-to-speech server
       voicemode  Already installed (enables the HTTP server)
       mlx-audio  Apple Silicon: unified Whisper STT + Kokoro TTS + Qwen3-TTS
+      livekit    Secure local LiveKit SFU
 
     \b
     Examples:
       voicemode service install whisper
       voicemode service install kokoro --force
       voicemode service install mlx-audio
+      voicemode service install livekit
     """
     if service_name == 'whisper':
         from voice_mode.tools.whisper.install import whisper_install
@@ -681,8 +699,83 @@ def service_install(service_name, force):
                 _echo_missing_dependencies(result)
         else:
             click.echo(result)
+    elif service_name == 'livekit':
+        livekit_install = importlib.import_module(
+            "voice_mode.tools.livekit.install"
+        ).livekit_install
+        install_fn = getattr(livekit_install, 'fn', livekit_install)
+        result = asyncio.run(install_fn(
+            force_reinstall=force,
+            rotate_credentials=rotate_credentials,
+        ))
+        if result.get("success"):
+            click.echo("✅ LiveKit installed successfully")
+            click.echo(f"   Binary: {result['binary']}")
+            click.echo(f"   Config: {result['config_path']}")
+        else:
+            click.echo(
+                f"❌ LiveKit installation failed: "
+                f"{result.get('error', 'Unknown error')}"
+            )
     else:
         click.echo(f"❌ Unknown service: {service_name}")
+
+
+@service.command('uninstall')
+@click.argument(
+    'service_name',
+    type=click.Choice(VALID_SERVICES, case_sensitive=False),
+    metavar='SERVICE',
+)
+@click.option('--remove-models', is_flag=True, help='Also remove downloaded models')
+@click.option('--remove-all-data', is_flag=True, help='Also remove service logs and data')
+@click.confirmation_option(prompt='Are you sure you want to uninstall this service?')
+@click.help_option('-h', '--help')
+def service_uninstall(service_name, remove_models, remove_all_data):
+    """Uninstall service software through the unified lifecycle."""
+    if service_name == 'whisper':
+        whisper_uninstall = importlib.import_module(
+            "voice_mode.tools.whisper.uninstall"
+        ).whisper_uninstall
+        uninstall_fn = getattr(whisper_uninstall, 'fn', whisper_uninstall)
+        result = asyncio.run(uninstall_fn(
+            remove_models=remove_models,
+            remove_all_data=remove_all_data,
+        ))
+    elif service_name == 'kokoro':
+        kokoro_uninstall = importlib.import_module(
+            "voice_mode.tools.kokoro.uninstall"
+        ).kokoro_uninstall
+        uninstall_fn = getattr(kokoro_uninstall, 'fn', kokoro_uninstall)
+        result = asyncio.run(uninstall_fn(
+            remove_models=remove_models,
+            remove_all_data=remove_all_data,
+        ))
+    elif service_name == 'mlx-audio':
+        mlx_audio_uninstall = importlib.import_module(
+            "voice_mode.tools.mlx_audio.uninstall"
+        ).mlx_audio_uninstall
+        result = asyncio.run(mlx_audio_uninstall(
+            remove_models=remove_models,
+            remove_all_data=remove_all_data,
+        ))
+    elif service_name == 'livekit':
+        livekit_uninstall = importlib.import_module(
+            "voice_mode.tools.livekit.uninstall"
+        ).livekit_uninstall
+        uninstall_fn = getattr(livekit_uninstall, 'fn', livekit_uninstall)
+        result = asyncio.run(uninstall_fn(remove_all_data=remove_all_data))
+    else:
+        click.echo(f"❌ {service_name} is part of VoiceMode and cannot be uninstalled")
+        return
+
+    if result.get('success'):
+        click.echo(f"✅ {service_name} uninstalled successfully")
+    else:
+        click.echo(
+            f"❌ {service_name} uninstall completed with errors: "
+            f"{'; '.join(result.get('errors', []))}"
+        )
 
 
 # ============================================================================
@@ -1557,6 +1650,7 @@ from voice_mode.cli_commands import claude as claude_cmd
 from voice_mode.cli_commands import soundfonts as soundfonts_cmd
 from voice_mode.cli_commands import autofocus as autofocus_cmd
 from voice_mode.cli_commands import conch as conch_cmd
+from voice_mode.cli_commands import livekit as livekit_cmd
 
 # Add exchanges to main CLI
 voice_mode_main_cli.add_command(exchanges_cmd.exchanges)
@@ -1574,6 +1668,7 @@ voice_mode_main_cli.add_command(autofocus_cmd.autofocus)
 
 # Add conch management commands
 voice_mode_main_cli.add_command(conch_cmd.conch)
+voice_mode_main_cli.add_command(livekit_cmd.livekit)
 
 # Add the /mcp self-reconnect command (VM-1727). Lives in a top-level,
 # MCP-independent module so it imports and runs when the voicemode server is
@@ -1745,6 +1840,10 @@ def _survey_exit_code(result):
               help='[DEPRECATED] --no-wait is deprecated; use --skip-stt instead. Wait for response after speaking.')
 @click.option('--skip-stt', is_flag=True, default=False,
               help='Speak only; skip listening for a spoken response (STT). Replaces --no-wait.')
+@click.option('--transport', type=click.Choice(['local', 'livekit']), default='local',
+              show_default=True, help='Voice audio transport.')
+@click.option('--room', 'room_name',
+              help='Exact LiveKit room name (or omit for unambiguous prefix resolution).')
 @click.option('--duration', '-d', type=float, default=DEFAULT_LISTEN_DURATION, help='Listen duration in seconds')
 @click.option('--min-duration', type=float, default=MIN_RECORDING_DURATION, help='Minimum listen duration before silence detection')
 @click.option('--voice', help='TTS voice: a name (nova, shimmer, af_sky), a clone '
@@ -1780,7 +1879,7 @@ def _survey_exit_code(result):
                    "when — and only when — an --ask turn captures a reply (silent on a "
                    "timeout), so you can tell 'heard you' from 'didn't hear'. Default off.")
 @click.option('--continuous', '-c', is_flag=True, help='Continuous conversation mode')
-def converse(message_args, message, wait, skip_stt, duration, min_duration, voice, tts_provider,
+def converse(message_args, message, wait, skip_stt, transport, room_name, duration, min_duration, voice, tts_provider,
             tts_model, tts_instructions, audio_feedback, audio_format, disable_silence_detection,
             speed, vad_aggressiveness, skip_tts, skip_conch, say_items, ask_items, script,
             pause_after_ms, ack, continuous):
@@ -1799,6 +1898,16 @@ def converse(message_args, message, wait, skip_stt, duration, min_duration, voic
     # the survey JSON instead of the speak-only summary). Mutually exclusive
     # with a scalar message and with continuous mode.
     turns = _build_turns_from_cli(say_items, ask_items, script, voice)
+    if transport == "livekit" and turns is not None:
+        raise click.UsageError(
+            "--transport livekit does not support --say/--ask/--script yet; "
+            "pass one scalar MESSAGE."
+        )
+    if transport == "livekit" and continuous:
+        raise click.UsageError(
+            "--transport livekit does not support --continuous yet; "
+            "run one converse command per exchange."
+        )
     if turns is not None:
         if message_args or message is not None:
             raise click.UsageError(
@@ -1856,7 +1965,11 @@ def converse(message_args, message, wait, skip_stt, duration, min_duration, voic
     # entering the MCP-only continuation manager; otherwise an in-progress
     # result makes ``asyncio.run`` cancel the still-speaking/listening job as it
     # closes its loop.
-    from voice_mode.tools.converse import _converse_core as converse_fn
+    from voice_mode.core import cleanup as cleanup_clients
+    from voice_mode.tools.converse import (
+        _converse_core as converse_fn,
+        openai_clients,
+    )
     
     async def run_conversation():
         """Run the conversation asynchronously."""
@@ -1879,6 +1992,8 @@ def converse(message_args, message, wait, skip_stt, duration, min_duration, voic
                 # inherits (harmless when there is no ask turn).
                 result = await getattr(converse_fn, 'fn', converse_fn)(
                     turns=turns,
+                    transport=transport,
+                    room_name=room_name,
                     pause_after_ms=pause_after_ms,
                     wait_for_response=False,
                     listen_duration_max=duration,
@@ -1913,6 +2028,8 @@ def converse(message_args, message, wait, skip_stt, duration, min_duration, voic
                 # First message
                 result = await getattr(converse_fn, 'fn', converse_fn)(
                     message=message,
+                    transport=transport,
+                    room_name=room_name,
                     wait_for_response=True,
                     listen_duration_max=duration,
                     listen_duration_min=min_duration,
@@ -1937,6 +2054,8 @@ def converse(message_args, message, wait, skip_stt, duration, min_duration, voic
                     # Wait for user's next input
                     result = await getattr(converse_fn, 'fn', converse_fn)(
                         message="",  # Empty message for listening only
+                        transport=transport,
+                        room_name=room_name,
                         wait_for_response=True,
                         listen_duration_max=duration,
                         listen_duration_min=min_duration,
@@ -1961,6 +2080,8 @@ def converse(message_args, message, wait, skip_stt, duration, min_duration, voic
                         if user_text.lower() in ['exit', 'quit', 'goodbye', 'bye']:
                             await getattr(converse_fn, 'fn', converse_fn)(
                                 message="Goodbye!",
+                                transport=transport,
+                                room_name=room_name,
                                 wait_for_response=False,
                                 voice=voice,
                                 tts_provider=tts_provider,
@@ -1975,6 +2096,8 @@ def converse(message_args, message, wait, skip_stt, duration, min_duration, voic
                 # Single conversation
                 result = await getattr(converse_fn, 'fn', converse_fn)(
                     message=message,
+                    transport=transport,
+                    room_name=room_name,
                     wait_for_response=wait_for_response,
                     listen_duration_max=duration,
                     listen_duration_min=min_duration,
@@ -2014,6 +2137,8 @@ def converse(message_args, message, wait, skip_stt, duration, min_duration, voic
             import traceback
             if os.environ.get('VOICEMODE_DEBUG'):
                 traceback.print_exc()
+        finally:
+            await cleanup_clients(openai_clients)
     
     # Run the async function
     asyncio.run(run_conversation())

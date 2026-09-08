@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Self-hosted LiveKit browser rooms restored in this private fork** — the
+  historical room transport is available again as an explicit
+  `transport="livekit"` / `--transport livekit` option. A secure installer
+  configures a loopback-only LiveKit SFU and packaged browser gateway, generates
+  private credentials, and integrates both services with the existing CLI and
+  MCP service lifecycle. Browser users can create a private room, opt in to
+  microphone publishing, hear agent audio, and return one final transcript per
+  exchange. This is a local self-hosted feature, not the removed hosted
+  VoiceMode Connect/Auth0 product. See
+  [the LiveKit setup guide](docs/guides/livekit-setup.md).
+
+### Fixed
+
+- **HTTP speech clients now close cleanly at process shutdown** — FastMCP uses
+  its lifespan hook to release shared OpenAI/httpx clients, and direct
+  `voicemode converse` commands perform the same cleanup before their event loop
+  exits. This removes the misleading `close.failed ... CancelledError` debug
+  noise after otherwise successful CLI conversations and prevents pooled
+  clients from leaking across server shutdown.
+- **LiveKit room participants now clean up after each exchange** — successful,
+  failed, and cancelled room conversations close the speech session, disconnect
+  the temporary agent, and release the API client so stale agent participants
+  do not remain in browser rooms.
+
 ## [8.12.1] - 2026-09-07
 
 ### Added
