@@ -1,6 +1,6 @@
 # macOS Media Keys Setup
 
-Use your keyboard's media keys ( ⏮  / ▶❙❙ / ⏭  ) to control VoiceMode — pause,
+Use your keyboard's media keys ( ⏮ / ▶❙❙ / ⏭ ) to control VoiceMode — pause,
 barge in, or replay — without touching your music. This guide covers the
 [Hammerspoon](https://www.hammerspoon.org/)-based setup on macOS: install →
 configure → grant permission → verify.
@@ -8,7 +8,7 @@ configure → grant permission → verify.
 **Why Hammerspoon?** macOS routes media keys straight to Music/Spotify. Making
 them also drive VoiceMode needs an interceptor, and you don't want VoiceMode
 permanently stealing your media keys — Hammerspoon's `hs.eventtap` can pass a
-key through to your media app *or* swallow it, per-event, based on whether a
+key through to your media app _or_ swallow it, per-event, based on whether a
 VoiceMode converse is currently live. When no converse is live, every key
 behaves exactly as it did before you installed anything.
 
@@ -82,23 +82,28 @@ Add Hammerspoon as a login item so it survives a reboot: System Settings →
 **General → Login Items** → add Hammerspoon (or run `open -a Hammerspoon` to
 start it right now).
 
-*(Stream Deck buttons don't need this — they shell out to `voicemode control`
+_(Stream Deck buttons don't need this — they shell out to `voicemode control`
 directly and never touch Hammerspoon. So a working Stream Deck with dead media
-keys is the tell-tale sign Hammerspoon isn't running.)*
+keys is the tell-tale sign Hammerspoon isn't running.)_
 
 ## Verify
 
 1. **Is Hammerspoon running?** `pgrep -x Hammerspoon` should print a PID (or
    look for the `VM⌨︎` item in the menubar).
 2. **Is the event tap live?** From the Hammerspoon Console:
-   ```
+
+   ```bash
    hs -c 'print(_G.__voicemodeMediaKeys.tap:isEnabled())'
    ```
+
    should print `true`.
+
 3. **Is Accessibility actually granted?**
-   ```
+
+   ```bash
    hs -c 'print(hs.accessibilityState())'
    ```
+
 4. **No converse running:** press a media key — behavior is unchanged, keys
    go straight to your music app.
 5. **Converse live** (start one, let VoiceMode speak): **Next** cuts it off
@@ -108,6 +113,7 @@ keys is the tell-tale sign Hammerspoon isn't running.)*
    `[voicemode-media-keys] started (...)` on load and a line for each action
    (`barge`, `pause`, `resume`) as you press keys.
 7. Offline logic test, no Hammerspoon needed:
+
    ```bash
    luajit scripts/hammerspoon/test_voicemode_media_keys.lua
    ```
