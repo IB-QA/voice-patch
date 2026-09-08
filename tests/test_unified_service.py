@@ -116,8 +116,13 @@ class TestUnifiedServiceTool:
         mock_proc.terminate = MagicMock()
         mock_proc.wait = MagicMock()
         
+        # The port lookup runs twice: once to find the victim, then again to
+        # confirm it actually released the socket. A real stop frees the port.
+        port_lookups = [mock_proc, None]
+
         # Mock platform and service files to force fallback to process termination
-        with patch('voice_mode.tools.service.find_process_by_port', return_value=mock_proc), \
+        with patch('voice_mode.tools.service.find_process_by_port',
+                   side_effect=lambda *_a, **_k: port_lookups.pop(0) if port_lookups else None), \
              patch('platform.system', return_value='Darwin'), \
              patch('pathlib.Path.exists', return_value=False):  # No service files exist
             result = await service("kokoro", "stop")

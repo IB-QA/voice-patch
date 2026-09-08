@@ -39,8 +39,22 @@ except ImportError:
     api = None
     rtc = None
 
+def _module_available(module: str) -> bool:
+    """Whether ``module`` can be imported.
+
+    find_spec raises ModuleNotFoundError (rather than returning None) when a
+    parent package is missing, so probing "livekit.api" without the optional
+    livekit extra installed aborts collection for the whole file instead of
+    skipping it.
+    """
+    try:
+        return importlib.util.find_spec(module) is not None
+    except (ImportError, ValueError):
+        return False
+
+
 _LIVEKIT_OPTIONALS_AVAILABLE = all(
-    importlib.util.find_spec(module) is not None
+    _module_available(module)
     for module in (
         "livekit.api",
         "livekit.rtc",
