@@ -49,9 +49,8 @@ These are the ways a PR can pass tests and still break voice. Treat any hit as
 - [ ] **It composes with recent work.** A months-old branch may silently revert
       or collide with shipped features. Check it still cooperates with:
       conch holdership (`hold_conch`, VM-1433), trigger words (VM-291), and the
-      impressions passthrough (`ref_text` / `clone_profile` / `tts_kwargs` in
-      `simple_failover.py`, VM-1174). A rebase must **preserve** these, not
-      overwrite the block.
+      per-provider model resolution in `simple_failover.py` (VM-1390). A rebase
+      must **preserve** these, not overwrite the block.
 - [ ] **Provider integrations: prefer the base-URL mechanism.** VoiceMode
       discovers TTS/STT providers from OpenAI-compatible endpoints in
       `VOICEMODE_*_BASE_URLS`. A new provider that *already* exposes an
