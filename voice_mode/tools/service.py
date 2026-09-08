@@ -644,6 +644,34 @@ async def start_service(service_name: str) -> str:
         return f"❌ Error starting {service_name}: {str(e)}"
 
 
+async def _confirm_port_released(
+    service_name: str,
+    port: int,
+    timeout: float = 10.0,
+) -> Optional[str]:
+    """Return an error string if ``port`` is still held after ``timeout``.
+
+    A stop request being *accepted* is not proof the process exited: launchctl
+    unload and systemctl stop both return 0 while a process wedged in an
+    uninterruptible wait keeps holding its listening socket. Callers report
+    success only when this returns None, so a later start doesn't collide with
+    a corpse that still owns the port.
+    """
+    deadline = time.monotonic() + timeout
+    while True:
+        proc = find_process_by_port(port)
+        if proc is None:
+            return None
+        if time.monotonic() >= deadline:
+            return (
+                f"❌ {service_name.capitalize()} did not stop: PID {proc.pid} still "
+                f"holds port {port} after {timeout:.0f}s. The stop request was "
+                f"accepted but the process has not exited (it may be stuck in an "
+                f"uninterruptible wait); kill -9 {proc.pid} if it persists."
+            )
+        await asyncio.sleep(0.5)
+
+
 async def stop_service(service_name: str) -> str:
     """Stop a service."""
     if service_name == "whisper":
@@ -676,7 +704,9 @@ async def stop_service(service_name: str) -> str:
                 text=True
             )
             if result.returncode == 0:
-                return f"✅ {service_name.capitalize()} stopped"
+                return await _confirm_port_released(service_name, port) or (
+                    f"✅ {service_name.capitalize()} stopped"
+                )
             else:
                 error = result.stderr or result.stdout
                 # If service is not loaded, that's ok - it's already stopped
@@ -695,7 +725,9 @@ async def stop_service(service_name: str) -> str:
                 text=True
             )
             if result.returncode == 0:
-                return f"✅ {service_name.capitalize()} stopped"
+                return await _confirm_port_released(service_name, port) or (
+                    f"✅ {service_name.capitalize()} stopped"
+                )
             else:
                 error = result.stderr or result.stdout
                 return f"❌ Failed to stop {service_name}: {error}"
@@ -719,9 +751,17 @@ async def stop_service(service_name: str) -> str:
         except psutil.TimeoutExpired:
             # Force kill if needed
             proc.kill()
-            proc.wait(timeout=5)
-        
-        return f"✅ {service_name.capitalize()} stopped (was PID: {pid})"
+            try:
+                proc.wait(timeout=5)
+            except psutil.TimeoutExpired:
+                # SIGKILL is queued but can't land while the process sits in an
+                # uninterruptible wait. Fall through to the port check, which
+                # reports the truth instead of a success we can't substantiate.
+                pass
+
+        return await _confirm_port_released(service_name, port) or (
+            f"✅ {service_name.capitalize()} stopped (was PID: {pid})"
+        )
         
     except Exception as e:
         logger.error(f"Error stopping {service_name}: {e}")
@@ -731,12 +771,17 @@ async def stop_service(service_name: str) -> str:
 async def restart_service(service_name: str) -> str:
     """Restart a service."""
     stop_result = await stop_service(service_name)
-    
+
+    # Starting on top of a process that never released the port produces a
+    # misleading "already running" from start_service, hiding the real failure.
+    if stop_result.startswith("❌"):
+        return f"Restart {service_name}:\n{stop_result}\n⏭️ Start skipped: the old process is still running."
+
     # Brief pause between stop and start
     await asyncio.sleep(1)
-    
+
     start_result = await start_service(service_name)
-    
+
     return f"Restart {service_name}:\n{stop_result}\n{start_result}"
 
 
