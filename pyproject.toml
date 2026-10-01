@@ -28,7 +28,7 @@ dependencies = [
     "numpy",
     "sounddevice",
     "scipy",
-    "openai>=2",  # was >=1.0.0 (VM-1640 / VM-1240)
+    "openai>=3.20.0",  # was >=1.0.0 (VM-1640 / VM-1240)
     "pydub",
     "audioop-lts; python_version >= '3.13'",
     "simpleaudio",
