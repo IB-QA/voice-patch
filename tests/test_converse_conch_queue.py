@@ -4,7 +4,7 @@ When the conch is busy, ``converse`` no longer blind-polls. It is a first-class
 participant in the VM-1613 waiter queue:
 
 - ``wait_for_conch`` falsy (default): return IMMEDIATELY with a status, NEVER
-  queue (Mike's hard constraint — never silently block an opt-out caller).
+  queue (IB-QA's hard constraint — never silently block an opt-out caller).
 - ``wait_for_conch`` truthy: ``ConchQueue.register`` then branch on
   ``conch_mode``:
     - ``wait``     — block until granted (FIFO via the grant hint), bounded by
@@ -69,7 +69,7 @@ FAKE_HOLDER = {"pid": 999999, "agent": "other_agent", "session_id": "holder-x"}
 
 
 # --------------------------------------------------------------------------- #
-# wait_for_conch falsy — immediate return, NEVER queue (back-compat + Mike's rule)
+# wait_for_conch falsy — immediate return, NEVER queue (back-compat + IB-QA's rule)
 # --------------------------------------------------------------------------- #
 
 class TestFalsyGateNeverQueues:

@@ -98,7 +98,7 @@ COMMAND_STATUS = "status"
 # ``message`` is still accepted (for local logging) but is NEVER surfaced to the
 # agent (see ``converse._build_control_stop_result``).
 #
-# Kept deliberately small for v1 (Mike, 2026-06-26); a secure user-extensible
+# Kept deliberately small for v1 (IB-QA, 2026-06-26); a secure user-extensible
 # registry can come later.
 CONTROL_INTENTS = {
     "switch-to-text": "user switched to text mode — continue in text, don't speak",

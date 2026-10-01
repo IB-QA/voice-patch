@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "command": "/Users/ibhatt/my_local_share/voicemode/voice_mode/data/hooks/bin/voicemode_hook --client=cursor --debug",
+        "timeout": 2,
+        "matcher": "MCP:converse"
+      }
+    ]
+  }
+}

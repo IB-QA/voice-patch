@@ -5,18 +5,13 @@ build-backend = "hatchling.build"
 [project]
 name = "voice-mode"
 dynamic = ["version"]
-description = "VoiceMode - Voice interaction capabilities for AI assistants (formerly voice-mcp)"
+description = "Voice-Mode - A plugin connecting Agents through Voice"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "MIT"}
-authors = [
-    {name = "Mike Bailey", email = "mike@failmode.com"},
-]
 keywords = ["mcp", "voice", "speech", "tts", "stt", "ai", "llm"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -87,8 +82,8 @@ docs = [
 
 [project.urls]
 Homepage = "https://getvoicemode.com/"
-Repository = "https://github.com/mbailey/voicemode"
-Issues = "https://github.com/mbailey/voicemode/issues"
+Repository = "https://github.com/IB-QA/voice-patchvoicemode"
+Issues = "https://github.com/IB-QA/voice-patchvoicemode/issues"
 
 [project.scripts]
 voice-mode = "voice_mode.cli:voice_mode"
@@ -134,6 +129,7 @@ include = [
   "voice_mode/templates/**/*",
   "voice_mode/data/**/*.yaml",
   "voice_mode/data/**/*.json",
+  "voice_mode/data/**/*.md",
   "voice_mode/data/**/*.cue",
   "voice_mode/data/**/*.ffmeta",
   "voice_mode/data/**/*.sha256",

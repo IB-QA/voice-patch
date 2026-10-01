@@ -24,6 +24,7 @@ await install_kokoro_fastapi()
 ```
 
 This will:
+
 - Clone the kokoro-fastapi repository to `~/.voicemode/kokoro-fastapi`
 - Install UV package manager if needed
 - Set up a systemd service (Linux) or LaunchAgent (macOS) for automatic startup
@@ -47,6 +48,7 @@ export TTS_VOICE=af_sky  # Optional: specify voice
 ```
 
 Or add to your MCP configuration:
+
 ```json
 "voice-mode": {
   "env": {

@@ -7,14 +7,17 @@ Voice Mode takes a pragmatic approach to configuration that balances MCP best pr
 ## Why Voice Mode Reads Configuration Files
 
 ### 1. **Already Managing the Directory**
+
 Voice Mode creates and manages the `~/.voicemode/` directory for audio files, logs, and other data. Adding configuration management is a natural extension.
 
 ### 2. **User Convenience**
+
 - Users can view and edit configuration in a familiar file format
 - No need to modify multiple host configuration files across different tools
 - Easier onboarding for new users
 
 ### 3. **Reasonable Defaults**
+
 Voice Mode can create an initial configuration file with sensible defaults, making it easier for users to understand available options.
 
 ## Configuration Precedence
@@ -37,6 +40,7 @@ The MCP specification doesn't prohibit servers from reading configuration files.
 ## Best of Both Worlds
 
 This approach provides:
+
 - **MCP compliance** - Hosts can fully control configuration via environment variables
 - **Standalone usage** - Users can run voice-mode directly with file-based config
 - **Service integration** - Systemd/launchd services can use the same config files

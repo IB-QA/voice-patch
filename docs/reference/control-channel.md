@@ -1,9 +1,9 @@
 # Control Channel Reference
 
-The **control channel** is a side channel into the *running* VoiceMode server. It
+The **control channel** is a side channel into the _running_ VoiceMode server. It
 lets an external trigger — a Stream Deck button, a media key, a spoken keyword,
 or any local process — **pause, resume, stop, skip back, or skip-forward** the
-assistant's speech *without* going through the agent and *without* pressing ESC.
+assistant's speech _without_ going through the agent and _without_ pressing ESC.
 
 The headline idea is **"barge-in with a key"**: the value of cutting the
 assistant off when it's talking too long or off-topic, but **deterministically**
@@ -17,7 +17,7 @@ pause / resume / stop, plus `skip_forward` (a deterministic **universal advance*
 during playback it cuts the current utterance and hands you the record turn; during
 that record turn it ends recording and returns what you've said — VM-1676, VM-1739,
 VM-1754) — acts on the single in-flight turn. **CD transport** — `skip_back` —
-replays *already-spoken* audio from a small history buffer: first press restarts
+replays _already-spoken_ audio from a small history buffer: first press restarts
 the current/most-recent utterance, each further press steps to the one before
 (VM-1685). A `status` query reads back
 what's playing and where you are in the buffer. Replaying cached audio never
@@ -42,7 +42,7 @@ voicemode control resume                                # resume after a pause
 voicemode control skip-back                             # replay the previous utterance (press again to step further back)
 ```
 
-> **What the agent sees is server-controlled.** `--hint` names an *intent* from a
+> **What the agent sees is server-controlled.** `--hint` names an _intent_ from a
 > fixed allowlist; the server owns the exact sentence the agent reads. Free-form
 > caller text is **never** surfaced to the agent — see [Security](#security).
 
@@ -80,16 +80,16 @@ multiple agent instances.
 
 ## Enabling
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `VOICEMODE_CONTROL_CHANNEL_ENABLED` | Bind the control socket while speaking | `false` |
-| `VOICEMODE_CONTROL_SOCKET` | Path to the control Unix domain socket | `~/.voicemode/control.sock` |
-| `VOICEMODE_CONTROL_PAUSE_TIMEOUT` | Seconds before a never-resumed `pause` self-heals (0 disables) | `300` |
-| `VOICEMODE_CONTROL_PAUSE_TIMEOUT_ACTION` | What a timed-out pause does: `stop` or `resume` | `stop` |
-| `VOICEMODE_HISTORY_BUFFER_SIZE` | How many recent utterances `skip_back` can replay (ring-buffer depth, ≥1) | `8` |
+| Variable                                 | Description                                                               | Default                     |
+| ---------------------------------------- | ------------------------------------------------------------------------- | --------------------------- |
+| `VOICEMODE_CONTROL_CHANNEL_ENABLED`      | Bind the control socket while speaking                                    | `false`                     |
+| `VOICEMODE_CONTROL_SOCKET`               | Path to the control Unix domain socket                                    | `~/.voicemode/control.sock` |
+| `VOICEMODE_CONTROL_PAUSE_TIMEOUT`        | Seconds before a never-resumed `pause` self-heals (0 disables)            | `300`                       |
+| `VOICEMODE_CONTROL_PAUSE_TIMEOUT_ACTION` | What a timed-out pause does: `stop` or `resume`                           | `stop`                      |
+| `VOICEMODE_HISTORY_BUFFER_SIZE`          | How many recent utterances `skip_back` can replay (ring-buffer depth, ≥1) | `8`                         |
 
 The channel is **off by default**: enabling it binds a Unix socket that any
-*same-user* local process (enforced by a peer-credential check) can drive, so it
+_same-user_ local process (enforced by a peer-credential check) can drive, so it
 stays opt-in. When disabled, the listener is never started and the CLI has
 nothing to talk to. See [Security](#security) for the full model.
 
@@ -122,25 +122,25 @@ as you like down a single connection.
 {"command": "skip_forward"}
 ```
 
-| Field | Type | Required | Applies to | Meaning |
-|-------|------|----------|------------|---------|
-| `command` | string | yes | all | One of `pause`, `resume`, `stop`, `skip_forward`, `skip_back`. |
-| `hint` | string | no | `stop` | A **named intent** from the allowlist (below). Selects the fixed, server-authored sentence surfaced in the converse return. An unknown hint is **rejected**. |
-| `message` | string | no | `stop` | Free-text note recorded in the **server log only**. It is **never** surfaced to the agent (security: prompt-injection, VM-1691). ≤256 chars. |
+| Field     | Type   | Required | Applies to | Meaning                                                                                                                                                      |
+| --------- | ------ | -------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `command` | string | yes      | all        | One of `pause`, `resume`, `stop`, `skip_forward`, `skip_back`.                                                                                               |
+| `hint`    | string | no       | `stop`     | A **named intent** from the allowlist (below). Selects the fixed, server-authored sentence surfaced in the converse return. An unknown hint is **rejected**. |
+| `message` | string | no       | `stop`     | Free-text note recorded in the **server log only**. It is **never** surfaced to the agent (security: prompt-injection, VM-1691). ≤256 chars.                 |
 
 These five commands are **fire-and-forget**: the server applies them and writes
-nothing back. There is one **request/response** verb — `status` — which is *not*
+nothing back. There is one **request/response** verb — `status` — which is _not_
 a command (it mutates nothing) and returns one JSON line; see
 [The "now playing" status query](#the-now-playing-status-query).
 
 **Named intents** (the only values `hint` accepts — the server controls the
 words the model sees, not the caller):
 
-| Intent | Sentence the agent receives |
-|--------|------------------------------|
+| Intent           | Sentence the agent receives                                |
+| ---------------- | ---------------------------------------------------------- |
 | `switch-to-text` | user switched to text mode — continue in text, don't speak |
-| `brevity` | user asked you to be brief — keep replies short |
-| `quiet` | user asked you to stop talking for now |
+| `brevity`        | user asked you to be brief — keep replies short            |
+| `quiet`          | user asked you to stop talking for now                     |
 
 **Limits.** A control line is capped at 8 KiB and `message` at 256 chars; both
 are rejected over the cap. Anything malformed (bad JSON, unknown command, unknown
@@ -161,7 +161,7 @@ crashes the server.
   load-bearing command.
 - **`skip_back`** — replay an already-spoken utterance from the history buffer
   (CD transport). First press restarts the current/most-recent utterance; each
-  further press steps to the one before. A one-shot, *non-sticky* transport
+  further press steps to the one before. A one-shot, _non-sticky_ transport
   request (it never latches like `stop`). Re-plays cached audio only — no new
   agent turn. Full semantics in
   [History buffer and CD-style skip-back](#history-buffer-and-cd-style-skip-back).
@@ -173,7 +173,7 @@ crashes the server.
   "I'm done, go now" end-of-turn and the fallback for when silence/VAD detection
   isn't cutting off. The same effect as speaking over the assistant, but triggered
   by a key/button. Carries no `hint`/`message` (nothing is surfaced to the agent).
-  Sticky like `stop` but a *softer* terminal — a racing `stop` still wins. See
+  Sticky like `stop` but a _softer_ terminal — a racing `stop` still wins. See
   [Skip-forward behaviour](#skip-forward-behaviour).
 
 ### Stop behaviour
@@ -190,22 +190,22 @@ With no `hint`, the detail is the generic `playback stopped via control channel`
 
 The agent reads an ordinary tool result and just continues in text. There is no
 `asyncio.CancelledError`, no MCP server teardown, and no `/mcp` reconnect. A stop
-that arrives while VoiceMode is *listening* (recording) returns cleanly the same
+that arrives while VoiceMode is _listening_ (recording) returns cleanly the same
 way, skipping transcription.
 
 ### Skip-forward behaviour
 
 `skip_forward` is the `>>|` half of a transport pair (with skip-back). Where
-`stop` *ends* the turn, `skip_forward` **advances** it. It's a **universal
+`stop` _ends_ the turn, `skip_forward` **advances** it. It's a **universal
 advance** that works in **both** conversation phases — barging out of playback
-*and* ending your record turn — so the one `>>|` button always means "move on".
+_and_ ending your record turn — so the one `>>|` button always means "move on".
 
 - **During playback** (`wait_for_response=True`): playback aborts, then
   `converse` plays the listening chime, records, transcribes, and returns your
   response **as an ordinary `Voice response: ...` result** — there is **no**
   `[control: stop]` marker. To the agent it looks exactly as if you'd let the
   utterance finish and then answered.
-- **While recording your reply** (VM-1754): if `skip_forward` arrives *during*
+- **While recording your reply** (VM-1754): if `skip_forward` arrives _during_
   the record/listen turn — VoiceMode is capturing your speech, not playing back —
   it **ends recording immediately**, transcribes whatever was captured, and
   returns it as your `Voice response: ...`. This is the manual "I'm done, go now"
@@ -222,14 +222,14 @@ advance** that works in **both** conversation phases — barging out of playback
 
 It's the deterministic, key/button counterpart to voice barge-in (talking over
 the assistant): same outcome — cut it off and take your turn — without relying on
-voice-activity detection, in either direction (cutting the assistant short *or*
+voice-activity detection, in either direction (cutting the assistant short _or_
 ending your own turn).
 
 ## History buffer and CD-style skip-back
 
 Where pause/resume/stop are **cassette transport** (they act on the one stream
-that's playing *now*), `skip_back` is **CD transport**: it jumps back through the
-utterances the assistant *already spoke* and replays the cached audio. That needs
+that's playing _now_), `skip_back` is **CD transport**: it jumps back through the
+utterances the assistant _already spoke_ and replays the cached audio. That needs
 the server to remember what it said, which is the **history buffer**.
 
 ### The history buffer
@@ -244,7 +244,7 @@ and no second TTS call), the **text**, and a little metadata
   writing audio files to disk. (`SAVE_AUDIO` still controls the on-disk copy;
   it's independent of this in-memory buffer.)
 - **Full utterances only — never a truncated fragment.** A record is added once
-  the server has the *whole* utterance. On a `pause` or a `skip_back` *during*
+  the server has the _whole_ utterance. On a `pause` or a `skip_back` _during_
   playback the server stops playing but keeps **draining** the rest of the
   utterance from the provider into the buffer (it decouples receiving from
   playing), so the complete utterance is captured even though you interrupted it.
@@ -272,12 +272,12 @@ CD player:
   buffer, further presses just keep replaying it (a CD stays on track 1; it
   doesn't wrap or error).
 
-> **Mid-playback restart (true CD behaviour).** If you press `skip_back` *while*
+> **Mid-playback restart (true CD behaviour).** If you press `skip_back` _while_
 > an utterance is still streaming, the server **silences the device immediately**
 > (a responsive barge-in) but keeps **draining the rest of that utterance into the
 > buffer** in the background, then restarts it **from its start**. You don't lose
 > the part you hadn't heard yet — the full utterance is captured first, so the
-> first press genuinely restarts the *current* one (and each further press steps
+> first press genuinely restarts the _current_ one (and each further press steps
 > back through the buffer). This is the decoupled receive/playback model: the
 > normal, uninterrupted path still plays as audio arrives (time-to-first-audio is
 > unchanged); only an interrupt switches it to drain-then-replay.
@@ -289,7 +289,7 @@ CD player:
   buffered remainder** rather than re-pulling the provider. Pause the assistant,
   then `skip_back` to re-hear the bit from just before: the replay lifts the hold
   and plays the cached audio from its start — it does **not** un-pause forward
-  into the *next* utterance. Pausing *during* a replay holds the replay, like any
+  into the _next_ utterance. Pausing _during_ a replay holds the replay, like any
   other playback.
 - **`stop` wins.** If a `stop` and a `skip_back` are both pending, `stop` takes
   precedence — a late `skip_back` can't revive an utterance you just cut into a
@@ -319,7 +319,7 @@ drives it, with survey-specific meaning per phase:
   utterance and (on an `ask` turn) jumps straight to listening
   ("answer early"); while already listening on an `ask` turn it ends capture,
   transcribes, and advances (VM-1739/VM-1754, applied per turn).
-- **`skip_back`** while listening on an `ask` turn replays *that turn's*
+- **`skip_back`** while listening on an `ask` turn replays _that turn's_
   question from its cached synthesis (no re-render) and re-listens — the
   survey's "repeat", reachable by button/key or by saying "repeat" (existing
   `should_repeat` phrase matching, rescoped per ask turn).
@@ -328,7 +328,7 @@ drives it, with survey-specific meaning per phase:
   survey the same way `stop` does (`stopped_at.reason: "spoken_break"`) —
   the triggering utterance itself is **not** recorded as a reply. Matching is
   standalone-only (word-boundary, not a substring), so an answer that merely
-  *contains* "break" (e.g. "I don't want to break up the work") is never
+  _contains_ "break" (e.g. "I don't want to break up the work") is never
   mistaken for the break command.
 
 **Killed-call recovery:** every reply is written to the conversation logs
@@ -381,14 +381,14 @@ nothing back.
 
 Two things to read precisely:
 
-- **`now_playing` is the most-recent *completed* utterance** (the newest buffer
+- **`now_playing` is the most-recent _completed_ utterance** (the newest buffer
   entry — exactly what a first `skip_back` would replay). Because the buffer only
-  captures an utterance once it finishes, *during* live playback `now_playing` is
+  captures an utterance once it finishes, _during_ live playback `now_playing` is
   the **previous** completed utterance while `state` reflects the live transport.
   `now_playing.index` is therefore always `depth − 1` (the replay anchor), not a
   live skip-back cursor — the cursor is ephemeral and isn't shared state.
 - **The query never consumes a `skip_back`.** `pending_transport` is a
-  non-destructive *peek*; a status query reports a queued press without eating it,
+  non-destructive _peek_; a status query reports a queued press without eating it,
   so the playback loop still sees and acts on the real press.
 
 There is **no `voicemode control status` CLI verb** in v1 — the status read-side
@@ -413,17 +413,17 @@ voicemode control skip-forward  [--socket PATH]
 ```
 
 > **CLI verbs are hyphenated, wire words are underscored.** `voicemode control
-> skip-back` sends `{"command":"skip_back"}` and `voicemode control skip-forward`
+skip-back` sends `{"command":"skip_back"}` and `voicemode control skip-forward`
 > sends `{"command":"skip_forward"}` — the exact words the Stream Deck `deck.py`
 > and other triggers put on the wire. (`--hint` / `--message` are accepted on the
 > pause/resume/stop/skip-back verbs for surface symmetry but only `stop` acts on
 > them; `skip-forward` takes neither.)
 
-| Option | Description |
-|--------|-------------|
-| `--hint` | Named intent (`switch-to-text`, `brevity`, `quiet`); selects the server's sentence on `stop`. Unknown values are rejected. |
-| `--message`, `-m` | Free-text note for the **server log only** — not shown to the agent. |
-| `--socket` | Socket path override (default `$VOICEMODE_CONTROL_SOCKET` or `~/.voicemode/control.sock`). |
+| Option            | Description                                                                                                                |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `--hint`          | Named intent (`switch-to-text`, `brevity`, `quiet`); selects the server's sentence on `stop`. Unknown values are rejected. |
+| `--message`, `-m` | Free-text note for the **server log only** — not shown to the agent.                                                       |
+| `--socket`        | Socket path override (default `$VOICEMODE_CONTROL_SOCKET` or `~/.voicemode/control.sock`).                                 |
 
 Exit status is `0` on a successful send. If nothing is listening — the server
 isn't speaking, or the channel is disabled — the CLI exits non-zero with a clear
@@ -432,11 +432,11 @@ message rather than hanging.
 ## Worked examples
 
 Any trigger that can run a shell command (or open a Unix socket) can drive the
-channel. The three below cover the surfaces in Mike's brief.
+channel. The three below cover the surfaces in IB-QA's brief.
 
 ### Stream Deck
 
-Stream Deck's *System → Open* / *Multi Action* runs a command on a key press.
+Stream Deck's _System → Open_ / _Multi Action_ runs a command on a key press.
 Point a button at the CLI:
 
 ```bash
@@ -460,14 +460,14 @@ If your Stream Deck plugin needs an absolute path, find it with `which voicemode
 
 > **Deck `SKIP_ENABLED` flip — cross-repo follow-up (gated on VM-1739).** The
 > Stream Deck integration `skills/streamdeck/scripts/deck.py` (in the **skillbox**
-> repo, *outside* this one — SKB-854) already sends `control_send("skip_back")`
+> repo, _outside_ this one — SKB-854) already sends `control_send("skip_back")`
 > and `control_send("skip_forward")`, but its skip buttons are dim placeholders
 > behind a single `SKIP_ENABLED = False` flag that lights **both** at once. VM-1685
 > makes `skip_back` work server-side; `skip_forward` is its sibling task
-> [VM-1739](https://github.com/mbailey/voicemode). Because one flag lights both
+> [VM-1739](https://github.com/IB-QA/voice-patchvoicemode). Because one flag lights both
 > buttons, flipping `SKIP_ENABLED = True` in `deck.py` is deferred until VM-1739
 > also lands — otherwise the skip-forward button would light but do nothing.
-> Until then, drive skip-back from a plain *System → Open* button (above), which
+> Until then, drive skip-back from a plain _System → Open_ button (above), which
 > works today.
 
 ### Media keys
@@ -479,31 +479,31 @@ depending on how much you want VoiceMode to share the keys with your music.
 #### Hammerspoon — ownership-aware (recommended on macOS)
 
 macOS routes the media keys (NSSystemDefined events) straight to Music/Spotify,
-so to use them for VoiceMode you need an interceptor that wins *first* — but you
+so to use them for VoiceMode you need an interceptor that wins _first_ — but you
 almost certainly don't want VoiceMode stealing play/pause during normal
 listening. [Hammerspoon](https://www.hammerspoon.org/) handles both: its
-`hs.eventtap` can pass an event through to the media app *or* swallow it,
+`hs.eventtap` can pass an event through to the media app _or_ swallow it,
 **per-event**, based on whether a converse is live.
 
 The reusable config ships in the repo:
-[`scripts/hammerspoon/voicemode-media-keys.lua`](https://github.com/mbailey/voicemode/blob/master/scripts/hammerspoon/voicemode-media-keys.lua).
+[`scripts/hammerspoon/voicemode-media-keys.lua`](https://github.com/IB-QA/voice-patchvoicemode/blob/master/scripts/hammerspoon/voicemode-media-keys.lua).
 
 **Ownership model — "polite spot-instance".** VoiceMode only grabs the media keys
-while a converse is *live*; otherwise every key passes straight through to your
+while a converse is _live_; otherwise every key passes straight through to your
 media app, unchanged:
 
-| Key | No converse live | Converse live (VoiceMode owns) |
-|-----|------------------|--------------------------------|
-| **Play/Pause** | toggles music (pass-through) | pauses/resumes **VoiceMode only** — key swallowed, media untouched *(default)*; set `pauseEverything = true` to also toggle music |
-| **Next** | next track | **barge** — cuts the utterance and hands you the mic (`control skip-forward`, VM-1742); music does **not** skip |
-| **Previous** | previous track | replay last utterance (`control skip-back`, VM-1685; key binding wired by VM-1919); music does **not** skip |
+| Key            | No converse live             | Converse live (VoiceMode owns)                                                                                                    |
+| -------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Play/Pause** | toggles music (pass-through) | pauses/resumes **VoiceMode only** — key swallowed, media untouched _(default)_; set `pauseEverything = true` to also toggle music |
+| **Next**       | next track                   | **barge** — cuts the utterance and hands you the mic (`control skip-forward`, VM-1742); music does **not** skip                   |
+| **Previous**   | previous track               | replay last utterance (`control skip-back`, VM-1685; key binding wired by VM-1919); music does **not** skip                       |
 
 **Play/Pause scope (`pauseEverything`).** By default, while a converse is live
-Play/Pause controls **only VoiceMode** and the key is *swallowed*, so your media
+Play/Pause controls **only VoiceMode** and the key is _swallowed_, so your media
 app is left alone (it won't start a paused track). Set `pauseEverything = true`
 to restore "pause everything" — the key also passes through so the media app
 toggles too (one press quiets both). Either way, when no converse is live
-Play/Pause passes straight through to your media app. Next/Previous *do* conflict
+Play/Pause passes straight through to your media app. Next/Previous _do_ conflict
 (barge vs skip-track), so they route to whichever side owns the keys.
 
 **Manual override.** A menubar item (`VM⌨︎:auto`) and a hotkey
@@ -522,17 +522,18 @@ by `pauseEverything`.)
 3. **Load the config** from `~/.hammerspoon/init.lua` (point the path at your
    checkout):
 
-    ```lua
-    -- ~/.hammerspoon/init.lua
-    -- Optional config (all keys have sane defaults):
-    -- _G.voicemodeMediaKeys = {
-    --   voicemodePath   = "/opt/homebrew/bin/voicemode",
-    --   pauseEverything = true,   -- Play/Pause also toggles your media app (default false)
-    -- }
-    dofile(os.getenv("HOME") .. "/Code/voicemode/scripts/hammerspoon/voicemode-media-keys.lua")
-    ```
+   ```lua
+   -- ~/.hammerspoon/init.lua
+   -- Optional config (all keys have sane defaults):
+   -- _G.voicemodeMediaKeys = {
+   --   voicemodePath   = "/opt/homebrew/bin/voicemode",
+   --   pauseEverything = true,   -- Play/Pause also toggles your media app (default false)
+   -- }
+   dofile(os.getenv("HOME") .. "/Code/voicemode/scripts/hammerspoon/voicemode-media-keys.lua")
+   ```
 
-    Then **Reload Config** from the Hammerspoon menubar (or run `hs.reload()`).
+   Then **Reload Config** from the Hammerspoon menubar (or run `hs.reload()`).
+
 4. **Grant Accessibility** — this is the load-bearing permission. System Settings
    → **Privacy & Security → Accessibility** → enable **Hammerspoon**. The event
    tap cannot see (or swallow) key events until you do; Hammerspoon prompts on
@@ -543,22 +544,22 @@ by `pauseEverything`.)
    Music/Spotify and VoiceMode never sees them — there is no error, the keys just
    do nothing for VoiceMode. So add Hammerspoon as a login item (System Settings →
    **General → Login Items**, or `open -a Hammerspoon` to start it now) so it
-   survives a reboot. *(The Stream Deck control buttons don't need this — they
+   survives a reboot. _(The Stream Deck control buttons don't need this — they
    shell out to `voicemode control` directly and never touch Hammerspoon. So a
    working Stream Deck with dead media keys is the tell-tale sign Hammerspoon
-   isn't running.)*
+   isn't running.)_
 
 The config resolves an absolute `voicemode` path at load (media-key handlers
 don't inherit your shell `PATH`) and shells out non-blocking, so a keypress is
 never delayed by the control command.
 
 > **Music/Spotify pre-emption gotcha (`pauseEverything = true` only).** With
-> `pauseEverything` enabled, Play/Pause is *passed through* to the frontmost media
+> `pauseEverything` enabled, Play/Pause is _passed through_ to the frontmost media
 > app, which toggles regardless of its own state — so if music is **paused** and
 > you press Play to quiet a VoiceMode utterance, the music will **start** (a single
 > toggle can't know which direction you meant). The **default**
 > (`pauseEverything = false`) avoids this: while a converse is live the key is
-> *swallowed* and only VoiceMode pauses. Next/Previous never have this problem —
+> _swallowed_ and only VoiceMode pauses. Next/Previous never have this problem —
 > when VoiceMode owns them the event is fully swallowed, so the media app never
 > skips. If a key still reaches the media app when VoiceMode should own it,
 > re-check that Accessibility is granted and the menubar shows `VM⌨︎`.
@@ -581,19 +582,19 @@ never delayed by the control command.
 - **No converse running:** media keys behave exactly as before — music only.
 - **Converse live** (start one, let VoiceMode speak): **Next** cuts it (barge),
   **Play/Pause** pauses VoiceMode (and your media app too if `pauseEverything =
-  true`), **Previous** shows the replay-not-yet stub.
+true`), **Previous** shows the replay-not-yet stub.
 - Offline logic test (no Hammerspoon needed):
   `luajit scripts/hammerspoon/test_voicemode_media_keys.lua`.
 
 > **Liveness signal.** "Is a converse live?" is answered by the presence of the
 > control socket `~/.voicemode/control.sock`, which the server binds for the whole
-> converse turn (speaking *and* listening). The config stats it on each key event
+> converse turn (speaking _and_ listening). The config stats it on each key event
 > — cheap, no subprocess. A socket left stale by a server that crashed
 > mid-utterance is the only false-positive; it clears on the next converse.
 
 #### Simple, unconditional bindings (skhd / xbindkeys / Karabiner)
 
-If you want a key wired *straight* to one command (no ownership logic, no
+If you want a key wired _straight_ to one command (no ownership logic, no
 pass-through to music), bind it to the CLI with any key-binding tool. For example
 with [`skhd`](https://github.com/koekeishiya/skhd) on macOS:
 
@@ -605,7 +606,7 @@ with [`skhd`](https://github.com/koekeishiya/skhd) on macOS:
 ```
 
 The same idea works with `xbindkeys` on Linux, Karabiner-Elements, or any tool
-that can bind a key to a shell command. Note these bind a *dedicated* key — they
+that can bind a key to a shell command. Note these bind a _dedicated_ key — they
 don't share the transport keys with your music the way the Hammerspoon recipe
 does.
 
@@ -680,19 +681,19 @@ below are honest about what is and isn't guaranteed (security review, VM-1688).
   message) to bound cost and memory.
 - **Bounded blast radius — but not zero for an agentic client.** The verbs are
   pause / resume / stop / skip_back; the channel itself runs no code and changes
-  no config. The realistic worst case is *influencing* an agent's turn via the
+  no config. The realistic worst case is _influencing_ an agent's turn via the
   intent set, which is why intents are server-authored and the peer check gates
   who can send them.
 - **`skip_back` adds no new agent surface.** It replays TTS the server already
   produced — no new agent turn, no STT, no model call — so it can't inject
   anything into the agent; the worst it can do is make the assistant repeat
-  itself. The `status` read-side only *exposes* our own rendered text to a
+  itself. The `status` read-side only _exposes_ our own rendered text to a
   same-uid local client (the reverse of the injection direction) and rides the
   same peer-credential gate, so it adds no foreign-access surface either.
 - **"Local" is about the socket, not the system.** The socket has no network
   surface. But the triggers this feature invites — media keys, Bluetooth
-  play/pause, a spoken-keyword/wake-word path — can extend the reach to *radio*
-  and *room audio*. If you wire those, anything that can drive them can drive the
+  play/pause, a spoken-keyword/wake-word path — can extend the reach to _radio_
+  and _room audio_. If you wire those, anything that can drive them can drive the
   channel; scope them accordingly.
 - **Stale-socket safety.** The listener refuses to unlink anything at the socket
   path that isn't a socket it owns, so a squatted file can't be clobbered or used

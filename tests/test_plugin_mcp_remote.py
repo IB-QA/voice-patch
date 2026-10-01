@@ -112,7 +112,7 @@ class TestConfigTemplate:
         assert "# VOICEMODE_MCP_TOKEN=" in config_src
 
     def test_mcp_url_wording_not_remote_only(self, config_src):
-        """Mike: must not describe it as remote-only; same machine is valid."""
+        """IB-QA: must not describe it as remote-only; same machine is valid."""
         idx = config_src.index("# VOICEMODE_MCP_URL=")
         block = config_src[idx - 900 : idx]
         assert "same machine" in block

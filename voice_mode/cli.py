@@ -195,6 +195,7 @@ def service():
       disable  Disable auto-start
       logs     View service logs
       health   Check if service is responding
+      config   Generate agent-client hook templates (no auto-install)
     """
     pass
 
@@ -1453,9 +1454,11 @@ from voice_mode.cli_commands import transcribe as transcribe_cmd
 from voice_mode.cli_commands import status as status_cmd
 from voice_mode.cli_commands import conch as conch_cmd
 from voice_mode.cli_commands import livekit as livekit_cmd
+from voice_mode.cli_commands import plugin as plugin_cmd
 
 # Add exchanges to main CLI
 voice_mode_main_cli.add_command(exchanges_cmd.exchanges)
+voice_mode_main_cli.add_command(plugin_cmd.plugin)
 # Add unified status command
 voice_mode_main_cli.add_command(status_cmd.status)
 

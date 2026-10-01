@@ -24,6 +24,7 @@ claude run install_whisper_cpp --model base.en
 ```
 
 This will:
+
 - Clone and build Whisper.cpp with GPU support (if available)
 - Download the specified model (default: large-v2)
 - Create a start script with environment variable support
@@ -32,11 +33,13 @@ This will:
 ### Prerequisites
 
 **macOS**:
+
 - Xcode Command Line Tools (`xcode-select --install`)
-- Homebrew (https://brew.sh)
+- Homebrew ([https://brew.sh](Homebrew))
 - cmake (`brew install cmake`)
 
 **Linux**:
+
 - Build essentials (`sudo apt install build-essential` on Ubuntu/Debian)
 
 ### Manual Installation
@@ -60,6 +63,7 @@ whisper-server \
 ```
 
 Key options:
+
 - `--model`: Model file path (supports tiny, base, small, medium, large-v2, large-v3)
 - `--host`: Server host (default: 127.0.0.1)
 - `--port`: Server port (Voice Mode expects 2022)
@@ -80,6 +84,7 @@ export STT_BASE_URL=http://127.0.0.1:2022/v1
 ```
 
 Or add to your MCP configuration:
+
 ```json
 "voice-mode": {
   "env": {
@@ -92,14 +97,14 @@ Or add to your MCP configuration:
 
 ### Available Models
 
-| Model | Size | RAM Usage | Accuracy | Speed |
-|-------|------|-----------|----------|-------|
-| tiny | 39 MB | ~390 MB | Low | Fastest |
-| base | 142 MB | ~500 MB | Fair | Fast |
-| small | 466 MB | ~1 GB | Good | Moderate |
-| medium | 1.5 GB | ~2.6 GB | Very Good | Slow |
-| large-v2 | 3 GB | ~3.9 GB | Excellent | Slower |
-| large-v3 | 3 GB | ~3.9 GB | Best | Slowest |
+| Model    | Size   | RAM Usage | Accuracy  | Speed    |
+| -------- | ------ | --------- | --------- | -------- |
+| tiny     | 39 MB  | ~390 MB   | Low       | Fastest  |
+| base     | 142 MB | ~500 MB   | Fair      | Fast     |
+| small    | 466 MB | ~1 GB     | Good      | Moderate |
+| medium   | 1.5 GB | ~2.6 GB   | Very Good | Slow     |
+| large-v2 | 3 GB   | ~3.9 GB   | Excellent | Slower   |
+| large-v3 | 3 GB   | ~3.9 GB   | Best      | Slowest  |
 
 ### Switching Models
 
@@ -124,6 +129,7 @@ claude resource read whisper://models
 ### Hardware Optimization
 
 The installation tool automatically detects and enables:
+
 - **Mac (Apple Silicon)**: Metal acceleration
 - **NVIDIA GPU**: CUDA acceleration
 - **CPU**: Optimized CPU builds
@@ -131,6 +137,7 @@ The installation tool automatically detects and enables:
 ## Performance
 
 Local Whisper typically processes speech in 1-3 seconds depending on:
+
 - Hardware (GPU/CPU)
 - Model size
 - Audio length

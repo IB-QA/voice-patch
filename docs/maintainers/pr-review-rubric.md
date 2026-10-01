@@ -95,7 +95,7 @@ These are the ways a PR can pass tests and still break voice. Treat any hit as
 Assign exactly one:
 
 | Disposition | When |
-|---|---|
+| ----------- | ---- |
 | **Merge** | Correct, valuable, mergeable as-is, CI green. |
 | **Rebase → merge** | Good change, just conflicts with `master`. Rebase, re-run tests, add the changelog, then merge. |
 | **Rework** | Valuable idea, needs changes first. Say *exactly* what, kindly. |

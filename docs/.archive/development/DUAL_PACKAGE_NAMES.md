@@ -37,6 +37,7 @@ The GitHub repository remains at the same location. Only the PyPI package name i
 ## Technical Details
 
 Both packages:
+
 - Share the same codebase
 - Have synchronized version numbers
 - Are built from the same source

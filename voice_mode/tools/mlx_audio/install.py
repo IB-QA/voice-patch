@@ -78,7 +78,7 @@ _PATCH_RESOURCE = (
 _BACKUP_NAME = "server.py.pre-voicemode.bak"
 
 # Extras the bundled server.py + voicemode client need at runtime. These were
-# captured from Mike's working install on 2026-04-27. Order matters only for
+# captured from IB-QA's working install on 2026-04-27. Order matters only for
 # reviewability -- ``uv tool install`` resolves them as a single set.
 MLX_AUDIO_EXTRAS: List[str] = [
     "misaki[en]",          # Kokoro G2P (text -> phonemes)

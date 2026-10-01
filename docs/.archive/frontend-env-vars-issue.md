@@ -12,7 +12,7 @@ The frontend was compiling successfully but the `/api/connection-details` endpoi
 The frontend requires specific environment variables to connect to the LiveKit server, but the `.env.local` file was missing from the frontend directory. Without this file, the Next.js application couldn't access the required LiveKit configuration.
 
 ## Solution
-Created `/Users/admin/Code/github.com/mbailey/voicemode/voice_mode/frontend/.env.local` with the required variables:
+Created `/Users/admin/Code/github.com/IB-QA/voicemode/voice_mode/frontend/.env.local` with the required variables:
 
 ```bash
 LIVEKIT_URL=ws://localhost:7880

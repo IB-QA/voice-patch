@@ -131,3 +131,14 @@ voicemode-install-feedback.md
 
 # Inspection artifacts
 _inspect/
+voice_mode/data/hooks/voicemode_hook
+voice_mode/data/hooks/.reciever_archive/
+voice_mode/data/hooks/reciever/target/
+
+# Local tool caches
+.graph-it/
+.codemie/
+
+
+# APM dependencies
+apm_modules/

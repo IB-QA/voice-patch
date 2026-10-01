@@ -50,6 +50,7 @@ curl -s https://pypi.org/pypi/voice-mode/json | jq -r '.releases | keys[]' | sor
 ```
 
 Recent versions include:
+
 - 2.3.0 (latest)
 - 2.2.0
 - 2.1.3

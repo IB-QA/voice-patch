@@ -1,7 +1,7 @@
-# Live long-turn test — 8.12.1-dev on IB-QA/voice-patch
+# Live long-turn test — 8.12.8-ib-dev on IB-QA/voice-patch
 
 Date: 2026-09-07
-Build under test: `8.12.1-dev.a670579` (repo-local `.venv`, editable install)
+Build under test: `8.12.8-ib-dev.a670579` (repo-local `.venv`, editable install)
 Host: Cursor, MCP over stdio
 Services: local STT (`STT: local`), local TTS
 
@@ -94,8 +94,8 @@ feedback, chimes, and the cancel announcement disabled.
 Six failures appeared on the first run, all in
 `tests/test_release_remote_resolution.py`, and all caused by the rebrand rather
 than the continuation work: `scripts/release.py` stores the canonical slug as a
-tuple, `("mbailey", "voicemode")`, which the literal string replace of
-`mbailey/voicemode` could not reach. It had become `("IB-QA", "voicemode")` —
+tuple, `("IB-QA", "voicemode")`, which the literal string replace of
+`IB-QA/voicemode` could not reach. It had become `("IB-QA", "voicemode")` —
 owner rewritten, repo name not — so `resolve_github_remote()` returned `None`
 for every real remote. Fixed in `a670579`.
 

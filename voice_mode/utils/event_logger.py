@@ -363,8 +363,8 @@ def log_tool_request_start(tool_name: str, parameters: Optional[Dict[str, Any]] 
         if parameters:
             # Don't log full message content, just basic params
             data["has_params"] = True
-            if "wait_for_response" in parameters:
-                data["wait_for_response"] = parameters["wait_for_response"]
+            for key in parameters:
+                data[key] = parameters[key]
         logger.log_event(EventLogger.TOOL_REQUEST_START, data)
 
 

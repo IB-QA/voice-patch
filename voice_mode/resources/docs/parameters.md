@@ -158,7 +158,7 @@ Bias Whisper's speech recognition toward specific words and names using a prompt
 
 Whisper uses a "prompt" field to condition its recognition. By providing words and phrases you frequently use, the model is primed to hear them correctly. This is especially useful for:
 
-- **Names**: People, pets, places (Tali, Mike, Brisbane)
+- **Names**: People, pets, places (Tali, IB-QA, Brisbane)
 - **Technical terms**: Command names, tools (tmux, kubectl, pytest)
 - **Project vocabulary**: Your codebase-specific terms
 - **Acronyms**: Common abbreviations in your domain

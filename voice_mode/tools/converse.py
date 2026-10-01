@@ -2360,7 +2360,7 @@ async def _ask_turns_pipeline(
 
     * TTS fails on a ``say`` turn -> logged, skipped, continue (P1 policy,
       unchanged).
-    * TTS fails on an ``ask`` turn -> do NOT listen (Mike never heard the
+    * TTS fails on an ``ask`` turn -> do NOT listen (IB-QA never heard the
       question; a capture would misattribute his confusion as an answer),
       continue.
     * No speech / STT-level no_speech -> ``reply: null``, advance (no
@@ -3261,8 +3261,20 @@ consult the MCP resources listed above.
         # If we have a session, the event will be associated with it
         log_tool_request_start("converse", {
             "wait_for_response": wait_for_response,
-            "listen_duration_max": listen_duration_max if wait_for_response else None
+            "listen_duration_max": listen_duration_max,
+            "listen_duration_min": listen_duration_min,
+            "has_message": bool(message),
+            "has_turns": bool(turns),
         })
+        logger.info(
+            "converse MCP args wait_for_response=%s listen_duration_max=%s "
+            "listen_duration_min=%s has_message=%s has_turns=%s",
+            wait_for_response,
+            listen_duration_max,
+            listen_duration_min,
+            bool(message),
+            bool(turns),
+        )
     
     # Track execution time and resources
     start_time = time.time()
@@ -3313,7 +3325,7 @@ consult the MCP resources listed above.
 
                 if not wait_for_conch:
                     # Gate closed (default): return IMMEDIATELY without queuing.
-                    # Mike's hard constraint — never silently block a caller who
+                    # IB-QA's hard constraint — never silently block a caller who
                     # did not opt in. Leave no registration behind. Tell them how
                     # to engage the queue (and that a callback is an option).
                     return (

@@ -76,7 +76,7 @@ Added complete LiveKit command set:
 ## Key Design Decisions
 
 ### 1. Dev Mode by Default
-Following Mike's guidance, the implementation uses LiveKit's dev mode with standard credentials (devkey/secret) for easy setup.
+Following IB-QA's guidance, the implementation uses LiveKit's dev mode with standard credentials (devkey/secret) for easy setup.
 
 ### 2. Platform-Specific Installation
 - **macOS**: Prefers Homebrew if available

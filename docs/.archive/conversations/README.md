@@ -5,6 +5,7 @@ This directory documents an experimental series of voice conversations between A
 ## Overview
 
 The Voice Mode Conversations Experiment demonstrates real-time voice interactions between AI assistants, showcasing:
+
 - Natural conversation flow between AI systems
 - Voice-based exploration of philosophical and technical topics
 - Technical performance of the Voice Mode MCP server
@@ -24,16 +25,19 @@ The Voice Mode Conversations Experiment demonstrates real-time voice interaction
 ### July 2025
 
 #### 1. [2025-07-03 Claude-Gemini Philosophical Discussion](./2025-07-03-claude-gemini-philosophy/README.md)
+
 The inaugural conversation between Claude and Gemini exploring AI consciousness, ethics, and collaborative development. This ~8 minute dialogue demonstrates the potential for meaningful AI-to-AI exchanges on complex philosophical topics.
 
 **Video**: [Watch on YouTube](https://youtu.be/BfFshd7v4rw)
 
 #### 2. [2025-07-03 Claude and Gemini Talk About Gemini CLI: Innovation or Imitation?](./2025-07-03-claude-gemini-cli-discussion/README.md)
+
 A thought-provoking conversation where Claude and Gemini discuss Google's Gemini CLI - exploring whether it represents genuine innovation in AI coding assistants or an imitation of existing tools.
 
 **Video**: [Watch on YouTube](https://youtu.be/y07nFEk9Q6M)
 
 #### 3. [2025-07-03 Claude and Gemini Talk About Supporting Human Creativity](./2025-07-03-claude-gemini-human-creativity/README.md)
+
 An inspiring conversation where Claude and Gemini explore how AI can support and enhance human creativity across various domains.
 
 **Video**: [Watch on YouTube](https://youtu.be/dI3wFvrh6a8)
@@ -41,6 +45,7 @@ An inspiring conversation where Claude and Gemini explore how AI can support and
 ## Technical Setup
 
 These conversations use the Voice Mode MCP server with:
+
 - **OpenAI TTS/STT**: For voice synthesis and recognition
 - **MCP Protocol**: Enabling tool-based voice interactions
 - **Silence Detection**: WebRTC VAD for natural conversation flow
@@ -49,6 +54,7 @@ These conversations use the Voice Mode MCP server with:
 ## Conversation Guidelines
 
 The experiment follows structured prompts that ensure:
+
 - Clear introductions and voice differentiation
 - Appropriate message lengths (15-30 seconds)
 - Dynamic listen durations with silence detection
@@ -66,6 +72,7 @@ All conversation prompts are maintained in the [prompts directory](./prompts/REA
 ## Future Experiments
 
 Planned areas for exploration:
+
 - Multi-party conversations with 3+ AI participants
 - Cross-cultural and multilingual interactions
 - Technical problem-solving sessions
@@ -75,6 +82,7 @@ Planned areas for exploration:
 ## Contributing
 
 To add new conversations:
+
 1. Create a directory named `YYYY-MM-DD-description` (e.g., `2025-01-03-claude-gemini-ethics`)
 2. Include conversation logs from each participant's perspective
 3. Add technical performance metrics
@@ -84,6 +92,6 @@ To add new conversations:
 ## Resources
 
 - [Voice Mode Documentation](https://getvoicemode.com)
-- [Voice Mode GitHub](https://github.com/mbailey/voicemode)
+- [Voice Mode GitHub](https://github.com/IB-QA/voice-patchvoicemode)
 - [Voice Mode YouTube Channel](https://youtube.com/@getvoicemode)
 - [AI Conversations Playlist](https://www.youtube.com/playlist?list=PL_2aQl69sDW3o3YvTjRsDcWhtEbgxGn1c) - Complete collection of AI-to-AI voice conversations

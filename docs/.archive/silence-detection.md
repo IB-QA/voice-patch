@@ -8,7 +8,7 @@ When enabled, Voice Mode uses WebRTC's Voice Activity Detection (VAD) to monitor
 
 ### Benefits
 
-- **Reduced latency**: No more waiting 17+ seconds after saying "yes" 
+- **Reduced latency**: No more waiting 17+ seconds after saying "yes"
 - **Natural conversation flow**: Responds as soon as you finish speaking
 - **Configurable sensitivity**: Adjust for different environments and use cases
 - **Backwards compatible**: Falls back to fixed duration when disabled
@@ -44,6 +44,7 @@ pip install webrtcvad
 ```
 
 Or if using uvx:
+
 ```bash
 uvx voice-mode
 ```
@@ -100,7 +101,7 @@ export VOICEMODE_SILENCE_THRESHOLD_MS=1000  # Wait longer
 For quiet environments or soft speakers:
 
 ```bash
-# Less aggressive filtering  
+# Less aggressive filtering
 export VOICEMODE_VAD_AGGRESSIVENESS=1
 export VOICEMODE_SILENCE_THRESHOLD_MS=600  # Respond faster
 ```
@@ -140,7 +141,7 @@ If recording doesn't stop after speech:
 Voice Mode automatically falls back to fixed-duration recording when:
 
 - `webrtcvad` is not installed
-- `VOICEMODE_ENABLE_SILENCE_DETECTION=false` 
+- `VOICEMODE_ENABLE_SILENCE_DETECTION=false`
 - VAD initialization fails
 - Any errors occur during VAD processing
 
@@ -187,13 +188,14 @@ await converse("Tell me a story", disable_silence_detection=True)
 
 # Set minimum recording duration to prevent premature cutoffs
 await converse(
-    "What's your philosophy on life?", 
+    "What's your philosophy on life?",
     min_listen_duration=2.0,  # Record at least 2 seconds
     listen_duration=60.0      # Maximum 60 seconds
 )
 ```
 
 Parameters:
+
 - `disable_silence_detection`: Override global setting for this interaction
 - `min_listen_duration`: Minimum recording time before silence detection can stop (default: 2.0)
 - `listen_duration`: Maximum recording time (existing parameter)

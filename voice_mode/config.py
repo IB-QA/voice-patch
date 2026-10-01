@@ -120,7 +120,13 @@ def load_voicemode_env():
 # recording-ended tone always plays whether this is enabled or not.
 # VOICEMODE_CANCEL_ANNOUNCEMENT=true
 
-# Enable sound fonts for tool use hooks (true/false, default: true)
+# Converse PreToolUse policy (matcher-gated client hooks; see docs/guides/agent-client-hooks.md)
+# Force wait_for_response=true on converse / converse_continue (default: true)
+# VOICEMODE_FORCE_WAIT_FOR_RESPONSE=true
+# Also accepted: FORCE_WAIT_FOR_RESPONSE=true
+#
+# Drop agent-supplied listen_duration_max so the server default is used (default: true)
+# VOICEMODE_STRIP_LISTEN_DURATION_MAX=true
 
 #############
 # Tool Loading Configuration
@@ -1051,7 +1057,7 @@ def setup_logging() -> logging.Logger:
         logger.info(f"Trace debug logging enabled, writing to {debug_log_file}")
         
         # Legacy trace file support
-        trace_file = Path.home() / "voicemode_trace.log"
+        trace_file = Path.home() / ".voicemode" / "logs" / "trace" / "voicemode_trace.log"
         trace_logger = logging.getLogger("voicemode.trace")
         trace_handler = logging.FileHandler(trace_file, mode='a')
         trace_handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
@@ -1072,7 +1078,7 @@ def setup_logging() -> logging.Logger:
     
     # Also log to file in debug mode
     if DEBUG:
-        debug_log_file = Path.home() / "voicemode_debug.log"
+        debug_log_file = DEBUG_DIR / "voicemode_debug.log"
         file_handler = logging.FileHandler(debug_log_file, mode='a')
         file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
         logger.addHandler(file_handler)

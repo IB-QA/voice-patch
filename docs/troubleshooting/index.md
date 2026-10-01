@@ -37,14 +37,17 @@ graph TD
 ## Most Common Issues
 
 ### 1. No Speech Detected
+
 **Symptoms:** Recording completes but no speech is recognized
 
 **Quick Fix:** Adjust minimum listen duration to allow more speaking time:
+
 ```python
 voicemode:converse("message", listen_duration_min=5.0)
 ```
 
 **Manual Recovery:** If audio was saved but STT failed, manually transcribe the recording:
+
 ```bash
 # Check if recording exists and transcribe it
 if [ -f ~/.voicemode/audio/latest-STT.wav ]; then
@@ -53,40 +56,48 @@ fi
 ```
 
 **Prerequisites for manual recovery:**
+
 - Audio saving must be enabled (`VOICEMODE_SAVE_AUDIO=true`, `VOICEMODE_SAVE_ALL=true`, or `VOICEMODE_DEBUG=true`)
 - Recording file exists at `~/.voicemode/audio/latest-STT.wav` (symlink to most recent)
 
 This recovery technique allows you to retrieve the transcription without asking the user to repeat themselves.
 
 ### 2. API Authentication Failed
+
 **Symptoms:** "Unauthorized" or "Invalid API key" errors
 **Quick Fix:** Set `OPENAI_API_KEY` in your MCP configuration
 
 ### 3. Microphone Not Found
+
 **Symptoms:** "No audio input device" errors
 **Quick Fix:** Run `voicemode diag devices` and check system permissions
 
 ### 4. Service Not Available
+
 **Symptoms:** "Failed to connect to TTS/STT service"
 **Quick Fix:** Check service status with `voicemode whisper status` or `voicemode kokoro status`
 
 ### 5. Poor Audio Quality
+
 **Symptoms:** Garbled or robotic voice output
 **Quick Fix:** Verify audio format with `voicemode config get VOICEMODE_TTS_AUDIO_FORMAT`
 
 ## Troubleshooting by Category
 
 ### Voice Interaction Issues
+
 - **No Speech Detected** - Recording but no recognition (coming soon)
 - **Audio Quality Problems** - Poor TTS/STT quality (coming soon)
 - **Response Delays** - Slow processing times (coming soon)
 
 ### Setup & Configuration
+
 - **API Authentication** - OpenAI key issues (coming soon)
 - **Missing Dependencies** - FFmpeg, Python packages (coming soon)
 - **MCP Connection** - Claude Code integration (coming soon)
 
 ### Service Issues
+
 - **Provider Selection** - Failover and discovery (coming soon)
 - **Whisper Problems** - Local STT service (coming soon)
 - **Kokoro Problems** - Local TTS service (coming soon)
@@ -94,6 +105,7 @@ This recovery technique allows you to retrieve the transcription without asking 
   browser rooms, services, credentials, and microphone access
 
 ### Audio Device Problems
+
 - **Microphone Access** - Permissions and detection (coming soon)
 - **WSL2 Audio** - Windows Subsystem for Linux (coming soon)
 - **macOS Permissions** - Privacy settings (coming soon)
@@ -141,19 +153,19 @@ When reporting issues, include:
 
 ## Quick Command Reference
 
-| Issue | Command | Purpose |
-|-------|---------|---------|
-| No audio | `voicemode diag devices` | List available audio devices |
-| Test voice | `voicemode converse` | Interactive voice test |
-| Service down | `voicemode whisper status` | Check Whisper service |
-| API errors | `voicemode config get OPENAI_API_KEY` | Verify API key |
-| Debug mode | `export VOICEMODE_DEBUG=true` | Enable detailed logging |
+| Issue        | Command                               | Purpose                      |
+| ------------ | ------------------------------------- | ---------------------------- |
+| No audio     | `voicemode diag devices`              | List available audio devices |
+| Test voice   | `voicemode converse`                  | Interactive voice test       |
+| Service down | `voicemode whisper status`            | Check Whisper service        |
+| API errors   | `voicemode config get OPENAI_API_KEY` | Verify API key               |
+| Debug mode   | `export VOICEMODE_DEBUG=true`         | Enable detailed logging      |
 
 ## Getting Help
 
 If you can't resolve your issue:
 
-1. Check the [GitHub Issues](https://github.com/mbailey/voicemode/issues) for similar problems
+1. Check the [GitHub Issues](https://github.com/IB-QA/voice-patchvoicemode/issues) for similar problems
 2. Review the [documentation](https://voicemode.dev)
 3. File a new issue with diagnostic information
 

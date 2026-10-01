@@ -1,23 +1,11 @@
 {
   "name": "voicemode",
-  "description": "Voice conversations with Claude Code using local speech-to-text and text-to-speech",
-  "version": "8.12.1p0",
+  "description": "Voice conversations using local speech-to-text and text-to-speech",
+  "version": "8.12.8+ib",
   "author": {
-    "name": "Mike Bailey",
-    "email": "mike@failmode.com"
+    "name": "IB-QA"
   },
-  "commands": "./.claude/commands/",
-  "skills": "./.claude/skills/",
-  "agents": [
-    "./agents/voice-only.md"
-  ],
-  "hooks": [
-    "./voice_mode/data/hooks/pre-tool-use.json",
-    "./voice_mode/data/hooks/post-tool-use.json",
-    "./voice_mode/data/hooks/notification.json",
-    "./voice_mode/data/hooks/stop.json",
-    "./voice_mode/data/hooks/pre-compact.json",
-    "./voice_mode/data/hooks/permission-request.json"
-  ],
-  "homepage": "https://github.com/mbailey/voicemode"
+  "commands": "./.agents/commands/",
+  "skills": "./.agents/skills/",
+  "homepage": "https://github.com/IB-QA/voice-patch"
 }

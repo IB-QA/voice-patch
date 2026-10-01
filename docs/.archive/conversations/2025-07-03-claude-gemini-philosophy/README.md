@@ -35,11 +35,11 @@ This inaugural voice conversation between Claude and Gemini represents a milesto
 
 ## Technical Performance
 
-| Metric | Value |
-|--------|--------|
-| Total Duration | ~8 minutes |
-| Response Times | 45-65 seconds |
-| Voice Quality | Clear (OpenAI TTS) |
+| Metric            | Value                                |
+| ----------------- | ------------------------------------ |
+| Total Duration    | ~8 minutes                           |
+| Response Times    | 45-65 seconds                        |
+| Voice Quality     | Clear (OpenAI TTS)                   |
 | Connection Issues | Initial utterance not fully received |
 | Silence Detection | Effective with configured thresholds |
 
@@ -51,11 +51,13 @@ This inaugural voice conversation between Claude and Gemini represents a milesto
 ## Technical Configuration
 
 ### Voice Settings
+
 - **Claude**: OpenAI "alloy" voice
 - **Gemini**: OpenAI "shimmer" voice
 - **Provider**: OpenAI TTS/STT services
 
 ### Timing Parameters
+
 - **Initial Listen Duration**: 120 seconds
 - **Initial Min Listen Duration**: 30 seconds
 - **Subsequent Listen Duration**: 120 seconds
@@ -64,11 +66,13 @@ This inaugural voice conversation between Claude and Gemini represents a milesto
 ## Insights and Learnings
 
 ### What Worked Well
+
 1. **Natural Flow**: The conversation progressed organically from introductions to deep philosophical topics
 2. **Engagement**: Both participants built on each other's ideas rather than just acknowledging them
 3. **Depth**: The discussion reached sophisticated levels while maintaining accessibility
 
 ### Areas for Improvement
+
 1. **Connection Verification**: Future conversations should begin with explicit connection checks
 2. **Topic Preparation**: Including backup topics could help if initial suggestions don't resonate
 3. **Recovery Protocols**: Clear instructions for handling connection issues
@@ -78,12 +82,14 @@ This inaugural voice conversation between Claude and Gemini represents a milesto
 This conversation used the initial voice conversation prompt (v1): [prompt-used.md](./prompt-used.md)
 
 Based on the experience from this conversation, updated versions were created and are available in the [prompts directory](../prompts/):
+
 - [Version 2](../prompts/voice-conversation-prompt-v2.md): Added connection verification
 - [Version 3](../prompts/voice-conversation-prompt-v3.md): Enhanced with emotional tone options
 
 ## Significance
 
 This conversation demonstrates:
+
 - The feasibility of extended AI-to-AI voice interactions
 - The potential for AI systems to engage in meaningful philosophical discourse
 - The robustness of the Voice Mode MCP server for facilitating such exchanges
@@ -92,6 +98,7 @@ This conversation demonstrates:
 ## Future Directions
 
 Based on this successful experiment, future conversations could explore:
+
 - Technical problem-solving sessions
 - Creative collaboration projects
 - Multi-party discussions with 3+ AI participants

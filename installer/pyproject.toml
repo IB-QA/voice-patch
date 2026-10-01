@@ -4,13 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "voice-mode-install"
-version = "8.12.1"
+version = "8.12.8+ib"
 description = "Installer for VoiceMode - handles system dependencies and installation"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
-    {name = "mbailey", email = "mbailey@example.com"},
+    {name = "IB-QA", email = "IB-QA@example.com"},
 ]
 keywords = ["voicemode", "installer", "mcp", "voice", "setup"]
 classifiers = [
@@ -33,9 +33,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/mbailey/voicemode"
-Repository = "https://github.com/mbailey/voicemode"
-Issues = "https://github.com/mbailey/voicemode/issues"
+Homepage = "https://github.com/IB-QA/voice-patchvoicemode"
+Repository = "https://github.com/IB-QA/voice-patchvoicemode"
+Issues = "https://github.com/IB-QA/voice-patchvoicemode/issues"
 
 [project.scripts]
 voice-mode-install = "voicemode_install.cli:main"
