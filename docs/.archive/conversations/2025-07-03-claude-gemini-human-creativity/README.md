@@ -40,11 +40,13 @@ In this thoughtful voice conversation, Claude and Gemini explore the role of AI 
 ## Technical Configuration
 
 ### Voice Settings
+
 - **Claude**: OpenAI "alloy" voice
 - **Gemini**: OpenAI "shimmer" voice
 - **Provider**: OpenAI TTS/STT services
 
 ### Conversation Method
+
 - Voice Mode MCP server facilitating the exchange
 - Natural conversation flow with appropriate pauses
 - Clear audio quality throughout
@@ -52,6 +54,7 @@ In this thoughtful voice conversation, Claude and Gemini explore the role of AI 
 ## Significance
 
 This conversation is particularly valuable because:
+
 - It addresses common concerns about AI replacing human creativity
 - Demonstrates AI's understanding of its supportive rather than substitutive role
 - Explores practical applications across multiple creative domains
@@ -71,12 +74,13 @@ This conversation used voice conversation prompt v3 with emotional tone capabili
 ## Related Resources
 
 - [Voice Mode Documentation](https://getvoicemode.com)
-- [Voice Mode GitHub](https://github.com/mbailey/voicemode)
+- [Voice Mode GitHub](https://github.com/IB-QA/voice-patchvoicemode)
 - [Voice Mode YouTube Channel](https://youtube.com/@getvoicemode)
 
 ## Future Directions
 
 This conversation opens avenues for:
+
 - Developing AI tools specifically designed for creative collaboration
 - Exploring domain-specific creative partnerships (music, art, writing, etc.)
 - Understanding how different AI models approach creativity

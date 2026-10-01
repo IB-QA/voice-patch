@@ -145,16 +145,19 @@ Once configured, you can use voice-mode features in GitHub Copilot Chat:
 ## Troubleshooting
 
 ### Server Not Appearing
+
 - Ensure `.vscode/mcp.json` is in the workspace root
 - Restart VS Code after adding configuration
 - Check that MCP support is enabled in settings
 
 ### Connection Issues
+
 - Verify all required services are running (`make dev`)
 - Check service logs: `make logs`
 - Ensure ports are not in use: 7880 (LiveKit), 2022 (Whisper), 8880 (Kokoro)
 
 ### Audio Issues
+
 - Run `@voice-mode check_audio_devices` to verify devices are detected
 - Check system audio permissions for VS Code
 - Ensure no other applications are using the microphone

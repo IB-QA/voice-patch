@@ -5,6 +5,7 @@ For voice-mode, we exclusively use OpenAI-compatible API endpoints to ensure con
 ## Documentation Endpoints
 
 ### OpenAPI/Swagger
+
 - `/docs` - Interactive Swagger UI (FastAPI default)
 - `/redoc` - Alternative ReDoc UI documentation
 - `/openapi.json` - Raw OpenAPI 3.0 specification
@@ -13,6 +14,7 @@ For voice-mode, we exclusively use OpenAI-compatible API endpoints to ensure con
 - `/api/docs` - Another common variant
 
 ### GraphQL
+
 - `/graphql` - GraphQL playground
 - `/graphiql` - GraphQL IDE
 - `/__graphql` - Apollo Server default
@@ -20,6 +22,7 @@ For voice-mode, we exclusively use OpenAI-compatible API endpoints to ensure con
 ## Discovery & Health Endpoints
 
 ### Service Information
+
 - `/` - Root endpoint, often lists available resources
 - `/health` - Basic health check
 - `/healthz` - Kubernetes-style health check
@@ -30,6 +33,7 @@ For voice-mode, we exclusively use OpenAI-compatible API endpoints to ensure con
 - `/info` - General service information
 
 ### API Resources
+
 - `/api` - API root, lists versions
 - `/v1` - Version-specific root
 - `/api/v1` - Combined API version root
@@ -39,14 +43,17 @@ For voice-mode, we exclusively use OpenAI-compatible API endpoints to ensure con
 These are the standard OpenAI API endpoints we use:
 
 ### Core Endpoints
+
 - `/v1/models` - List available models
 - `/v1/models/{model}` - Get specific model details
 
 ### Audio Endpoints
+
 - `/v1/audio/speech` - Text-to-speech generation
 - `/v1/audio/transcriptions` - Speech-to-text transcription
 
 ### Health/Status
+
 - `/health` - Basic health check (provider-specific)
 
 **Note**: We intentionally avoid provider-specific endpoints like `/v1/audio/voices` to maintain compatibility across different providers.
@@ -54,6 +61,7 @@ These are the standard OpenAI API endpoints we use:
 ## Examples
 
 ### Kokoro TTS
+
 ```bash
 # Documentation
 curl http://127.0.0.1:8880/docs
@@ -66,6 +74,7 @@ curl http://127.0.0.1:8880/health
 ```
 
 ### OpenAI API
+
 ```bash
 # Models
 curl https://api.openai.com/v1/models \

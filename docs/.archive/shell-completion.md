@@ -19,12 +19,14 @@ voice-mode completion zsh
 ### Automatic Setup (Recommended)
 
 #### Bash
+
 ```bash
 # Add to your ~/.bashrc
 eval "$(_VOICE_MODE_COMPLETE=bash_source voice-mode)"
 ```
 
 #### Zsh
+
 ```bash
 # Add to your ~/.zshrc
 eval "$(_VOICE_MODE_COMPLETE=zsh_source voice-mode)"
@@ -34,7 +36,8 @@ eval "$(_VOICE_MODE_COMPLETE=zsh_source voice-mode)"
 
 For faster shell startup, you can pre-generate the completion script:
 
-#### Bash
+#### Bash for performance-optimized setup
+
 ```bash
 # Generate completion script once
 _VOICE_MODE_COMPLETE=bash_source voice-mode > ~/.voice-mode-complete.bash
@@ -43,7 +46,8 @@ _VOICE_MODE_COMPLETE=bash_source voice-mode > ~/.voice-mode-complete.bash
 source ~/.voice-mode-complete.bash
 ```
 
-#### Zsh
+#### Zsh for performance-optimized setup
+
 ```bash
 # Generate completion script once
 _VOICE_MODE_COMPLETE=zsh_source voice-mode > ~/.voice-mode-complete.zsh
@@ -56,18 +60,20 @@ source ~/.voice-mode-complete.zsh
 
 If you're using metool for configuration management, Voice Mode provides wrapper scripts that integrate with Click's completion:
 
-### Installation with metool
+### Installation with metool for using metool pattern
 
 The completion scripts are located in `shell/completions/`:
+
 - `voice-mode.bash` - Bash completion wrapper
 - `voice-mode.zsh` - Zsh completion wrapper
 
 These scripts:
+
 1. Check if `voice-mode` is installed
 2. Use Click's completion generation if available
 3. Provide helpful fallback messages if not installed
 
-### Manual Sourcing
+### Manual Sourcing for using metool pattern
 
 ```bash
 # For bash
@@ -77,10 +83,10 @@ source ~/.voicemode/shell/completions/voice-mode.bash
 source ~/.voicemode/shell/completions/voice-mode.zsh
 ```
 
-
 ## How It Works
 
 Voice Mode uses Click's shell completion system which:
+
 - Dynamically generates completions based on the current CLI structure
 - Supports all commands, subcommands, and options automatically
 - Updates completions when new features are added
@@ -91,16 +97,19 @@ Voice Mode uses Click's shell completion system which:
 ### Completions Not Working
 
 1. Ensure voice-mode is installed:
+
    ```bash
    which voice-mode
    ```
 
 2. Test completion generation:
+
    ```bash
    _VOICE_MODE_COMPLETE=bash_source voice-mode
    ```
 
 3. Reload your shell configuration:
+
    ```bash
    source ~/.bashrc  # or ~/.zshrc
    ```
@@ -112,6 +121,7 @@ If completions are slow, use the pre-generated script method described above ins
 ## Technical Details
 
 Click's completion system works by:
+
 1. Setting an environment variable (`_VOICE_MODE_COMPLETE`)
 2. Running the voice-mode command with this variable set
 3. The command detects this and outputs shell completion code

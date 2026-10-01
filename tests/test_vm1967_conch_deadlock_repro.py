@@ -4,7 +4,7 @@ Reported symptom (evidence/conch-snapshot-20260715-1724.md, captured live by
 super.voicemode):
 
 - ``conch.grant`` named the queue-head session; ``voicemode conch status``
-  reported ``Holder: none`` (the status line "lying" — Mike's words).
+  reported ``Holder: none`` (the status line "lying" — IB-QA's words).
 - The granted session's process was ALIVE, so this was NOT a dead-holder
   case that self-heals via PID-liveness pruning.
 - Sessions queued in ``wait`` mode behind the granted-but-unclaimed head
@@ -273,7 +273,7 @@ class TestConchDeadlockSafetyNetStatusFix:
         assert status_payload()["free"] is True
 
     def test_status_line_no_longer_lies_about_an_unclaimed_grant(self, clean_conch):
-        """Mike's exact field complaint: 'the status line seems to be
+        """IB-QA's exact field complaint: 'the status line seems to be
         lying' -- `Holder: none` while a grant is outstanding must no
         longer be reported as `free`.
         """
@@ -286,7 +286,7 @@ class TestConchDeadlockSafetyNetStatusFix:
         assert snap["holder"] is None
         assert snap["free"] is False, (
             "REGRESSION: a grant is outstanding and unclaimed -- reporting "
-            "free is the exact bug Mike reported"
+            "free is the exact bug IB-QA reported"
         )
         granted_entry = next(q for q in snap["queue"] if q["granted"])
         assert granted_entry["session_id"] == "stuck-head"

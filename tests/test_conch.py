@@ -643,11 +643,11 @@ class TestConchPayload:
     def test_try_acquire_writes_enriched_payload(self, clean_conch):
         """try_acquire() records session_id, project_path, voice and held=False."""
         conch = Conch(agent_name="cora", session_id="sess-123",
-                      project_path="/home/mike/proj", voice="af_sky")
+                      project_path="/home/IB-QA/proj", voice="af_sky")
         assert conch.try_acquire() is True
         data = json.loads(Conch.LOCK_FILE.read_text())
         assert data["session_id"] == "sess-123"
-        assert data["project_path"] == "/home/mike/proj"
+        assert data["project_path"] == "/home/IB-QA/proj"
         assert data["voice"] == "af_sky"
         assert data["held"] is False
         assert data["agent"] == "cora"

@@ -1,6 +1,6 @@
 # VoiceMode
 
-**Private working clone derived from [mbailey/voicemode](https://github.com/mbailey/voicemode).**
+**Private working clone derived from [IB-QA/voicemode](https://github.com/IB-QA/voice-patchvoicemode).**
 
 > Natural voice conversations with Claude Code (and other MCP capable agents)
 
@@ -32,7 +32,7 @@ The fastest way for Claude Code users to get started:
 
 ```bash
 # Add the VoiceMode marketplace
-claude plugin marketplace add mbailey/voicemode
+claude plugin marketplace add IB-QA/voicemode
 
 # Install VoiceMode plugin
 claude plugin install voicemode@voicemode
@@ -156,21 +156,22 @@ brew install ffmpeg node portaudio
 
 ```bash
 # Use development shell
-nix develop github:mbailey/voicemode
+nix develop github:IB-QA/voicemode
 
 # Or install system-wide
-nix profile install github:mbailey/voicemode
+nix profile install github:IB-QA/voicemode
 ```
 
-</details>
-
 <details>
-<summary><strong>Alternative Installation Methods</strong></summary>
+  <summary>
+    <strong>Alternative Installation Methods</strong>
+  </summary>
+</details>
 
 #### From source
 
 ```bash
-git clone https://github.com/mbailey/voicemode.git
+git clone https://github.com/IB-QA/voice-patchvoicemode.git
 cd voicemode
 uv tool install -e .
 ```
@@ -180,7 +181,7 @@ uv tool install -e .
 ```nix
 # In /etc/nixos/configuration.nix
 environment.systemPackages = [
-  (builtins.getFlake "github:mbailey/voicemode").packages.${pkgs.system}.default
+  (builtins.getFlake "github:IB-QA/voicemode").packages.${pkgs.system}.default
 ];
 ```
 
@@ -188,14 +189,12 @@ environment.systemPackages = [
 
 ## Troubleshooting
 
-
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | No microphone access | Check terminal/app permissions. WSL2 needs pulseaudio packages. |
 | UV not found | Run `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
 | OpenAI API error | Verify `OPENAI_API_KEY` is set correctly |
 | No audio output | Check system audio settings and available devices |
-
 
 ### Save Audio for Debugging
 
@@ -218,7 +217,7 @@ Full documentation: [voicemode.dev](https://voicemode.dev)
 ## Links
 
 - **Website**: [voicemode.dev](https://voicemode.dev)
-- **GitHub**: [github.com/mbailey/voicemode](https://github.com/mbailey/voicemode)
+- **GitHub**: [github.com/IB-QA/voicemode](https://github.com/IB-QA/voice-patchvoicemode)
 - **PyPI**: [pypi.org/project/voice-mode](https://pypi.org/project/voice-mode/)
 - **YouTube**: [@getvoicemode](https://youtube.com/@getvoicemode)
 - **Twitter/X**: [@getvoicemode](https://twitter.com/getvoicemode)

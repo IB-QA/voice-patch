@@ -37,6 +37,7 @@ uv build
 ```
 
 This creates wheel and source distributions in the `dist/` directory:
+
 - `dist/voice_mode-2.4.2.dev0-py3-none-any.whl`
 - `dist/voice_mode-2.4.2.dev0.tar.gz`
 
@@ -88,20 +89,23 @@ For testing with Claude Code or other MCP clients:
 ## Testing Your Build
 
 1. Create a test environment:
-```bash
-uv venv test-env
-source test-env/bin/activate  # On Windows: test-env\Scripts\activate
-```
+
+    ```bash
+    uv venv test-env
+    source test-env/bin/activate  # On Windows: test-env\Scripts\activate
+    ```
 
 2. Install your build:
-```bash
-uv pip install dist/voice_mode-*.whl
-```
+
+    ```bash
+    uv pip install dist/voice_mode-*.whl
+    ```
 
 3. Test the installation:
-```bash
-python -m voice_mode --help
-```
+
+    ```bash
+    python -m voice_mode --help
+    ```
 
 ## Troubleshooting
 

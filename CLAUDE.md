@@ -13,6 +13,7 @@ VoiceMode is a Python package that provides voice interaction capabilities for A
 ## Key Commands
 
 ### Development & Testing
+
 ```bash
 # Install in development mode with dependencies
 make dev-install
@@ -29,12 +30,13 @@ make clean
 ```
 
 ### Building & Publishing
+
 ```bash
 # Build Python package
 make build-package
 
 # Build development version (auto-versioned)
-make build-dev  
+make build-dev
 
 # Test package installation
 make test-package
@@ -44,6 +46,7 @@ make release
 ```
 
 ### Documentation
+
 ```bash
 # Serve docs locally at http://localhost:8000
 make docs-serve
@@ -81,7 +84,7 @@ make release        # prompts for the new version, then runs scripts/release.py 
 `scripts/release.py X.Y.Z` does **all of this automatically** — do NOT do these by hand:
 
 1. Bumps the version in all four files above.
-2. **Rewrites the CHANGELOG header**: turns `## [Unreleased]` into `## [Unreleased]` (fresh empty) + `## [X.Y.Z] - YYYY-MM-DD` below it. **So never manually cut the version header or add the date — that is the release script's job.** Your only changelog responsibility before a release is making sure the *Unreleased* section is complete and accurate.
+2. **Rewrites the CHANGELOG header**: turns `## [Unreleased]` into `## [Unreleased]` (fresh empty) + `## [X.Y.Z] - YYYY-MM-DD` below it. **So never manually cut the version header or add the date — that is the release script's job.** Your only changelog responsibility before a release is making sure the _Unreleased_ section is complete and accurate.
 3. `git commit -m "chore: bump version to X.Y.Z for all packages"`.
 4. Creates annotated tag `vX.Y.Z`.
 5. `git push origin` (the **current branch**) + pushes the tag.
@@ -95,11 +98,11 @@ Pushing a `v*` tag fires two GitHub Actions workflows:
 - **`create-release.yml`** — `awk`-extracts the `## [X.Y.Z] - DATE` section from CHANGELOG.md and publishes it as the GitHub Release body. **The header must be exactly `## [X.Y.Z] - DATE`** or extraction yields empty notes — another reason to let `release.py` write it.
 - **`publish-pypi-and-mcp.yml`** — builds and publishes packages to PyPI and the MCP registry.
 
-Monitor: https://github.com/mbailey/voicemode/actions
+Monitor: https://github.com/IB-QA/voice-patchvoicemode/actions
 
 ### Pre-release checklist (do this before `make release`)
 
-1. **Be on `master` and `git pull` first.** Mike merges PRs locally (`--no-ff`) and pushes master; `release.py` pushes whatever branch you're on, so the tag must be cut from an up-to-date `master` or merged work is silently excluded.
+1. **Be on `master` and `git pull` first.** IB-QA merges PRs locally (`--no-ff`) and pushes master; `release.py` pushes whatever branch you're on, so the tag must be cut from an up-to-date `master` or merged work is silently excluded.
 2. Verify `## [Unreleased]` is complete — every merged user-facing PR represented, headline features showcased. Cross-check against `git log <last-tag>..origin/master`.
 3. Decide the version bump per SemVer.
 4. `make release`, then watch the Actions run.
@@ -139,6 +142,7 @@ Monitor: https://github.com/mbailey/voicemode/actions
 ### Service Architecture
 
 The project supports multiple voice service backends:
+
 - **OpenAI API**: Cloud-based TTS/STT (requires API key)
 - **Whisper.cpp**: Local speech-to-text service
 - **Kokoro**: Local text-to-speech with multiple voices
@@ -171,6 +175,7 @@ Services can be installed and managed through MCP tools, with automatic service 
 ## Logging
 
 Logs are stored in `~/.voicemode/`:
+
 - `logs/conversations/` - Voice exchange history (JSONL)
 - `logs/events/` - Operational events and errors
 - `audio/` - Saved TTS/STT audio files
@@ -181,9 +186,11 @@ Logs are stored in `~/.voicemode/`:
 This is the core Python package. VoiceMode is a suite of related projects:
 
 **For a complete overview of all VoiceMode components**, read:
+
 - **[voicemode-meta/COMPONENTS.md](../voicemode-meta/COMPONENTS.md)** - Full suite documentation
 
 Quick reference:
+
 - **voicemode** (this repo) - Python MCP server for local voice mode
 - **voicemode-dev** - Cloudflare Workers backend for voicemode.dev
 - **voicemode-ios** - Native iOS app

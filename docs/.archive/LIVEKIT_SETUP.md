@@ -5,6 +5,7 @@ This guide covers the complete setup and usage of LiveKit integration with Voice
 ## Overview
 
 Voice Mode now includes full LiveKit integration providing:
+
 - **LiveKit server management** - Install, configure, and manage LiveKit server as a system service
 - **Voice Assistant Frontend** - Web-based interface for voice conversations bundled with Voice Mode
 - **Service integration** - Unified management alongside Whisper and Kokoro services
@@ -49,12 +50,14 @@ voice-mode frontend open
 ### LiveKit Server Installation
 
 The `voice-mode livekit install` command:
+
 - Downloads LiveKit server binary for your platform (macOS/Linux)
 - Creates configuration file at `~/.voicemode/config/livekit.yaml`
 - Sets up systemd (Linux) or launchd (macOS) service files
 - Configures development credentials for easy setup
 
 **Installation locations:**
+
 - **macOS**: `/opt/homebrew/bin/livekit-server`
 - **Linux**: `/usr/local/bin/livekit-server`
 - **Config**: `~/.voicemode/config/livekit.yaml`
@@ -63,6 +66,7 @@ The `voice-mode livekit install` command:
 ### Frontend Installation
 
 The frontend is bundled with Voice Mode and automatically installed. The system:
+
 - Prioritizes bundled frontend in the Python package
 - Falls back to external development locations if needed
 - Automatically installs Node.js dependencies on first run
@@ -226,6 +230,7 @@ curl -H "Authorization: Bearer <jwt_token>" \
 ```
 
 **Generate JWT tokens** for API access using development credentials:
+
 - **Key**: `devkey`
 - **Secret**: `secret`
 
@@ -244,11 +249,13 @@ curl -H "Authorization: Bearer <jwt_token>" \
 To change default ports, edit configurations and restart services:
 
 **LiveKit server** (`~/.voicemode/config/livekit.yaml`):
+
 ```yaml
-port: 8880  # Change from default 7880
+port: 8880 # Change from default 7880
 ```
 
 **Frontend** (`.env.local`):
+
 ```bash
 PORT=4000  # Change from default 3000
 ```
@@ -331,7 +338,7 @@ Complete cleanup:
 rm -rf ~/.voicemode/logs/livekit/
 rm -rf ~/.voicemode/config/livekit.yaml
 
-# Remove frontend data  
+# Remove frontend data
 rm -rf ~/.voicemode/logs/frontend/
 
 # Remove service files (automatic on uninstall)
@@ -357,6 +364,7 @@ AI agents can manage LiveKit services programmatically and create voice conversa
 ### Common Issues
 
 **Port already in use:**
+
 ```bash
 # Find conflicting process
 lsof -ti :7880  # LiveKit
@@ -368,6 +376,7 @@ voice-mode frontend stop
 ```
 
 **Permission denied:**
+
 ```bash
 # Fix service permissions (Linux)
 systemctl --user daemon-reload
@@ -378,6 +387,7 @@ sudo chmod +x /usr/local/bin/livekit-server
 ```
 
 **Frontend dependencies:**
+
 ```bash
 # Manual dependency install
 cd ~/.voicemode/frontend  # or bundled location
@@ -388,6 +398,7 @@ voice-mode frontend logs
 ```
 
 **Service won't start:**
+
 ```bash
 # Check service status
 systemctl --user status voicemode-livekit.service

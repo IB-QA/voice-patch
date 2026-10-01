@@ -5,6 +5,15 @@
   "hooks": {
     "PreToolUse": [
       {
+        "matcher": "converse|converse_continue|mcp__.*converse",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./voice_mode/data/hooks/converse-pre-tool-use.sh --client auto || true"
+          }
+        ]
+      },
+      {
         "hooks": [
           {
             "type": "command",

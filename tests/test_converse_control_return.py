@@ -1,6 +1,6 @@
 """Tests for converse's NORMAL return on a control-channel stop (VM-1676).
 
-This is the load-bearing behaviour from Mike's brief: when an external trigger
+This is the load-bearing behaviour from IB-QA's brief: when an external trigger
 (Stream Deck, media key, spoken keyword, any local process) fires a ``stop`` over
 the control channel, ``converse`` must end the turn cleanly and return a NORMAL
 string result carrying a control marker -- e.g. ``"[control: stop] switch-to-text

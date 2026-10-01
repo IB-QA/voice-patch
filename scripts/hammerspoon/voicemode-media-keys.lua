@@ -7,7 +7,7 @@
 --- friends) into a control surface for that channel — WITHOUT permanently stealing
 --- the keys from Spotify/Music.
 ---
---- Ownership model — "polite spot-instance" (VM-1724, Mike's decision 2026-06-27):
+--- Ownership model — "polite spot-instance" (VM-1724, IB-QA's decision 2026-06-27):
 ---   VoiceMode only grabs the media keys when a converse is *live*; otherwise every
 ---   key passes straight through to the active media app, unchanged.
 ---
@@ -212,7 +212,7 @@ end
 
 --- Next, with VoiceMode owning → barge: cut the current utterance AND advance
 --- straight to the record/listen turn (`skip-forward`, VM-1739), so the keypress
---- hands Mike the mic mid-sentence rather than just stopping (`stop` left the turn
+--- hands IB-QA the mic mid-sentence rather than just stopping (`stop` left the turn
 --- with the agent, never listening). Falls through to the speak-only result when
 --- the converse wasn't waiting for a response — see converse.py skip_forward.
 local function handle_next_voicemode()

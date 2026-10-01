@@ -71,11 +71,11 @@ export VOICEMODE_AAC_BITRATE="64k"         # AAC bitrate (default: 64k)
 
 Voice Mode automatically validates format compatibility with your providers:
 
-| Provider | TTS Formats | STT Formats |
-|----------|-------------|-------------|
-| OpenAI | opus, mp3, aac, flac, wav, pcm | mp3, opus, wav, flac, m4a, webm |
-| Kokoro (local) | mp3, wav | N/A |
-| Whisper.cpp (local) | N/A | wav, mp3, opus, flac, m4a |
+| Provider            | TTS Formats                    | STT Formats                     |
+| ------------------- | ------------------------------ | ------------------------------- |
+| OpenAI              | opus, mp3, aac, flac, wav, pcm | mp3, opus, wav, flac, m4a, webm |
+| Kokoro (local)      | mp3, wav                       | N/A                             |
+| Whisper.cpp (local) | N/A                            | wav, mp3, opus, flac, m4a       |
 
 If you select an unsupported format, Voice Mode will automatically fallback to a compatible format.
 
@@ -114,6 +114,7 @@ done
 ### Issue: "Provider doesn't support format"
 
 Voice Mode will automatically fallback to a supported format. You'll see a log message like:
+
 ```
 Format 'opus' not supported by kokoro, using 'mp3' instead
 ```
@@ -125,10 +126,11 @@ Note: PCM is universally supported for streaming.
 Some older systems might have issues with Opus playback. Try:
 
 1. Update your audio libraries:
+
    ```bash
    # Ubuntu/Debian
    sudo apt update && sudo apt install libopus0 libopusfile0
-   
+
    # macOS
    brew install opus opus-tools
    ```
@@ -144,16 +146,16 @@ Opus files might appear larger if saved in an OGG container. The actual audio da
 
 ## Format Comparison
 
-| Format | File Size* | Quality | Latency | Best For |
-|--------|-----------|---------|---------|----------|
-| PCM | N/A (streaming) | Uncompressed | Zero | TTS streaming (default) |
-| Opus | Smallest (100KB) | Excellent for voice | High (buffering required) | STT uploads, saving |
-| MP3 | Medium (500KB) | Good | Low | Wide compatibility |
-| AAC | Medium (450KB) | Good | Low | Apple ecosystem |
-| FLAC | Large (2MB) | Lossless | Low | Archival |
-| WAV | Largest (5MB) | Uncompressed | Zero | Local processing |
+| Format | File Size\*      | Quality             | Latency                   | Best For                |
+| ------ | ---------------- | ------------------- | ------------------------- | ----------------------- |
+| PCM    | N/A (streaming)  | Uncompressed        | Zero                      | TTS streaming (default) |
+| Opus   | Smallest (100KB) | Excellent for voice | High (buffering required) | STT uploads, saving     |
+| MP3    | Medium (500KB)   | Good                | Low                       | Wide compatibility      |
+| AAC    | Medium (450KB)   | Good                | Low                       | Apple ecosystem         |
+| FLAC   | Large (2MB)      | Lossless            | Low                       | Archival                |
+| WAV    | Largest (5MB)    | Uncompressed        | Zero                      | Local processing        |
 
-*Approximate sizes for 1 minute of speech
+\*Approximate sizes for 1 minute of speech
 
 ## Benefits of PCM for Streaming
 
@@ -176,10 +178,11 @@ Opus files might appear larger if saved in an OGG container. The actual audio da
 To change from PCM streaming to compressed formats:
 
 1. Set environment variables:
+
    ```bash
    # For TTS streaming (consider latency impact)
    export VOICEMODE_TTS_AUDIO_FORMAT="opus"
-   
+
    # For STT uploads (already uses compression by default)
    export VOICEMODE_STT_AUDIO_FORMAT="mp3"
    ```
@@ -189,6 +192,7 @@ To change from PCM streaming to compressed formats:
 3. Restart your MCP client
 
 PCM provides the best streaming performance, but compressed formats are useful for:
+
 - Reducing bandwidth usage
 - Saving audio files
 - STT uploads to cloud services

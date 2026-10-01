@@ -13,6 +13,7 @@ ExecStartPost=/bin/sh -c 'while ! curl -sf http://127.0.0.1:8880/health >/dev/nu
 ```
 
 Benefits:
+
 - `systemctl start` blocks until service is ready
 - Clear status messages during startup
 - Immediate feedback on success/failure
@@ -41,6 +42,7 @@ done
 When you check service status during startup, you'll see:
 
 **systemd:**
+
 ```
 ● voicemode-kokoro.service - Voice Mode Kokoro Text-to-Speech Service
      Active: activating (start-post) since Mon 2025-01-28; 3s ago
@@ -51,6 +53,7 @@ When you check service status during startup, you'll see:
 ```
 
 **launchd:**
+
 ```
 Service is starting... (check logs for details)
 ```
@@ -76,6 +79,7 @@ voice-mode service kokoro status
 ```
 
 Output shows both application and service file versions:
+
 ```
 ✅ Kokoro is running
    PID: 12345
@@ -95,6 +99,7 @@ voice-mode service kokoro update-service-files
 ```
 
 This will:
+
 1. Backup existing service files
 2. Apply the latest templates with your current configuration
 3. Reload systemd/launchctl if needed
@@ -106,6 +111,7 @@ This will:
 - **launchd**: Property list and wrapper scripts
 
 Service files use semantic versioning:
+
 - **Major**: Breaking changes requiring manual intervention
 - **Minor**: New features (like health checks)
 - **Patch**: Bug fixes and improvements
@@ -119,6 +125,7 @@ If a service fails to become ready:
    - launchd: `tail -f ~/.voicemode/logs/kokoro/kokoro.log`
 
 2. Manually test the health endpoint:
+
    ```bash
    curl -v http://127.0.0.1:8880/health
    ```
@@ -131,6 +138,7 @@ If a service fails to become ready:
 ### Update Issues
 
 If service file update fails:
+
 - Check for backup files: `~/.config/systemd/user/*.backup.*`
 - Manually restore: `mv voicemode-kokoro.backup.1.0.0 voicemode-kokoro.service`
 - Reload daemon: `systemctl --user daemon-reload`

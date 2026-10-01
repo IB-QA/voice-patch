@@ -48,7 +48,7 @@ app = FastAPI()
 @app.post("/v1/audio/speech")
 async def route_tts(request: Request):
     body = await request.json()
-    
+
     # Route based on model
     if body.get("model") == "tts-1":
         # Use local Kokoro for standard TTS
@@ -71,29 +71,29 @@ async def route_tts(request: Request):
 
 ```javascript
 // Node.js Express router
-app.post('/v1/audio/speech', async (req, res) => {
-    const { voice, model } = req.body;
-    
-    // Route Sky voice to Kokoro, others to OpenAI
-    if (voice === 'af_sky') {
-        const response = await fetch('http://127.0.0.1:8880/v1/audio/speech', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...req.body, model: 'kokoro-v0.87' })
-        });
-        res.send(await response.arrayBuffer());
-    } else {
-        // Forward to OpenAI
-        const response = await fetch('https://api.openai.com/v1/audio/speech', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': req.headers.authorization
-            },
-            body: JSON.stringify(req.body)
-        });
-        res.send(await response.arrayBuffer());
-    }
+app.post("/v1/audio/speech", async (req, res) => {
+  const { voice, model } = req.body;
+
+  // Route Sky voice to Kokoro, others to OpenAI
+  if (voice === "af_sky") {
+    const response = await fetch("http://127.0.0.1:8880/v1/audio/speech", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...req.body, model: "kokoro-v0.87" }),
+    });
+    res.send(await response.arrayBuffer());
+  } else {
+    // Forward to OpenAI
+    const response = await fetch("https://api.openai.com/v1/audio/speech", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: req.headers.authorization,
+      },
+      body: JSON.stringify(req.body),
+    });
+    res.send(await response.arrayBuffer());
+  }
 });
 ```
 
@@ -102,20 +102,20 @@ app.post('/v1/audio/speech', async (req, res) => {
 ```yaml
 # HAProxy configuration
 global
-    maxconn 4096
+maxconn 4096
 
 defaults
-    timeout connect 5000ms
-    timeout client 50000ms
-    timeout server 50000ms
+timeout connect 5000ms
+timeout client 50000ms
+timeout server 50000ms
 
 backend tts_servers
-    balance roundrobin
-    option httpchk GET /health
-    
-    server openai api.openai.com:443 ssl verify none check
-    server kokoro1 127.0.0.1:8880 check
-    server kokoro2 127.0.0.1:8881 check backup
+balance roundrobin
+option httpchk GET /health
+
+server openai api.openai.com:443 ssl verify none check
+server kokoro1 127.0.0.1:8880 check
+server kokoro2 127.0.0.1:8881 check backup
 ```
 
 ## Configuration
@@ -145,6 +145,7 @@ export TTS_BASE_URL="http://127.0.0.1:8880/v1"  # Local Kokoro
 ```
 
 Your router receives all requests and can then:
+
 - Route to different providers
 - Add authentication
 - Log requests

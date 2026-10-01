@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "pm-skills": {
+      "type": "local",
+      "tools": [
+        "*"
+      ],
+      "id": "",
+      "command": "python",
+      "args": [
+        "${PLUGIN_ROOT}/mcp/pm_skills_mcp_server.py"
+      ]
+    }
+  }
+}

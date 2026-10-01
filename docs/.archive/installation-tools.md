@@ -5,6 +5,7 @@ Voice Mode now includes MCP tools to automatically install and configure whisper
 ## Overview
 
 These tools handle:
+
 - System detection (macOS/Linux)
 - Dependency installation
 - GPU support configuration
@@ -18,6 +19,7 @@ These tools handle:
 Installs [whisper.cpp](https://github.com/ggerganov/whisper.cpp) for speech-to-text (STT) functionality.
 
 #### Features
+
 - Automatic OS detection (macOS/Linux)
 - GPU acceleration (Metal on macOS, CUDA on Linux)
 - Model download management
@@ -41,6 +43,7 @@ result = await install_whisper_cpp(
 ```
 
 #### Parameters
+
 - `install_dir` (str, optional): Installation directory (default: `~/.voicemode/whisper.cpp`)
 - `model` (str, optional): Whisper model to download (default: `large-v2`)
   - Available models: `tiny`, `tiny.en`, `base`, `base.en`, `small`, `small.en`, `medium`, `medium.en`, `large-v2`, `large-v3`
@@ -49,6 +52,7 @@ result = await install_whisper_cpp(
 - `force_reinstall` (bool, optional): Force reinstallation (default: false)
 
 #### Return Value
+
 ```python
 {
     "success": True,
@@ -74,13 +78,14 @@ result = await install_whisper_cpp(
 
 Installs [kokoro-fastapi](https://github.com/remsky/kokoro-fastapi) for text-to-speech (TTS) functionality.
 
-#### Features
+#### Features for install_kokoro_fastapi
+
 - Python environment management with UV
 - Automatic model downloads
 - Service configuration (launchd on macOS, systemd on Linux)
 - Auto-start capability
 
-#### Usage
+#### Usage for install_kokoro_fastapi
 
 ```python
 # Basic installation with defaults
@@ -97,7 +102,8 @@ result = await install_kokoro_fastapi(
 )
 ```
 
-#### Parameters
+#### Parameters for install_kokoro_fastapi
+
 - `install_dir` (str, optional): Installation directory (default: `~/.voicemode/kokoro-fastapi`)
 - `models_dir` (str, optional): Models directory (default: `~/.voicemode/kokoro-models`)
 - `port` (int, optional): Service port (default: 8880)
@@ -105,7 +111,8 @@ result = await install_kokoro_fastapi(
 - `install_models` (bool, optional): Download Kokoro models (default: true)
 - `force_reinstall` (bool, optional): Force reinstallation (default: false)
 
-#### Return Value
+#### Return Value for install_kokoro_fastapi
+
 ```python
 {
     "success": True,
@@ -120,39 +127,42 @@ result = await install_kokoro_fastapi(
 }
 ```
 
-## System Requirements
+## System Requirements for install_whisper_cpp and install_kokoro_fastapi
 
 ### whisper.cpp
 
-#### macOS
+#### macOS for install_whisper_cpp
+
 - Xcode Command Line Tools
 - Homebrew (for cmake)
 - Metal support (built-in)
 
-#### Linux
+#### Linux for install_whisper_cpp
+
 - Build essentials (gcc, g++, make)
 - CMake
 - CUDA toolkit (optional, for NVIDIA GPU support)
 
 ### kokoro-fastapi
 
-#### All Systems
+#### All Systems for install_kokoro_fastapi
+
 - Python 3.10+
 - Git
 - ~5GB disk space for models
 - UV package manager (installed automatically if missing)
 
-## Integration with Voice Mode
+## Integration with Voice Mode for install_whisper_cpp and install_kokoro_fastapi
 
 After installation, the services integrate automatically with Voice Mode:
 
-1. **whisper.cpp**: 
+1. **whisper.cpp**:
    - Runs automatically on boot (port 2022)
    - OpenAI-compatible API endpoint
    - Model selection via `VOICEMODE_WHISPER_MODEL` environment variable
    - View installed models: `claude resource read whisper://models`
 
-2. **kokoro-fastapi**: 
+2. **kokoro-fastapi**:
    - Automatically detected by Voice Mode's provider registry when running
    - 67 voices available
    - OpenAI-compatible API endpoint
@@ -219,6 +229,7 @@ result = await install_kokoro_fastapi(
 ### Manual Service Management
 
 #### macOS (launchd)
+
 ```bash
 # Whisper
 launchctl load ~/Library/LaunchAgents/com.voicemode.whisper-server.plist
@@ -230,6 +241,7 @@ launchctl unload ~/Library/LaunchAgents/com.voicemode.kokoro.plist
 ```
 
 #### Linux (systemd)
+
 ```bash
 # Whisper
 systemctl --user start whisper-server
@@ -243,6 +255,7 @@ systemctl --user status kokoro-fastapi-8880
 ```
 
 #### Change Whisper Model
+
 ```bash
 # Set environment variable before restarting
 export VOICEMODE_WHISPER_MODEL=base.en  # or tiny, small, medium, large-v2, large-v3

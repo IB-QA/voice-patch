@@ -11,6 +11,7 @@ export VOICEMODE_VAD_DEBUG=true
 ```
 
 This will output detailed information to stderr including:
+
 - VAD configuration at startup
 - Real-time speech detection decisions
 - State transitions (WAITING_FOR_SPEECH → SPEECH_ACTIVE)
@@ -21,7 +22,7 @@ This will output detailed information to stderr including:
 
 When VAD_DEBUG is enabled, you'll see output like:
 
-```
+```bash
 [VAD_DEBUG] Starting VAD recording with config:
 [VAD_DEBUG]   max_duration: 120.0s
 [VAD_DEBUG]   min_duration: 2.0s
@@ -52,7 +53,8 @@ When VAD_DEBUG is enabled, you'll see output like:
 
 **Symptom**: Recording ends with "No speech detected" even though you haven't spoken yet.
 
-**Debug with**: 
+**Debug with**:
+
 ```bash
 export VOICEMODE_VAD_DEBUG=true
 python scripts/test-vad-enhancement.py
@@ -61,6 +63,7 @@ python scripts/test-vad-enhancement.py
 **Look for**: Check if the VAD is incorrectly detecting noise as speech early in the recording.
 
 **Solutions**:
+
 1. Increase VAD aggressiveness: `export VOICEMODE_VAD_AGGRESSIVENESS=3`
 2. Ensure you're in a quiet environment
 3. Check microphone sensitivity
@@ -70,10 +73,12 @@ python scripts/test-vad-enhancement.py
 **Symptom**: Recording continues for the full duration even after you stop speaking.
 
 **Debug output to check**:
+
 - Are silence periods being detected? Look for "Accumulating silence" messages
 - Is the silence threshold being reached?
 
 **Solutions**:
+
 1. Decrease VAD aggressiveness: `export VOICEMODE_VAD_AGGRESSIVENESS=1`
 2. Reduce silence threshold: `export VOICEMODE_SILENCE_THRESHOLD_MS=600`
 
@@ -82,21 +87,23 @@ python scripts/test-vad-enhancement.py
 **Symptom**: Recording stops while you're still speaking.
 
 **Debug output to check**:
+
 - Look for rapid state changes between speech and silence
 - Check if min_duration is being respected
 
 **Solutions**:
+
 1. Increase min_listen_duration in the converse call
 2. Increase silence threshold: `export VOICEMODE_SILENCE_THRESHOLD_MS=1200`
 
 ## VAD Configuration Parameters
 
-| Parameter | Environment Variable | Default | Description |
-|-----------|---------------------|---------|-------------|
-| VAD Aggressiveness | `VOICEMODE_VAD_AGGRESSIVENESS` | 2 | 0-3, higher = more aggressive filtering |
-| Silence Threshold | `VOICEMODE_SILENCE_THRESHOLD_MS` | 800ms | How long to wait after speech stops |
-| Min Recording Duration | `VOICEMODE_MIN_RECORDING_DURATION` | 0.5s | Global minimum recording time |
-| min_listen_duration | Function parameter | 2.0s | Per-call minimum recording time |
+| Parameter              | Environment Variable               | Default | Description                             |
+| ---------------------- | ---------------------------------- | ------- | --------------------------------------- |
+| VAD Aggressiveness     | `VOICEMODE_VAD_AGGRESSIVENESS`     | 2       | 0-3, higher = more aggressive filtering |
+| Silence Threshold      | `VOICEMODE_SILENCE_THRESHOLD_MS`   | 800ms   | How long to wait after speech stops     |
+| Min Recording Duration | `VOICEMODE_MIN_RECORDING_DURATION` | 0.5s    | Global minimum recording time           |
+| min_listen_duration    | Function parameter                 | 2.0s    | Per-call minimum recording time         |
 
 ## Testing VAD Enhancement
 
@@ -112,6 +119,7 @@ python scripts/test-vad-enhancement.py
 ```
 
 This script will:
+
 1. Wait indefinitely for you to speak
 2. Start recording when speech is detected
 3. Stop after silence threshold is reached
@@ -121,7 +129,7 @@ This script will:
 
 The VAD operates as a state machine with three states:
 
-1. **WAITING_FOR_SPEECH**: 
+1. **WAITING_FOR_SPEECH**:
    - Initial state
    - No timeout - waits indefinitely
    - Transitions to SPEECH_ACTIVE when speech detected

@@ -16,9 +16,9 @@ This document explains how environment variables work in MCP (Model Context Prot
     "my-server": {
       "command": "./my-server",
       "env": {
-        "API_KEY": "${OPENAI_API_KEY}",           // Does NOT expand
+        "API_KEY": "${OPENAI_API_KEY}", // Does NOT expand
         "BASE_URL": "${MY_SERVICE_URL:-default}", // Does NOT expand
-        "TOKEN": "${env:MY_TOKEN}"                // Does NOT expand
+        "TOKEN": "${env:MY_TOKEN}" // Does NOT expand
       }
     }
   }
@@ -31,11 +31,11 @@ This document explains how environment variables work in MCP (Model Context Prot
 {
   "mcpServers": {
     "my-server": {
-      "command": "./my-server", 
+      "command": "./my-server",
       "env": {
-        "API_KEY": "sk-actual-literal-key-here",  // Only literal values
-        "DEBUG": "true",                          // Literal strings
-        "PORT": "3000"                            // Literal values only
+        "API_KEY": "sk-actual-literal-key-here", // Only literal values
+        "DEBUG": "true", // Literal strings
+        "PORT": "3000" // Literal values only
       }
     }
   }
@@ -61,7 +61,7 @@ Let the MCP server read from the global environment:
     "voice-mode": {
       "command": "./mcp-servers/voice-mode",
       "env": {
-        "VOICE_MODE_DEBUG": "true"  // Only MCP-specific vars
+        "VOICE_MODE_DEBUG": "true" // Only MCP-specific vars
       }
       // OPENAI_API_KEY will be read from global environment
     }
@@ -69,12 +69,14 @@ Let the MCP server read from the global environment:
 }
 ```
 
-**Pros**: 
+**Pros**:
+
 - Uses existing environment variables
 - No hardcoded secrets in config
 - Works with different environments
 
-**Cons**: 
+**Cons**:
+
 - Requires global environment setup
 - Less explicit about dependencies
 
@@ -98,12 +100,14 @@ Let the MCP server read from the global environment:
 }
 ```
 
-**Pros**: 
+**Pros**:
+
 - Explicit and clear
 - Works immediately
 - Self-contained configuration
 
-**Cons**: 
+**Cons**:
+
 - Hardcoded secrets in config file
 - Needs manual updates for different environments
 
@@ -120,20 +124,19 @@ npm install -g envmcp
   "mcpServers": {
     "my-server": {
       "command": "npx",
-      "args": [
-        "envmcp",
-        "./my-server"
-      ]
+      "args": ["envmcp", "./my-server"]
     }
   }
 }
 ```
 
-**Pros**: 
+**Pros**:
+
 - Enables environment variable usage
 - No hardcoded secrets
 
-**Cons**: 
+**Cons**:
+
 - Requires additional dependency
 - Community maintained (not official)
 
@@ -148,7 +151,7 @@ npm install -g envmcp
 ### Best Practices
 
 1. **Use Option 1** for widely available environment variables (like OPENAI_API_KEY)
-2. **Use Option 2** for deployment-specific configurations 
+2. **Use Option 2** for deployment-specific configurations
 3. **Document required environment variables** in your README
 4. **Create example config files** without secrets
 
@@ -172,7 +175,7 @@ Our working voice-mode configuration uses Option 2 (literal values):
       "args": [],
       "env": {
         "STT_BASE_URL": "https://api.openai.com/v1",
-        "TTS_BASE_URL": "https://api.openai.com/v1", 
+        "TTS_BASE_URL": "https://api.openai.com/v1",
         "TTS_VOICE": "alloy",
         "TTS_MODEL": "tts-1",
         "STT_MODEL": "whisper-1",
