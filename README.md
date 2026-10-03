@@ -2,13 +2,9 @@
 
 **Private working clone derived from [IB-QA/voicemode](https://github.com/IB-QA/voice-patchvoicemode).**
 
-> Natural voice conversations with Claude Code (and other MCP capable agents)
+> Natural voice conversations with MCP-capable coding agents
 
-[![PyPI Downloads](https://static.pepy.tech/badge/voice-mode)](https://pepy.tech/project/voice-mode)
-[![PyPI Downloads](https://static.pepy.tech/badge/voice-mode/month)](https://pepy.tech/project/voice-mode)
-[![PyPI Downloads](https://static.pepy.tech/badge/voice-mode/week)](https://pepy.tech/project/voice-mode)
-
-VoiceMode enables natural voice conversations with Claude Code. Voice isn't about replacing typing - it's about being available when typing isn't.
+VoiceMode is a local MCP server for speech-to-text and text-to-speech. Voice isn't about replacing typing - it's about being available when typing isn't.
 
 **Perfect for:**
 
@@ -26,23 +22,19 @@ VoiceMode enables natural voice conversations with Claude Code. Voice isn't abou
 
 **Requirements:** Computer with microphone and speakers
 
-### Option 1: Claude Code Plugin (Recommended)
+### Option 1: Plugin installer (recommended)
 
-The fastest way for Claude Code users to get started:
+Wires VoiceMode at user level for Cursor, Claude Code, Copilot, Codex, and the other supported clients:
 
 ```bash
-# Add the VoiceMode marketplace
-claude plugin marketplace add IB-QA/voicemode
+uv sync
+uv run voicemode plugin install --client=all
+```
 
-# Install VoiceMode plugin
-claude plugin install voicemode@voicemode
+Then start talking with the `converse` MCP tool, or:
 
-## Install dependencies (CLI, Local Voice Services)
-
-/voicemode:install
-
-# Start talking!
-/voicemode:converse
+```bash
+uv run voicemode converse "Hello"
 ```
 
 ### Option 2: Python installer package
@@ -56,14 +48,14 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 # Run the installer (sets up dependencies and local voice services)
 uvx voice-mode-install
 
-# Add to Claude Code
-claude mcp add --scope user voicemode -- uvx --refresh --from voice-mode voicemode-mcp-launcher
+# Wire the MCP server into your client(s)
+uv run voicemode plugin install --client=all
 
 # Optional: Add OpenAI API key as fallback for local services
 export OPENAI_API_KEY=your-openai-key
 
 # Start a conversation
-claude converse
+uv run voicemode converse "Hello"
 ```
 
 For manual setup, see the [Getting Started Guide](docs/tutorials/getting-started.md).

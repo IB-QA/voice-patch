@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`voicemode livekit join`** — VoiceMode can join the local LiveKit room as
+  the human (microphone in, speakers out) without opening the browser. Default
+  room `voicemode-native`. While joined, `converse(transport="livekit")`
+  reuses that room when `room_name` is omitted. LiveKit agent sessions now
+  allow voice barge-in and hold the turn up to 4.5s when the sentence looks
+  unfinished.
+
 - **`voicemode plugin install --client=... --converse-hooks`** — one installer
   writes a client plugin folder (hooks, skills, commands, Rust hook binary,
   bundled `.mcp.json`) and **merges each client's real user-level hooks and
@@ -38,6 +45,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   VoiceMode Connect/Auth0 product. See
   [the LiveKit setup guide](docs/guides/livekit-setup.md).
 
+### Removed
+
+- **Claude/Gemini archived conversation dumps** under `docs/.archive/conversations/`
+  and the unused `agents/voice-only.md` subagent. Live docs no longer tell
+  people to run `claude converse`.
+
 ### Fixed
 
 - **Editable installs work again with a PEP 440 local version** — Hatchling
@@ -45,6 +58,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   PyPI classifiers use the canonical `Development Status :: 4 - Beta` and
   `Intended Audience :: Developers` labels so `uv pip install -e .` can
   build metadata.
+
+- **macOS LiveKit install no longer dies when Homebrew is newer than 1.13.6** —
+  the installer records the brew `livekit-server` version instead of failing
+  the exact pin. Linux still uses the checksummed 1.13.6 archive.
 
 - **`voicemode plugin install` is the one client installer** — `--client` accepts
   `cursor`, `claude`, `copilot`, `antigravity`, `codex`, `chatgpt`, `devin`, or

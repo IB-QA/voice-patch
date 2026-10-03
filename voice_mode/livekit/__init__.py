@@ -1,6 +1,6 @@
 """Optional, isolated LiveKit foundation for VoiceMode."""
 
-from .client import MAX_TOKEN_TTL, LiveKitClient, api_url
+from .client import MAX_TOKEN_TTL, MAX_NATIVE_TOKEN_TTL, LiveKitClient, api_url
 from .config import BrowserConfig, LiveKitConfig
 from .errors import (
     LiveKitConfigurationError,
@@ -21,6 +21,7 @@ from .models import (
 
 __all__ = [
     "MAX_TOKEN_TTL",
+    "MAX_NATIVE_TOKEN_TTL",
     "BrowserConfig",
     "LiveKitClient",
     "LiveKitConfig",

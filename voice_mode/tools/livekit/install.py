@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import logging
 import os
 import platform
 import re
@@ -62,6 +63,7 @@ ENV_KEYS = (
     "VOICEMODE_LIVEKIT_API_SECRET",
     "VOICEMODE_LIVEKIT_BROWSER_TOKEN",
 )
+logger = logging.getLogger("voicemode")
 
 
 def _atomic_write(path: Path, content: str | bytes, mode: int) -> None:
@@ -166,7 +168,14 @@ def _download_linux_binary(version: str) -> Path:
     return binary
 
 
-def _install_macos_binary(version: str) -> Path:
+def _parse_server_version(version_text: str) -> str | None:
+    match = re.search(r"(?<!\d)(\d+\.\d+\.\d+)(?!\d)", version_text)
+    if match is None:
+        return None
+    return match.group(1)
+
+
+def _install_macos_binary(version: str) -> tuple[Path, str]:
     brew = shutil.which("brew")
     if brew is None:
         raise ValueError(
@@ -195,12 +204,20 @@ def _install_macos_binary(version: str) -> Path:
                 text=True,
             )
             reported = f"{version_result.stdout}\n{version_result.stderr}"
-            if re.search(rf"(?<!\d){re.escape(version)}(?!\d)", reported) is None:
+            actual = _parse_server_version(reported)
+            if actual is None:
                 raise ValueError(
-                    "Homebrew livekit formula did not provide the requested "
-                    f"LiveKit Server {version}"
+                    "Homebrew livekit-server did not report a usable version"
                 )
-            return resolved
+            # Homebrew owns the macOS pin. Record what brew actually installed
+            # instead of failing when the formula moved past DEFAULT_LIVEKIT_VERSION.
+            if version != actual:
+                logger.info(
+                    "Homebrew livekit-server is %s (installer default %s)",
+                    actual,
+                    version,
+                )
+            return resolved, actual
     raise ValueError("Homebrew installed livekit but livekit-server was not found")
 
 
@@ -348,11 +365,10 @@ async def livekit_install(
         if not browser_token:
             browser_token = secrets.token_urlsafe(24)
 
-        binary = (
-            _install_macos_binary(version)
-            if system == "Darwin"
-            else _download_linux_binary(version)
-        )
+        if system == "Darwin":
+            binary, version = _install_macos_binary(version)
+        else:
+            binary = _download_linux_binary(version)
         _atomic_write(livekit_config_path(), _render_config(api_key, api_secret), 0o600)
         start_script = _write_start_script(binary)
         browser_start_script = _write_browser_start_script()

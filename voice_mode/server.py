@@ -31,6 +31,11 @@ async def server_lifespan(_server):
     try:
         yield
     finally:
+        try:
+            from voice_mode.tools.converse import join_cancelled_recovery
+            join_cancelled_recovery()
+        except Exception:
+            logger.exception("Cancelled recording recovery drain failed")
         await cleanup_on_shutdown()
 
 
