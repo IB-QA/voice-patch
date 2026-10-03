@@ -26,9 +26,6 @@ VoiceMode includes an installation tool that handles everything:
 ```bash
 # Install kokoro with default settings
 voicemode kokoro install
-
-# Or using Claude Code
-claude converse "Please install kokoro-fastapi"
 ```
 
 This will:

@@ -44,6 +44,10 @@ def livekit_metadata_path() -> Path:
     return livekit_service_dir() / "install.json"
 
 
+def livekit_native_session_path() -> Path:
+    return livekit_service_dir() / "native-session.json"
+
+
 def livekit_start_script_path() -> Path:
     return livekit_service_dir() / "bin" / "start-livekit-server.sh"
 

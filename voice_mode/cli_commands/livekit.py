@@ -10,11 +10,29 @@ from aiohttp import web
 from voice_mode.livekit import BrowserConfig, LiveKitClient, LiveKitConfig
 from voice_mode.livekit.browser_app import create_app
 from voice_mode.livekit.errors import LiveKitError
+from voice_mode.livekit.native import join_native_room
 
 
 @click.group()
 def livekit() -> None:
     """Manage local LiveKit rooms and browser access."""
+
+
+@livekit.command("join")
+@click.option(
+    "--room",
+    default=None,
+    help="Exact room name. Created if missing. Default: voicemode-native.",
+)
+def livekit_join(room: str | None) -> None:
+    """Join the local LiveKit room as the human (mic in, speakers out). No browser."""
+
+    try:
+        asyncio.run(join_native_room(room_name=room))
+    except LiveKitError as exc:
+        raise click.ClickException(str(exc)) from exc
+    except KeyboardInterrupt:
+        click.echo("Left the LiveKit room.")
 
 
 @livekit.group()

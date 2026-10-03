@@ -29,8 +29,8 @@ automatically route or fall back to LiveKit.
 
 - Working OpenAI-compatible TTS and STT endpoints. Local Whisper and Kokoro can
   provide these; cloud endpoints require `OPENAI_API_KEY`.
-- macOS: Homebrew. The installer installs and verifies the pinned `livekit`
-  formula.
+- macOS: Homebrew. The installer installs the `livekit` formula and records
+  the `livekit-server` version Homebrew actually provides.
 - Linux: x86-64/amd64 or arm64/aarch64. The installer downloads the pinned
   LiveKit Server archive and verifies its embedded SHA-256 checksum.
 - A browser with microphone permission.
@@ -116,6 +116,18 @@ voicemode service enable livekit-web
 voicemode service disable livekit-web
 voicemode service disable livekit
 ```
+
+## Native join (no browser)
+
+After the SFU is running, VoiceMode can join as the human itself: local microphone published into the room, subscribed audio played on local speakers.
+
+```bash
+voicemode livekit join
+```
+
+Default room name: `voicemode-native` (created if missing). Optional `--room <name>`. While this process is joined, `converse(..., transport="livekit")` uses that room when `room_name` is omitted.
+
+The packaged browser client remains optional for debugging.
 
 ## Open the browser and connect
 

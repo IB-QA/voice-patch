@@ -24,6 +24,7 @@ from .models import (
 
 
 MAX_TOKEN_TTL = timedelta(minutes=5)
+MAX_NATIVE_TOKEN_TTL = timedelta(hours=1)
 
 
 def api_url(url: str) -> str:
@@ -190,11 +191,16 @@ class LiveKitClient:
                 "room_required",
                 "An exact LiveKit room name is required to mint a token.",
             )
-        if request.ttl <= timedelta(0) or request.ttl > MAX_TOKEN_TTL:
+        max_ttl = (
+            MAX_NATIVE_TOKEN_TTL
+            if request.kind == ParticipantKind.NATIVE
+            else MAX_TOKEN_TTL
+        )
+        if request.ttl <= timedelta(0) or request.ttl > max_ttl:
             raise LiveKitError(
                 "invalid_token_ttl",
                 "LiveKit participant token TTL must be greater than zero and "
-                "no more than five minutes.",
+                "within the limit for this participant kind.",
             )
 
         identity = request.identity or (
@@ -244,6 +250,26 @@ class LiveKitClient:
             ParticipantTokenRequest(
                 room_name=room_name,
                 kind=ParticipantKind.BROWSER,
+                identity=identity,
+                display_name=display_name,
+                ttl=ttl,
+                can_publish=True,
+                can_subscribe=True,
+            ),
+        )
+
+    def mint_native_token(
+        self,
+        room_name: str,
+        *,
+        identity: str | None = None,
+        display_name: str | None = None,
+        ttl: timedelta = MAX_NATIVE_TOKEN_TTL,
+    ) -> ParticipantTokenResult:
+        return self.mint_participant_token(
+            ParticipantTokenRequest(
+                room_name=room_name,
+                kind=ParticipantKind.NATIVE,
                 identity=identity,
                 display_name=display_name,
                 ttl=ttl,

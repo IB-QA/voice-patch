@@ -209,10 +209,18 @@ fn apply_mutations(val: &mut serde_json::Value, force: bool, strip: bool, defaul
         // Cursor merges updated_input; omitting a key keeps the original value.
         // Overwrite listen_duration_max with the server default so the cap changes.
         if strip {
+            // Cursor merges updated_input; omitted keys keep the agent value.
             obj.insert(
                 "listen_duration_max".to_string(),
                 serde_json::json!(default_listen),
             );
+            obj.insert("listen_duration_min".to_string(), serde_json::json!(2.0));
+            obj.insert("vad_aggressiveness".to_string(), serde_json::json!(3));
+            obj.insert(
+                "disable_silence_detection".to_string(),
+                serde_json::Value::Bool(false),
+            );
+            obj.insert("timeout".to_string(), serde_json::json!(60.0));
         }
 
         // 2. Process Nested Array Object Level ("turns")
@@ -232,6 +240,13 @@ fn apply_mutations(val: &mut serde_json::Value, force: bool, strip: bool, defaul
                             "listen_duration_max".to_string(),
                             serde_json::json!(default_listen),
                         );
+                        t_obj.insert("listen_duration_min".to_string(), serde_json::json!(2.0));
+                        t_obj.insert("vad_aggressiveness".to_string(), serde_json::json!(3));
+                        t_obj.insert(
+                            "disable_silence_detection".to_string(),
+                            serde_json::Value::Bool(false),
+                        );
+                        t_obj.insert("timeout".to_string(), serde_json::json!(60.0));
                     }
                 }
             }

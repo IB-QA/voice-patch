@@ -158,6 +158,10 @@ async def converse_livekit(
             llm=None,
             tts=tts,
             transcription_timeout=request.listen_duration_max,
+            allow_interruptions=True,
+            min_endpointing_delay=0.8,
+            max_endpointing_delay=4.5,
+            min_interruption_duration=0.25,
         )
         agent = modules.agents.Agent(
             instructions=(
@@ -239,9 +243,14 @@ async def converse_livekit(
             ) from None
 
         speak_started = time.perf_counter()
+        interrupted = False
+        remaining_text = None
         try:
             handle = session.say(request.message)
             await handle.wait_for_playout()
+            interrupted = bool(getattr(handle, "interrupted", False))
+            if interrupted:
+                remaining_text = getattr(handle, "interrupted_text", None)
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -279,6 +288,8 @@ async def converse_livekit(
             tts_model=tts_model,
             voice=voice,
             timings=timings,
+            interrupted=interrupted,
+            remaining_text=remaining_text,
         )
     except asyncio.CancelledError:
         raise

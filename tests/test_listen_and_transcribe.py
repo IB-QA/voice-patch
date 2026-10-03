@@ -82,13 +82,13 @@ class TestListenAndTranscribe:
                 time.sleep(0.01)
             return partial, True
 
-        async def _recover(recording_future, **_kwargs):
-            recovered["audio"], recovered["speech"] = await recording_future
+        def _start(recording_future, **_kwargs):
+            recovered["audio"], recovered["speech"] = recording_future.result(timeout=1)
             recovery_finished.set()
 
         with patch("voice_mode.tools.converse.play_audio_feedback", new=_noop_feedback), \
              patch("voice_mode.tools.converse.record_audio_with_silence_detection", new=_record), \
-             patch("voice_mode.tools.converse._recover_cancelled_recording", new=_recover):
+             patch("voice_mode.tools.converse._start_cancelled_recovery_thread", new=_start):
             task = asyncio.create_task(listen_and_transcribe(**_listen_kwargs()))
             await asyncio.sleep(0.05)
             task.cancel()

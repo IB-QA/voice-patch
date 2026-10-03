@@ -1,6 +1,7 @@
 """Conversation tools for interactive voice interactions."""
 
 import asyncio
+import concurrent.futures
 import json
 import logging
 import os
@@ -1636,21 +1637,31 @@ def join_cancelled_recovery(timeout: float = 30.0) -> None:
         thread.join(timeout)
 
 
-async def _recover_cancelled_recording(
+def _wait_recording_result(recording_future):
+    """Block for the recorder without using the dying MCP request loop."""
+    if isinstance(recording_future, concurrent.futures.Future):
+        return recording_future.result(timeout=_CANCEL_RECOVERY_TIMEOUT)
+    if recording_future.done():
+        return recording_future.result()
+    deadline = time.time() + _CANCEL_RECOVERY_TIMEOUT
+    while not recording_future.done():
+        if time.time() > deadline:
+            raise TimeoutError("cancelled recording did not finish")
+        time.sleep(0.05)
+    return recording_future.result()
+
+
+def _start_cancelled_recovery_thread(
     recording_future,
     *,
     transport: str,
     chime_leading_silence: Optional[float],
     chime_trailing_silence: Optional[float],
 ) -> None:
-    """Save and transcribe audio captured before an MCP request cancellation."""
-    audio_data, speech_detected = await recording_future
-
-    # The cancelling request's event loop shuts its default executor down while
-    # this recovery is still pending, and the chime, announcement, and STT paths
-    # all reach for that executor. Finish on a private loop that owns its own.
+    """Start announcement/save/STT on a private thread. No awaits — safe in a cancelled request."""
     def runner() -> None:
         try:
+            audio_data, speech_detected = _wait_recording_result(recording_future)
             asyncio.run(
                 asyncio.wait_for(
                     _finish_cancelled_recording(
@@ -1675,6 +1686,22 @@ async def _recover_cancelled_recording(
     )
     _cancelled_recovery_threads.add(thread)
     thread.start()
+
+
+async def _recover_cancelled_recording(
+    recording_future,
+    *,
+    transport: str,
+    chime_leading_silence: Optional[float],
+    chime_trailing_silence: Optional[float],
+) -> None:
+    """Save and transcribe audio captured before an MCP request cancellation."""
+    _start_cancelled_recovery_thread(
+        recording_future,
+        transport=transport,
+        chime_leading_silence=chime_leading_silence,
+        chime_trailing_silence=chime_trailing_silence,
+    )
 
 
 async def _finish_cancelled_recording(
@@ -1895,8 +1922,14 @@ async def listen_and_transcribe(
     # then awaits that shielded future in a detached task, saves/transcribes the
     # partial capture, and plays feedback after the microphone has closed.
     stop_event = threading.Event()
-    recording_future = asyncio.get_event_loop().run_in_executor(
-        None,
+    loop = asyncio.get_running_loop()
+    executor = loop._default_executor
+    if executor is None:
+        executor = concurrent.futures.ThreadPoolExecutor(
+            thread_name_prefix="voicemode-record"
+        )
+        loop.set_default_executor(executor)
+    recording_cfut = executor.submit(
         record_audio_with_silence_detection,
         listen_duration_max,
         disable_silence_detection,
@@ -1904,20 +1937,17 @@ async def listen_and_transcribe(
         vad_aggressiveness,
         stop_event,
     )
+    recording_future = asyncio.wrap_future(recording_cfut, loop=loop)
     try:
         audio_data, speech_detected = await asyncio.shield(recording_future)
     except asyncio.CancelledError:
         stop_event.set()
-        recovery_task = asyncio.create_task(
-            _recover_cancelled_recording(
-                recording_future,
-                transport=transport,
-                chime_leading_silence=chime_leading_silence,
-                chime_trailing_silence=chime_trailing_silence,
-            ),
-            name="voicemode-cancelled-recording-recovery",
+        _start_cancelled_recovery_thread(
+            recording_cfut,
+            transport=transport,
+            chime_leading_silence=chime_leading_silence,
+            chime_trailing_silence=chime_trailing_silence,
         )
-        _track_cancelled_recording_recovery(recovery_task)
         raise
     timings['record'] = time.perf_counter() - record_start
 
@@ -3455,13 +3485,20 @@ consult the MCP resources listed above.
             # must never probe the LiveKit installation.
             from voice_mode.livekit.errors import LiveKitError
             from voice_mode.livekit.models import LiveKitConversationRequest
+            from voice_mode.livekit.native import read_native_session
             from voice_mode.livekit.transport import converse_livekit
+
+            livekit_room = room_name
+            if not livekit_room:
+                native_session = read_native_session()
+                if native_session:
+                    livekit_room = native_session["room_name"]
 
             try:
                 livekit_result = await converse_livekit(
                     LiveKitConversationRequest(
                         message=message,
-                        room_name=room_name,
+                        room_name=livekit_room,
                         wait_for_response=bool(wait_for_response),
                         listen_duration_max=listen_duration_max,
                         voice=voice,
@@ -3491,6 +3528,12 @@ consult the MCP resources listed above.
                     "No speech detected"
                     if wait_for_response
                     else f"Spoke in LiveKit room: {livekit_result.room_name}"
+                )
+            if livekit_result.interrupted:
+                leftover = livekit_result.remaining_text or ""
+                base_result = (
+                    f"{base_result} | Interrupted"
+                    + (f"; unspoken: {leftover}" if leftover else "")
                 )
             if effective_metrics_level == "minimal":
                 result = base_result

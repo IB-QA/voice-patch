@@ -36,6 +36,7 @@ class FakeSilero:
 
 class FakeSpeechHandle:
     blocker = None
+    interrupted = False
 
     async def wait_for_playout(self):
         if self.blocker is not None:
@@ -144,6 +145,7 @@ def fake_runtime(monkeypatch, request):
     FakeSession.transcript = "browser reply"
     FakeSession.emit_error = False
     FakeSpeechHandle.blocker = None
+    FakeSpeechHandle.interrupted = False
     monkeypatch.setattr(transport, "LiveKitClient", FakeClient)
     if request.node.name != "test_lazy_missing_dependency_is_actionable":
         monkeypatch.setattr(
@@ -202,7 +204,10 @@ async def test_exact_request_mapping_and_success_transcript():
     assert session.kwargs["tts"].kwargs["model"] == "tts-custom"
     assert session.kwargs["tts"].kwargs["api_key"] == "dummy-key-for-local"
     assert FakeVAD.calls == [{"activation_threshold": 0.65}]
+    assert session.kwargs["allow_interruptions"] is True
+    assert session.kwargs["max_endpointing_delay"] == 4.5
     assert result.response_text == "browser reply"
+    assert result.interrupted is False
     assert result.room_name == "vm-exact"
     assert client.closed and session.closed and FakeRoom.instances[-1].disconnected
 

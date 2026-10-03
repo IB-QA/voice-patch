@@ -6,13 +6,13 @@
     "url": "https://github.com/IB-QA/voice-patchvoicemode",
     "source": "github"
   },
-  "version": "8.12.8+ib",
+  "version": "8.12.9+ib",
   "packages": [
     {
       "registryType": "pypi",
       "registryBaseUrl": "https://pypi.org",
       "identifier": "voice-mode",
-      "version": "8.12.8+ib",
+      "version": "8.12.9+ib",
       "transport": {
         "type": "stdio"
       },

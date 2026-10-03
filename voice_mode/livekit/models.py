@@ -11,6 +11,7 @@ class ParticipantKind(str, Enum):
 
     BROWSER = "browser"
     AGENT = "agent"
+    NATIVE = "native"
 
 
 @dataclass(frozen=True)
@@ -86,3 +87,5 @@ class LiveKitConversationResult:
     tts_model: str
     voice: str
     timings: Mapping[str, float] = field(default_factory=dict)
+    interrupted: bool = False
+    remaining_text: str | None = None
