@@ -23,12 +23,12 @@ classifiers = [
 ]
 
 dependencies = [
-    "uv>=0.4.0",
-    "fastmcp>=4.0.3,<5",  # MCP 2 dispatcher natively cancels in-flight handlers on transport close.
+    "uv>=0.13.6",
+    "fastmcp>=4.1.4,<5",  # MCP 2 dispatcher natively cancels in-flight handlers on transport close.
     "numpy",
     "sounddevice",
     "scipy",
-    "openai>=2",  # was >=1.0.0 (VM-1640 / VM-1240)
+    "openai>=3.41.0",  # was >=1.0.0 (VM-1640 / VM-1240)
     "pydub",
     "audioop-lts; python_version >= '3.13'",
     "simpleaudio",
@@ -42,24 +42,24 @@ dependencies = [
 
 [project.optional-dependencies]
 livekit = [
-    "livekit-api>=1.2,<2",
+    "livekit-api>=1.2.2,<2",
     "livekit-agents>=1.6.8,<2",
-    "livekit-plugins-openai>=1.6,<2",
-    "livekit-plugins-silero>=1.6,<2",
+    "livekit-plugins-openai>=1.8.10,<2",
+    "livekit-plugins-silero>=1.8.10,<2",
 ]
 dev = [
     "build>=1.0.0",
     "twine>=4.0.0",
-    "pytest>=8.0.0",
-    "pytest-asyncio>=0.23.0",
+    "pytest>=9.2.0",
+    "pytest-asyncio>=1.4.1",
     "pytest-cov>=4.1.0",
-    "pytest-mock>=3.10.0",
+    "pytest-mock>=3.17.0",
 ]
 test = [
-    "pytest>=8.0.0",
-    "pytest-asyncio>=0.23.0",
+    "pytest>=9.2.0",
+    "pytest-asyncio>=1.4.1",
     "pytest-cov>=4.1.0",
-    "pytest-mock>=3.10.0",
+    "pytest-mock>=3.17.0",
     "pytest-xdist>=3.5.0",  # For parallel testing
     "pytest-timeout>=2.2.0",  # For test timeouts
     "coverage[toml]>=7.4.0",
@@ -74,8 +74,8 @@ docs = [
     # mkdocs.yml. mkdocs is a local-only preview (undeployed; ReadTheDocs
     # retired in VMMT-120), so OG social cards have no use. Clears 7 alerts.
     "mkdocs-material>=9.0.0",
-    "pymdown-extensions>=10.0",
-    "mkdocs-git-revision-date-localized-plugin>=1.2.0",
+    "pymdown-extensions>=12.3",
+    "mkdocs-git-revision-date-localized-plugin>=1.6.2",
     "mkdocs-minify-plugin>=0.7.0",
     "mkdocs-gen-files>=0.5.0",
 ]
