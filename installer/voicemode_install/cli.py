@@ -73,6 +73,44 @@ def print_error(message: str):
     click.echo(click.style(f"❌ {message}", fg='red'))
 
 
+def choose_clients(found: list[str]) -> list[str]:
+    """Let the person pick which detected coding tools get VoiceMode.
+
+    Accepts numbers ("1,3"), tool names, ``all`` or ``none``. Pressing Enter
+    means none. Without an interactive terminal nothing is changed.
+    """
+    if not sys.stdin.isatty():
+        print_warning("No terminal to ask in, so no coding tool was changed.")
+        return []
+
+    click.echo("")
+    click.echo("Which of these should VoiceMode be added to?")
+    for number, name in enumerate(found, start=1):
+        click.echo(f"  {number}. {name}")
+    click.echo("Type numbers separated by commas (for example 1,3), 'all', or 'none'.")
+    answer = click.prompt("Your choice", default="none", show_default=True).strip().lower()
+
+    if answer in ("", "none", "n", "no", "0"):
+        return []
+    if answer in ("all", "a", "yes", "y"):
+        return list(found)
+
+    chosen: list[str] = []
+    for part in answer.replace(" ", ",").split(","):
+        if not part:
+            continue
+        if part.isdigit() and 1 <= int(part) <= len(found):
+            name = found[int(part) - 1]
+        elif part in found:
+            name = part
+        else:
+            print_warning(f"Ignoring '{part}': not one of the listed tools.")
+            continue
+        if name not in chosen:
+            chosen.append(name)
+    return chosen
+
+
 def offer_client_hooks(dry_run: bool, non_interactive: bool, clients: str | None = None) -> None:
     """Ask before installing converse hooks for coding tools already on this machine.
 
@@ -99,14 +137,14 @@ def offer_client_hooks(dry_run: bool, non_interactive: bool, clients: str | None
         print_step("[DRY RUN] Would offer VoiceMode hooks for: " + ", ".join(found))
         return
 
-    if non_interactive:
-        accepted = True
-    else:
-        accepted = click.confirm("Install VoiceMode hooks for these tools?", default=True)
-    if not accepted:
-        click.echo("Skipped hooks. Add them later with:")
-        click.echo("  voicemode plugin install --client=all --converse-hooks")
-        return
+    if clients is None:
+        # Nothing was chosen up front. Never pick for the person: ask which tools,
+        # and with no one to ask (no terminal), touch none.
+        found = choose_clients(found)
+        if not found:
+            click.echo("No coding tools selected. Add them later with:")
+            click.echo("  voicemode plugin install --client=all --converse-hooks")
+            return
 
     executable = shutil.which("voicemode")
     if not executable:

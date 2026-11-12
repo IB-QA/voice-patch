@@ -102,6 +102,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   temp file that was deleted while still open, which Windows refuses ("the
   process cannot access the file because it is being used by another process").
   It is now built in memory.
+- **The installer asks which coding tools to set up** — it used to install into
+  every tool it detected as soon as `--yes` was given. It now lists them and lets
+  you pick by number, `all` or `none` (Enter means none), and changes nothing when
+  there is no terminal to ask in.
+- **A tool whose config folder does not exist yet no longer aborts the install** —
+  picking it creates the folder instead of failing with a bare error.
+- **Errors print on Windows instead of crashing** — click's private console writer
+  failed with "Windows error: 6" and buried the real message under a traceback.
+  VoiceMode now uses Python's own console streams.
 - **GitHub Copilot now actually gets the plugin** — Copilot keeps its own plugin
   registry, so the plugin folder the installer copied into place never appeared.
   The installer now runs `copilot plugin install` on it, which registers and

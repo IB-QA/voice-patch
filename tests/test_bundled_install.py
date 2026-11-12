@@ -210,3 +210,40 @@ def test_registered_copilot_plugin_replaces_the_user_level_entries(monkeypatch, 
     assert written == [("plugin", tmp_path / "plugin")]
     assert json.loads(mcp.read_text())["mcpServers"] == {"other": {"command": "x"}}
     assert not hooks.exists()
+
+
+def test_choosing_which_coding_tools_never_picks_for_the_user(monkeypatch):
+    from voicemode_install import cli as cli_mod
+
+    found = ["claude", "copilot", "codex"]
+    monkeypatch.setattr(cli_mod.sys.stdin, "isatty", lambda: True)
+
+    def pick(answer):
+        monkeypatch.setattr(cli_mod.click, "prompt", lambda *a, **k: answer)
+        return cli_mod.choose_clients(found)
+
+    assert pick("none") == []
+    assert pick("") == []
+    assert pick("all") == found
+    assert pick("2") == ["copilot"]
+    assert pick("1, 3") == ["claude", "codex"]
+    assert pick("codex,9,copilot") == ["codex", "copilot"]
+
+
+def test_no_terminal_means_no_coding_tool_is_touched(monkeypatch):
+    from voicemode_install import cli as cli_mod
+
+    monkeypatch.setattr(cli_mod.sys.stdin, "isatty", lambda: False)
+    assert cli_mod.choose_clients(["claude", "copilot"]) == []
+
+
+def test_missing_tool_folder_is_created_not_fatal(monkeypatch, tmp_path):
+    from voice_mode.cli_commands import plugin
+
+    # Isolate every file the install writes; the real ~/.copilot must stay untouched.
+    monkeypatch.setattr(plugin, "DEFAULT_PARENTS", {**plugin.DEFAULT_PARENTS, "copilot": tmp_path / ".copilot" / "plugins"})
+    monkeypatch.setenv("VOICEMODE_COPILOT_MCP", str(tmp_path / "mcp-config.json"))
+    monkeypatch.setenv("VOICEMODE_COPILOT_HOOKS", str(tmp_path / "hooks.json"))
+    dest, _ = plugin.install_plugin("copilot", converse_hooks=False, output=None, binary=None)
+    assert dest.is_dir()
+    assert dest.is_relative_to(tmp_path)

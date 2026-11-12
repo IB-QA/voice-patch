@@ -878,11 +878,13 @@ def install_plugin(
     dest = plugin_home(client, output)
     parent = dest.parent
     if not parent.exists():
-        app_dir = CLIENT_APP_DIRS[client]
-        if output is not None or not app_dir.is_dir():
+        if output is not None:
             raise click.ClickException(
                 f"{parent} does not exist. Install {client} first, or create that folder."
             )
+        # The person asked for this tool by name, so create its folder. A tool
+        # that has not run yet has not made its config folder, and refusing here
+        # used to abort the whole install with a bare error.
         parent.mkdir(parents=True, exist_ok=True)
 
     dest.mkdir(parents=True, exist_ok=True)

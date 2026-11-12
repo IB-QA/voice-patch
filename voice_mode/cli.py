@@ -11,6 +11,32 @@ import shutil
 import click
 from pathlib import Path
 
+def harden_windows_console() -> bool:
+    """Stop click's private Windows console writer from crashing error messages.
+
+    On some Windows setups click's own writer fails on stderr with
+    "OSError: Windows error: 6" (invalid handle), so any usage error or
+    ClickException turned into a traceback and hid the real message. It picks its
+    handle once at import, while Python's own console streams use the live one.
+    Python has written Unicode to the console natively since 3.6, so click's
+    writer is not needed: without it click falls back to sys.stderr.
+    Returns True when the patch was applied.
+    """
+    if sys.platform != "win32":
+        return False
+    try:
+        import click._compat as click_compat
+
+        if hasattr(click_compat, "_get_windows_console_stream"):
+            click_compat._get_windows_console_stream = lambda *args, **kwargs: None
+            return True
+    except Exception:
+        pass
+    return False
+
+
+harden_windows_console()
+
 # Import version info
 try:
     from voice_mode.version import __version__
