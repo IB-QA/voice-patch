@@ -5,6 +5,8 @@ audio files, making it easy to quickly access the last recording or TTS output.
 """
 
 import logging
+import shutil
+import sys
 from pathlib import Path
 from typing import Optional, Literal
 
@@ -13,6 +15,32 @@ from ..config import AUDIO_DIR
 logger = logging.getLogger("voicemode")
 
 AudioType = Literal["stt", "tts"]
+
+
+def _place_latest(link: Path, target: Path, relative_target: Path) -> None:
+    """Point `link` at the new audio file.
+
+    A symlink is the normal result. When the OS refuses (Windows error 1314,
+    a required privilege is not held), copy the bytes instead so the latest
+    name still opens.
+    """
+    # Only this exact name. A real file that merely starts with "latest" is
+    # someone else's file and must be left alone.
+    if link.is_symlink() or (link.exists() and link.is_file()):
+        link.unlink()
+    try:
+        link.symlink_to(relative_target)
+        logger.debug(f"Created symlink: {link} -> {relative_target}")
+    except OSError as error:
+        if sys.platform != "win32":
+            raise
+        shutil.copyfile(target, link)
+        logger.info(
+            "Copied %s to %s because this Windows account cannot create symlinks (%s)",
+            target.name,
+            link.name,
+            error,
+        )
 
 
 def update_latest_symlinks(
@@ -77,12 +105,10 @@ def update_latest_symlinks(
         # Remove old 'latest' symlinks with any extension
         _remove_old_symlinks(AUDIO_DIR, "latest")
 
-        # Create new symlinks
-        type_symlink_path.symlink_to(relative_target)
-        logger.debug(f"Created symlink: {type_symlink_path} -> {relative_target}")
-
-        latest_symlink_path.symlink_to(relative_target)
-        logger.debug(f"Created symlink: {latest_symlink_path} -> {relative_target}")
+        # Create new symlinks. Windows without the symlink privilege raises
+        # WinError 1314; a same-named copy still gives latest-TTS.wav a target.
+        _place_latest(type_symlink_path, file_path, relative_target)
+        _place_latest(latest_symlink_path, file_path, relative_target)
 
         return type_symlink_path, latest_symlink_path
 

@@ -383,6 +383,12 @@ async def simple_stt_failover(
                 provider_type=provider_type,
             )
             resolved_model = _select_stt_model_for_endpoint(endpoint_info, model)
+            logger.info(
+                "Whisper request: %s/audio/transcriptions model=%s audio=%.1fKB",
+                base_url.rstrip("/"),
+                resolved_model,
+                file_size_bytes / 1024,
+            )
 
             # Try STT with this endpoint - track timing
             request_start = time.perf_counter()

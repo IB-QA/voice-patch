@@ -5,6 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 INSTALLER_ROOT = Path(__file__).resolve().parents[1] / "installer"
 sys.path.insert(0, str(INSTALLER_ROOT))
 
@@ -59,6 +61,8 @@ def test_merging_keeps_other_servers_and_a_backup(tmp_path):
 
 
 def test_an_environment_variable_can_point_at_the_hook(tmp_path, monkeypatch):
+    if sys.platform == "win32":
+        pytest.skip("the stand-in hook is a shell script, which Windows cannot run")
     binary = tmp_path / "voicemode_hook"
     binary.write_text("#!/bin/sh\nexit 0\n")
     binary.chmod(0o755)
@@ -70,16 +74,17 @@ def test_an_environment_variable_can_point_at_the_hook(tmp_path, monkeypatch):
 
 
 def test_a_hook_built_for_another_platform_is_not_installed(tmp_path, monkeypatch):
-    foreign = tmp_path / "voicemode_hook"
+    foreign = tmp_path / plugin_mod.HOOK_BIN_NAME
     foreign.write_bytes(b"\xcf\xfa\xed\xfe not for this machine")
     foreign.chmod(0o755)
     monkeypatch.setattr(plugin_mod, "PACKAGED_BINARY", foreign)
     monkeypatch.setattr(plugin_mod, "BUILD_SH", tmp_path / "missing-build.sh")
+    monkeypatch.setattr(plugin_mod, "CARGO_MANIFEST", tmp_path / "missing-Cargo.toml")
     monkeypatch.delenv("VOICEMODE_HOOK_BINARY", raising=False)
     monkeypatch.setenv("VOICEMODE_HOOK_CACHE_DIR", str(tmp_path / "cache"))
 
     assert plugin_mod.ensure_cached_hook_binary() is None
-    assert not (tmp_path / "cache" / "voicemode_hook").exists()
+    assert not (tmp_path / "cache" / plugin_mod.HOOK_BIN_NAME).exists()
 
 
 def test_uv_is_found_even_when_its_folder_is_not_on_path(tmp_path, monkeypatch):
@@ -151,11 +156,15 @@ def test_only_the_tools_the_user_picked_get_hooks(monkeypatch, tmp_path):
     assert ran == []
 
 
-def test_mcp_entries_use_the_plain_command_name(monkeypatch):
-    """Configs must say `voicemode`, not a full path to voicemode.exe."""
+def test_mcp_entries_use_the_platform_command(monkeypatch):
+    """POSIX configs say `voicemode`; Windows configs carry the real voicemode.exe path."""
     from voice_mode.cli_commands import plugin
 
-    monkeypatch.setattr(plugin.shutil, "which", lambda name: r"C:\Users\x\.local\bin\voicemode.exe")
+    exe = r"C:\Users\x\.local\bin\voicemode.exe"
+    monkeypatch.setattr(plugin.shutil, "which", lambda name: exe)
+    monkeypatch.setattr(plugin.sys, "platform", "win32")
+    assert plugin.voicemode_mcp_command() == str(plugin.Path(exe))
+    monkeypatch.setattr(plugin.sys, "platform", "linux")
     for client in ("cursor", "claude", "copilot", "codex", "generic"):
         assert plugin.mcp_server_entry(client)["command"] == "voicemode"
 

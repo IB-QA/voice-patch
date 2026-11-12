@@ -46,6 +46,11 @@ class TestPlatformDetection:
     """Test platform detection logic."""
 
     @patch('platform.system')
+    def test_detect_windows(self, mock_system):
+        mock_system.return_value = 'Windows'
+        assert detect_platform() == 'windows'
+
+    @patch('platform.system')
     def test_detect_darwin(self, mock_system):
         """Test macOS detection."""
         mock_system.return_value = 'Darwin'

@@ -102,6 +102,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   temp file that was deleted while still open, which Windows refuses ("the
   process cannot access the file because it is being used by another process").
   It is now built in memory.
+- **Windows plugin install uses `voicemode_hook.exe` and the real `voicemode.exe`** —
+  the hook name had no `.exe`, the build step called `sh` (which Windows does not
+  have), and MCP configs said `voicemode`, which Copilot and Cursor do not resolve.
+  A hook that cannot start makes Copilot deny every tool. The installer now builds
+  the hook with `cargo` and writes the full `voicemode.exe` path. If a Copilot
+  session has the plugin open, it says so instead of failing silently.
+- **Listening and Whisper say what they are doing** — while waiting for speech the
+  log reports how much audio has arrived and the level, names the microphone and
+  the Whisper address, and logs the model and size of each transcription request.
+- **Conversation recording no longer dies on Windows after one silent buffer** —
+  the recorder forced the microphone to deliver 30ms blocks. On Windows that
+  stream delivered one silent block and stopped, so every turn was "no speech",
+  while `voicemode diag mic` (which lets the device choose the block size) heard
+  the same microphone. Recording now uses the device's own block size and slices
+  it into the 30ms frames the speech detector needs.
+- **`latest-TTS.wav` is still written when Windows refuses a symlink** — creating
+  a symlink needs a privilege (Windows error 1314). The latest file is copied
+  instead, so opening it works.
+- **Windows is a known platform** — startup no longer logs "Unknown platform: windows".
 - **The installer asks which coding tools to set up** — it used to install into
   every tool it detected as soon as `--yes` was given. It now lists them and lets
   you pick by number, `all` or `none` (Enter means none), and changes nothing when

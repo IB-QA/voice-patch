@@ -16,6 +16,7 @@ import os
 import shutil
 import stat
 import subprocess
+import sys
 from pathlib import Path
 
 import click
@@ -25,10 +26,13 @@ from voice_mode.__version__ import __version__ as VERSION
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = PACKAGE_ROOT.parent
 AGENTS_DIR = REPO_ROOT / ".agents"
-PACKAGED_BINARY = PACKAGE_ROOT / "data" / "hooks" / "bin" / "voicemode_hook"
+# Windows only starts executables that end in .exe.
+HOOK_BIN_NAME = "voicemode_hook.exe" if sys.platform == "win32" else "voicemode_hook"
+PACKAGED_BINARY = PACKAGE_ROOT / "data" / "hooks" / "bin" / HOOK_BIN_NAME
 BUILD_SH = PACKAGE_ROOT / "data" / "hooks" / "reciever" / "build.sh"
+CARGO_MANIFEST = PACKAGE_ROOT / "data" / "hooks" / "reciever" / "Cargo.toml"
 HOOK_CACHE_DIR = Path.home() / ".voicemode" / "services" / "hooks"
-HOOK_CACHE_BIN = HOOK_CACHE_DIR / "voicemode_hook"
+HOOK_CACHE_BIN = HOOK_CACHE_DIR / HOOK_BIN_NAME
 HOOK_CACHE_STAMP = HOOK_CACHE_DIR / "voice_mode_version"
 
 # Canonical names shown in --help and accepted by --client=all.
@@ -203,8 +207,14 @@ def devin_user_hooks_path(output: Path | None) -> Path:
 
 
 def voicemode_mcp_command() -> str:
-    # Plain name, never a resolved path: a full path to voicemode.exe goes stale
-    # when the tool is reinstalled or moved, and it is noisy in every config file.
+    # Plain name on POSIX: a full path goes stale when the tool is reinstalled or
+    # moved. Windows launchers (Copilot, Cursor) do not resolve bare names the way
+    # a shell does, so use the real voicemode.exe from PATH there.
+    if sys.platform == "win32":
+        found = shutil.which("voicemode.exe") or shutil.which("voicemode")
+        if found:
+            return str(Path(found))
+        return "voicemode.exe"
     return "voicemode"
 
 
@@ -261,7 +271,7 @@ def ensure_cached_hook_binary() -> Path | None:
         if chosen.is_file() and hook_binary_runs(chosen):
             return chosen
     cache_dir = Path(os.environ.get("VOICEMODE_HOOK_CACHE_DIR", HOOK_CACHE_DIR))
-    cache_bin = cache_dir / "voicemode_hook"
+    cache_bin = cache_dir / HOOK_BIN_NAME
     cache_stamp = cache_dir / "voice_mode_version"
     stamped = cache_stamp.read_text(encoding="utf-8").strip() if cache_stamp.is_file() else ""
     if cache_bin.is_file() and stamped == VERSION and hook_binary_runs(cache_bin):
@@ -270,6 +280,18 @@ def ensure_cached_hook_binary() -> Path | None:
     cache_dir.mkdir(parents=True, exist_ok=True)
     if PACKAGED_BINARY.is_file() and hook_binary_runs(PACKAGED_BINARY):
         shutil.copy2(PACKAGED_BINARY, cache_bin)
+    elif sys.platform == "win32" and CARGO_MANIFEST.is_file() and shutil.which("cargo"):
+        try:
+            subprocess.run(
+                ["cargo", "build", "--release", "--manifest-path", str(CARGO_MANIFEST)],
+                check=True,
+            )
+        except subprocess.CalledProcessError:
+            return None
+        built = CARGO_MANIFEST.parent / "target" / "release" / HOOK_BIN_NAME
+        if not built.is_file():
+            return None
+        shutil.copy2(built, cache_bin)
     elif BUILD_SH.is_file() and shutil.which("sh") and shutil.which("cargo"):
         try:
             subprocess.run(["sh", str(BUILD_SH), str(cache_bin)], check=True)
@@ -287,7 +309,7 @@ def ensure_cached_hook_binary() -> Path | None:
 def copy_cached_binary_into_plugin(dest: Path, binary: Path) -> Path:
     bin_dir = dest / "bin"
     bin_dir.mkdir(parents=True, exist_ok=True)
-    target = bin_dir / "voicemode_hook"
+    target = bin_dir / HOOK_BIN_NAME
     shutil.copy2(binary, target)
     target.chmod(target.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
     return target
@@ -296,8 +318,8 @@ def copy_cached_binary_into_plugin(dest: Path, binary: Path) -> Path:
 def _hook_command(client: str, dest: Path) -> str:
     hook_client = HOOK_CLIENT[client]
     if client == "cursor":
-        return f'"$CURSOR_PLUGIN_ROOT/bin/voicemode_hook" --client={hook_client}'
-    path = dest / "bin" / "voicemode_hook"
+        return f'"$CURSOR_PLUGIN_ROOT/bin/{HOOK_BIN_NAME}" --client={hook_client}'
+    path = dest / "bin" / HOOK_BIN_NAME
     return f'"{path}" --client={hook_client}'
 
 
@@ -533,7 +555,7 @@ def _is_cursor_voicemode_hook(entry: object) -> bool:
 
 def _user_hook_command(client: str, dest: Path) -> str:
     hook_client = HOOK_CLIENT[user_wire_name(client)]
-    path = dest / "bin" / "voicemode_hook"
+    path = dest / "bin" / HOOK_BIN_NAME
     return f'"{path}" --client={hook_client}'
 
 
@@ -653,7 +675,7 @@ def wire_antigravity(dest: Path, output: Path | None, converse_hooks: bool) -> t
 
 
 def cursor_user_hook_entry(dest: Path) -> dict:
-    binary = dest / "bin" / "voicemode_hook"
+    binary = dest / "bin" / HOOK_BIN_NAME
     return {
         "command": f'"{binary}" --client=cursor',
         "timeout": 2,
@@ -681,7 +703,7 @@ def merge_cursor_user_hooks(path: Path, dest: Path) -> Path:
 
 
 def copilot_user_hook_payload(dest: Path) -> dict:
-    binary = dest / "bin" / "voicemode_hook"
+    binary = dest / "bin" / HOOK_BIN_NAME
     quoted = f"'{binary}' --client=copilot"
     return {
         "version": 1,
@@ -719,6 +741,14 @@ def register_copilot_plugin(dest: Path) -> bool:
                                 capture_output=True, text=True, timeout=120)
     except (OSError, subprocess.SubprocessError):
         return False
+    stderr = (result.stderr or "").lower()
+    if result.returncode != 0 and (
+        "another process" in stderr or "another program" in stderr or "os error 32" in stderr
+    ):
+        click.echo(
+            "warning: Copilot could not replace the plugin because a Copilot session "
+            "is using it. Close all Copilot sessions and re-run this command."
+        )
     return result.returncode == 0 and "installed successfully" in (result.stdout or "")
 
 

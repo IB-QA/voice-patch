@@ -53,7 +53,7 @@ def test_plugin_install_cursor_to_tmp(tmp_path: Path, monkeypatch) -> None:
     assert (dest / "hooks" / "hooks.json").is_file()
     assert (dest / "skills" / "voicemode" / "SKILL.md").is_file()
     assert (dest / "commands" / "voicemode-plugin.md").is_file()
-    assert (dest / "bin" / "voicemode_hook").is_file()
+    assert (dest / "bin" / plugin_mod.HOOK_BIN_NAME).is_file()
     payload = json.loads((dest / "hooks" / "hooks.json").read_text(encoding="utf-8"))
     command = payload["hooks"]["preToolUse"][0]["command"]
     assert "CURSOR_PLUGIN_ROOT" in command

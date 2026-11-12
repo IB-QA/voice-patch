@@ -124,6 +124,28 @@ class TestUpdateLatestSymlinks:
         assert latest_target == "2026/02/test_relative.wav"
 
 
+class TestWindowsSymlinkFallback:
+    def test_a_refused_symlink_becomes_a_copy(self, isolate_home_directory, monkeypatch):
+        from voice_mode.utils.symlinks import update_latest_symlinks
+        from voice_mode.config import AUDIO_DIR
+
+        AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+        test_file = AUDIO_DIR / "2026" / "11" / "spoken.wav"
+        test_file.parent.mkdir(parents=True)
+        test_file.write_bytes(b"spoken")
+        monkeypatch.setattr("voice_mode.utils.symlinks.sys.platform", "win32")
+
+        def refuse(self, target):
+            raise OSError(1314, "A required privilege is not held by the client")
+
+        monkeypatch.setattr(Path, "symlink_to", refuse)
+        type_link, latest = update_latest_symlinks(test_file, "tts")
+
+        assert type_link.read_bytes() == b"spoken"
+        assert latest.read_bytes() == b"spoken"
+        assert not type_link.is_symlink()
+
+
 class TestSymlinkExtensionChanges:
     """Tests for symlink updates when file extension changes."""
 

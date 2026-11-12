@@ -53,12 +53,14 @@ def detect_platform() -> str:
     """Detect OS/distribution.
 
     Returns:
-        str: Platform key - 'darwin', 'debian', 'fedora', 'wsl-debian', 'wsl-fedora', or 'unknown'
+        str: Platform key - 'darwin', 'windows', 'debian', 'fedora', 'wsl-debian', 'wsl-fedora', or 'unknown'
     """
     system = platform.system().lower()
 
     if system == "darwin":
         return "darwin"
+    if system == "windows":
+        return "windows"
     elif system == "linux":
         # Check for WSL
         try:

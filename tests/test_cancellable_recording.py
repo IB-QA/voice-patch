@@ -106,6 +106,51 @@ class TestStopEventUpfront:
         assert speech_detected is True
 
 
+class TestDeviceChoosesBufferSize:
+    """Windows stops the input stream when blocksize is forced to one VAD frame."""
+
+    @patch('voice_mode.tools.converse.VAD_AVAILABLE', True)
+    def test_stream_is_opened_without_a_fixed_blocksize(self):
+        stop_event = threading.Event()
+        stop_event.set()
+        with patch('voice_mode.tools.converse.webrtcvad') as mock_webrtcvad, \
+             patch('voice_mode.tools.converse.sd') as mock_sd, \
+             patch('queue.Queue', return_value=_ForeverQueue()):
+            mock_webrtcvad.Vad.return_value.is_speech.return_value = False
+            mock_sd.InputStream.return_value.__enter__.return_value = MagicMock()
+            record_audio_with_silence_detection(max_duration=30.0, stop_event=stop_event)
+
+        assert "blocksize" not in mock_sd.InputStream.call_args.kwargs
+
+    @patch('voice_mode.tools.converse.VAD_AVAILABLE', True)
+    def test_a_large_callback_is_split_into_vad_frames(self):
+        frame = int(SAMPLE_RATE * VAD_CHUNK_DURATION_MS / 1000)
+        stop_event = threading.Event()
+
+        class _Once:
+            def __init__(self):
+                self.served = False
+
+            def get(self, timeout=None):
+                if not self.served:
+                    self.served = True
+                    return np.zeros(frame * 2 + frame // 2, dtype=np.int16)
+                stop_event.set()
+                raise queue.Empty()
+
+        with patch('voice_mode.tools.converse.webrtcvad') as mock_webrtcvad, \
+             patch('voice_mode.tools.converse.sd') as mock_sd, \
+             patch('queue.Queue', return_value=_Once()):
+            mock_webrtcvad.Vad.return_value.is_speech.return_value = True
+            mock_sd.InputStream.return_value.__enter__.return_value = MagicMock()
+            audio, speech_detected = record_audio_with_silence_detection(
+                max_duration=30.0, stop_event=stop_event,
+            )
+
+        assert len(audio) == frame * 2 + frame // 2
+        assert speech_detected is True
+
+
 class TestCancelledRecordingIsDiscarded:
     """VM-2015 fix-001 review focus B: the stop flag makes the recording
     thread return EARLY, i.e. with a PARTIAL buffer. That partial audio must
