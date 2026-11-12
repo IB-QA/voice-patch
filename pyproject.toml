@@ -87,8 +87,8 @@ docs = [
 
 [project.urls]
 Homepage = "https://getvoicemode.com/"
-Repository = "https://github.com/IB-QA/voice-patchvoicemode"
-Issues = "https://github.com/IB-QA/voice-patchvoicemode/issues"
+Repository = "https://github.com/IB-QA/voice-patch"
+Issues = "https://github.com/IB-QA/voice-patch/issues"
 
 [project.scripts]
 voice-mode = "voice_mode.cli:voice_mode"

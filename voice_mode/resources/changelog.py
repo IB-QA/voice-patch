@@ -27,4 +27,4 @@ def changelog_resource() -> str:
     return """CHANGELOG.md not found in package.
 
 For the latest changelog, please visit:
-https://github.com/IB-QA/voice-patchvoicemode/blob/master/CHANGELOG.md"""
+https://github.com/IB-QA/voice-patch/blob/master/CHANGELOG.md"""

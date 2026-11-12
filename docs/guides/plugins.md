@@ -150,4 +150,4 @@ voicemode config edit
 
 ## Resources
 
-- [GitHub Repository](https://github.com/IB-QA/voice-patchvoicemode)
+- [GitHub Repository](https://github.com/IB-QA/voice-patch)

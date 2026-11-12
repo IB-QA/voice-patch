@@ -26,7 +26,7 @@ pip install uv
 
 ## Cloning the Repository
 
-**For contributors:** Fork the repo first at https://github.com/IB-QA/voice-patchvoicemode, then clone your fork:
+**For contributors:** Fork the repo first at https://github.com/IB-QA/voice-patch, then clone your fork:
 
 ```bash
 # Clone your fork (replace YOUR-USERNAME)

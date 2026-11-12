@@ -464,7 +464,7 @@ If your Stream Deck plugin needs an absolute path, find it with `which voicemode
 > and `control_send("skip_forward")`, but its skip buttons are dim placeholders
 > behind a single `SKIP_ENABLED = False` flag that lights **both** at once. VM-1685
 > makes `skip_back` work server-side; `skip_forward` is its sibling task
-> [VM-1739](https://github.com/IB-QA/voice-patchvoicemode). Because one flag lights both
+> [VM-1739](https://github.com/IB-QA/voice-patch). Because one flag lights both
 > buttons, flipping `SKIP_ENABLED = True` in `deck.py` is deferred until VM-1739
 > also lands — otherwise the skip-forward button would light but do nothing.
 > Until then, drive skip-back from a plain _System → Open_ button (above), which
@@ -486,7 +486,7 @@ listening. [Hammerspoon](https://www.hammerspoon.org/) handles both: its
 **per-event**, based on whether a converse is live.
 
 The reusable config ships in the repo:
-[`scripts/hammerspoon/voicemode-media-keys.lua`](https://github.com/IB-QA/voice-patchvoicemode/blob/master/scripts/hammerspoon/voicemode-media-keys.lua).
+[`scripts/hammerspoon/voicemode-media-keys.lua`](https://github.com/IB-QA/voice-patch/blob/master/scripts/hammerspoon/voicemode-media-keys.lua).
 
 **Ownership model — "polite spot-instance".** VoiceMode only grabs the media keys
 while a converse is _live_; otherwise every key passes straight through to your
