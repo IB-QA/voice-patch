@@ -79,6 +79,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **An unattended install no longer stops when ffmpeg cannot be installed** —
+  `voice-mode-install --yes` used to exit before installing VoiceMode or wiring
+  any coding tool if a system package (on Windows, ffmpeg via winget) failed,
+  leaving the machine with nothing. It now warns, says how to install the
+  package later, and carries on.
+
 - **`voicemode` was missing after a Windows install** — `voice-mode-install`
   called plain `uv`, which a freshly started installer process cannot find
   because uv's own installer only updates PATH for new terminals. It now finds

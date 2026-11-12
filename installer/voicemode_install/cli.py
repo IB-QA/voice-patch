@@ -416,10 +416,20 @@ def main(dry_run, voice_mode_version, skip_services, non_interactive, model):
                 print_success("System dependencies installed")
                 logger.log_install('system', missing_names, True)
             else:
-                print_error("Failed to install some dependencies")
                 logger.log_install('system', missing_names, False)
-                if not dry_run:
-                    sys.exit(1)
+                if non_interactive:
+                    # An unattended installer must not stop here: VoiceMode and
+                    # the coding-tool setup do not need these packages to be
+                    # installed, and exiting would leave the machine with nothing.
+                    print_warning(
+                        "Could not install: " + ", ".join(missing_names)
+                        + ". Continuing; install them later."
+                    )
+                    click.echo("  ffmpeg is needed for audio conversion. On Windows: winget install Gyan.FFmpeg")
+                else:
+                    print_error("Failed to install some dependencies")
+                    if not dry_run:
+                        sys.exit(1)
         else:
             print_success("All required dependencies are already installed")
 

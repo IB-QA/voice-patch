@@ -89,3 +89,31 @@ def test_the_install_also_puts_uv_tools_on_the_users_path(monkeypatch):
 
     assert _installer().install_voicemode()
     assert calls[1][1:] == ["tool", "update-shell"]
+
+
+def test_an_unattended_install_continues_when_system_packages_fail(monkeypatch, tmp_path):
+    """A failed ffmpeg install must not stop VoiceMode and the tool setup."""
+    from click.testing import CliRunner
+    from voicemode_install import cli as cli_mod
+
+    steps = []
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setattr(cli_mod, "ensure_homebrew_on_macos", lambda *a, **k: True)
+    monkeypatch.setattr(cli_mod, "check_existing_installation", lambda: False)
+    monkeypatch.setattr(cli_mod.PackageInstaller, "install_packages", lambda self, pkgs: False)
+    monkeypatch.setattr(cli_mod.PackageInstaller, "install_voicemode", lambda self, version=None: steps.append("voicemode") or True)
+    monkeypatch.setattr(cli_mod, "verify_silence_detection", lambda dry_run=False: True)
+    monkeypatch.setattr(cli_mod, "attempt_optional_simpleaudio", lambda dry_run=False: "skipped")
+    monkeypatch.setattr(cli_mod, "offer_client_hooks", lambda **k: steps.append("hooks"))
+
+    class Missing:
+        name, description, required, installed = "ffmpeg", "audio", True, False
+
+    monkeypatch.setattr(cli_mod.DependencyChecker, "check_core_dependencies", lambda self: [Missing()])
+    monkeypatch.setattr(cli_mod.DependencyChecker, "get_missing_packages", lambda self, deps: deps)
+    monkeypatch.setattr(
+        cli_mod.DependencyChecker, "get_summary", lambda self, deps: {"installed": 0, "missing_required": 1}
+    )
+
+    result = CliRunner().invoke(cli_mod.main, ["--yes", "--skip-services"])
+    assert "voicemode" in steps and "hooks" in steps, result.output
