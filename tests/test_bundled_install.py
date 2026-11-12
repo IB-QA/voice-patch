@@ -31,7 +31,8 @@ def test_bundled_wheel_replaces_the_public_package(monkeypatch):
     monkeypatch.setattr(subprocess, "run", lambda cmd, **kw: calls.append(cmd) or subprocess.CompletedProcess(cmd, 0))
 
     assert _installer().install_voicemode()
-    assert calls == [["uv", "tool", "install", "--upgrade", "--force", "/tmp/voice_mode-1.0-py3-none-any.whl"]]
+    assert calls[0][1:] == ["tool", "install", "--upgrade", "--force", "/tmp/voice_mode-1.0-py3-none-any.whl"]
+    assert calls[0][0].endswith("uv") or calls[0][0].endswith("uv.exe")
 
 
 def test_without_a_bundle_the_public_package_is_used(monkeypatch):
@@ -40,7 +41,7 @@ def test_without_a_bundle_the_public_package_is_used(monkeypatch):
     monkeypatch.setattr(subprocess, "run", lambda cmd, **kw: calls.append(cmd) or subprocess.CompletedProcess(cmd, 0))
 
     assert _installer().install_voicemode()
-    assert calls == [["uv", "tool", "install", "--upgrade", "voice-mode"]]
+    assert calls[0][1:] == ["tool", "install", "--upgrade", "voice-mode"]
 
 
 def test_merging_keeps_other_servers_and_a_backup(tmp_path):
@@ -67,3 +68,24 @@ def test_a_hook_built_for_another_platform_is_not_installed(tmp_path, monkeypatc
 
     assert plugin_mod.ensure_cached_hook_binary() is None
     assert not (tmp_path / "cache" / "voicemode_hook").exists()
+
+
+def test_uv_is_found_even_when_its_folder_is_not_on_path(tmp_path, monkeypatch):
+    from voicemode_install import installer as installer_mod
+
+    folder = tmp_path / ".local" / "bin"
+    folder.mkdir(parents=True)
+    (folder / "uv.exe").write_text("")
+    monkeypatch.setattr(installer_mod.shutil, "which", lambda name: None)
+    monkeypatch.setattr(installer_mod.Path, "home", lambda: tmp_path)
+
+    assert installer_mod.find_uv() == str(folder / "uv.exe")
+
+
+def test_the_install_also_puts_uv_tools_on_the_users_path(monkeypatch):
+    calls = []
+    monkeypatch.delenv("VOICEMODE_INSTALL_SOURCE", raising=False)
+    monkeypatch.setattr(subprocess, "run", lambda cmd, **kw: calls.append(cmd) or subprocess.CompletedProcess(cmd, 0))
+
+    assert _installer().install_voicemode()
+    assert calls[1][1:] == ["tool", "update-shell"]

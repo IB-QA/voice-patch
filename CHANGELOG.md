@@ -79,6 +79,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`voicemode` was missing after a Windows install** — `voice-mode-install`
+  called plain `uv`, which a freshly started installer process cannot find
+  because uv's own installer only updates PATH for new terminals. It now finds
+  uv in its install folder and runs `uv tool update-shell` so new terminals see
+  `voicemode`.
+
 - **Agents no longer walk away from a user who is still talking** — the
   `converse_continue` in-progress reply now carries an explicit `instruction`
   ("do not end your turn; call converse_continue again"), a rising `poll`

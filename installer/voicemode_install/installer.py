@@ -3,10 +3,29 @@
 import os
 import shutil
 import subprocess
+from pathlib import Path
 from typing import List, Optional
 
 from .checker import PackageInfo
 from .system import PlatformInfo, get_package_manager
+
+
+def find_uv() -> str:
+    """Path to uv, even when its folder is not on this process's PATH.
+
+    uv's own installer only updates the registry/profile for new terminals, so a
+    process started before it ran (for example an installer) cannot see it.
+    """
+    found = shutil.which('uv')
+    if found:
+        return found
+    home = Path.home()
+    for folder in (home / '.local' / 'bin', home / '.cargo' / 'bin'):
+        for name in ('uv.exe', 'uv'):
+            candidate = folder / name
+            if candidate.is_file():
+                return str(candidate)
+    return 'uv'
 
 
 class PackageInstaller:
@@ -164,13 +183,14 @@ class PackageInstaller:
             True if installation succeeded, False otherwise.
         """
         # A built wheel or other uv source, for example the one bundled in an installer.
+        uv = find_uv()
         source = os.environ.get('VOICEMODE_INSTALL_SOURCE', '').strip()
         if source:
-            cmd = ['uv', 'tool', 'install', '--upgrade', '--force', source]
+            cmd = [uv, 'tool', 'install', '--upgrade', '--force', source]
         elif version:
-            cmd = ['uv', 'tool', 'install', '--upgrade', f'voice-mode=={version}']
+            cmd = [uv, 'tool', 'install', '--upgrade', f'voice-mode=={version}']
         else:
-            cmd = ['uv', 'tool', 'install', '--upgrade', 'voice-mode']
+            cmd = [uv, 'tool', 'install', '--upgrade', 'voice-mode']
 
         if self.dry_run:
             print(f"[DRY RUN] Would install: {' '.join(cmd)}")
@@ -183,6 +203,12 @@ class PackageInstaller:
                 check=True,
                 capture_output=False
             )
+            # Put uv's tool folder on the user's PATH so new terminals find
+            # `voicemode`. Best effort; the install itself already succeeded.
+            try:
+                subprocess.run([uv, 'tool', 'update-shell'], check=False, capture_output=True, timeout=30)
+            except (OSError, subprocess.SubprocessError):
+                pass
             return result.returncode == 0
         except subprocess.CalledProcessError as e:
             print(f"VoiceMode installation failed: {e}")
@@ -199,7 +225,7 @@ def voice_mode_tool_python() -> Optional[str]:
     tool_dir = None
     try:
         result = subprocess.run(
-            ['uv', 'tool', 'dir'],
+            [find_uv(), 'tool', 'dir'],
             capture_output=True,
             text=True,
             check=True,
