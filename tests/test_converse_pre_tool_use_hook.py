@@ -33,6 +33,20 @@ def test_non_converse_is_silent_and_zero() -> None:
     assert result.stdout == ""
 
 
+def test_mentioning_converse_in_another_tool_is_silent() -> None:
+    """A normal tool call that only lists the voice tool must not be treated as one."""
+    result = _run(
+        {
+            "tool_name": "Shell",
+            "tool_input": {"command": "echo hi"},
+            "tools": [{"name": "converse", "description": "voice"}],
+        },
+        "cursor",
+    )
+    assert result.returncode == 0
+    assert result.stdout == ""
+
+
 def test_claude_forces_wait() -> None:
     result = _run(
         {

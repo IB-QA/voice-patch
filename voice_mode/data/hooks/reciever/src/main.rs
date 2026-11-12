@@ -4,8 +4,6 @@ use std::fs::{self, OpenOptions};
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::path::PathBuf;
 use chrono::Local;
-use regex::Regex;
-
 fn main() {
     // Read payload from standard input pipeline
     let mut input_str = String::new();
@@ -13,10 +11,9 @@ fn main() {
         std::process::exit(0);
     }
 
-    // 1. Instant Discard Validation Step using regex targeting key pairs ONLY
-    // Strict hardware regex matching values ending explicitly in 'converse'
-    let re = Regex::new(r#"(?i)("tool_name"|"toolName"|"name")\s*:\s*"[^"]*converse""#).unwrap();
-    if !re.is_match(&input_str) {
+    // Only the voice tool. A payload that merely lists "converse" among other
+    // tools, or a normal prompt, is not a voice call.
+    if !invoked_tool_is_voice(&input_str) {
         std::process::exit(0);
     }
 
@@ -203,9 +200,26 @@ fn run_pipeline(input_str: &str, client_arg: &str) -> Result<Option<String>, Box
     Ok(Some(serde_json::to_string(&output)?))
 }
 
+fn invoked_tool_is_voice(input: &str) -> bool {
+    let data: serde_json::Value = match serde_json::from_str(input) {
+        Ok(v) => v,
+        Err(_) => return false,
+    };
+    let names = [
+        get_nested_string(&data, &["tool_name"]),
+        get_nested_string(&data, &["toolName"]),
+        get_nested_string(&data, &["toolCall", "name"]),
+        get_nested_string(&data, &["tool_input", "name"]),
+        get_nested_string(&data, &["toolArgs", "name"]),
+    ];
+    names.into_iter().flatten().any(|name| is_converse(&name))
+}
+
 fn is_converse(s: &str) -> bool {
     let lower = s.to_lowercase();
-    lower.ends_with("converse")
+    let tail = lower.rsplit(['/', ':']).next().unwrap_or(&lower);
+    let tail = tail.rsplit("__").next().unwrap_or(tail);
+    tail == "converse" || tail == "converse_continue"
 }
 
 fn is_truthy(s: &str) -> bool {
