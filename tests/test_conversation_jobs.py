@@ -96,6 +96,13 @@ async def test_slow_operation_returns_compact_continuation_then_completes(tmp_pa
     assert pending["next"]["tool"] == "converse_continue"
     assert pending["next"]["arguments"]["job_id"] == job.job_id
     assert pending["next"]["arguments"]["wait_seconds"] == 50.0
+    assert "Do NOT end your turn" in pending["instruction"]
+    assert pending["poll"] == 1
+
+    # Each wait looks different, so a long run of polls is visibly progress.
+    again = json.loads(await manager.wait(job.job_id, 0.001))
+    assert again["poll"] == 2
+    assert again["elapsed_seconds"] >= pending["elapsed_seconds"]
 
     release.set()
     assert await manager.wait(job.job_id, 1) == "Voice response: complete"

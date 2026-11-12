@@ -15,6 +15,8 @@ Pass only:
 
 Do not start a new `converse` recording while that job is active. Repeat `converse_continue` until you get a spoken reply or a final error.
 
+**Never end your turn while a job is in progress.** The user is still on the call. Each in-progress reply has an `instruction`, a rising `poll`, and `elapsed_seconds`; many polls in a row are normal. Do not write a summary, and do not stop and report.
+
 ```bash
 # After converse returns job_id=…
 # converse_continue job_id=<id> wait_seconds=50

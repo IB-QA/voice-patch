@@ -70,6 +70,18 @@ class ConversationJob:
     status: str = "in_progress"
     result: Optional[str] = None
     error: Optional[str] = None
+    polls: int = 0
+
+
+# Told to the calling agent on every in-progress reply. A person talking for a
+# minute or two is normal; ending the turn here abandons them mid-sentence.
+KEEP_WAITING_INSTRUCTION = (
+    "The user is still on the voice call (speaking or being heard). This is "
+    "normal, not an error and not a loop. Do NOT end your turn, do NOT write a "
+    "summary, do NOT start a new recording. Your very next action must be the "
+    "converse_continue call in `next`, repeated for as long as it takes; only "
+    "a spoken reply or a final error ends the wait."
+)
 
 
 class ConversationJobManager:
@@ -114,7 +126,13 @@ class ConversationJobManager:
                 timeout=wait_seconds,
             )
         except asyncio.TimeoutError:
-            return self._in_progress_result(job.job_id, wait_seconds)
+            job.polls += 1
+            return self._in_progress_result(
+                job.job_id,
+                wait_seconds,
+                polls=job.polls,
+                elapsed_seconds=time.time() - job.created_at,
+            )
         except asyncio.CancelledError:
             # Explicit client cancellation must retain the existing VoiceMode
             # semantics: stop the audio operation and let cancellation reach
@@ -208,7 +226,12 @@ class ConversationJobManager:
         )
 
     @staticmethod
-    def _in_progress_result(job_id: str, wait_seconds: float) -> str:
+    def _in_progress_result(
+        job_id: str,
+        wait_seconds: float,
+        polls: int = 1,
+        elapsed_seconds: float = 0.0,
+    ) -> str:
         next_wait = (
             wait_seconds
             if wait_seconds >= 1.0
@@ -217,7 +240,10 @@ class ConversationJobManager:
         payload = {
             "status": "in_progress",
             "job_id": job_id,
+            "poll": polls,
+            "elapsed_seconds": round(elapsed_seconds),
             "message": "Voice operation is still active; do not start a new recording.",
+            "instruction": KEEP_WAITING_INSTRUCTION,
             "next": {
                 "tool": "converse_continue",
                 "arguments": {

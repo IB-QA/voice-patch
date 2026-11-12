@@ -4536,6 +4536,14 @@ async def converse_continue(
     exact ``job_id`` from that result. The original TTS, microphone recording,
     silence detection, and transcription continue inside the MCP server.
 
+    DO NOT END YOUR TURN while a job is in progress. The user is still on the
+    call; ending the turn abandons them mid-sentence. Call this tool again
+    immediately after every in-progress result, however many times it takes.
+    Repeated identical-looking calls are expected here, and each reply carries
+    a rising ``poll`` and ``elapsed_seconds`` to show it is progressing. Only a
+    spoken reply or a final error (completed, failed, cancelled, interrupted)
+    means you may continue with other work.
+
     Args:
         job_id: The ID returned by converse.
         wait_seconds: Seconds to wait for completion, capped at 55.
