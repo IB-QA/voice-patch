@@ -1441,6 +1441,103 @@ def devices():
 
 
 @diag.command()
+@click.option("--seconds", default=5, show_default=True, help="How long to listen.")
+def mic(seconds):
+    """Listen for a few seconds and say whether the microphone is working.
+
+    Reports the input device, whether audio frames arrive at all, the signal
+    level, and how much of it the speech detector counts as speech. Speak while
+    it runs.
+    """
+    import time
+
+    import numpy as np
+    import sounddevice as sd
+
+    from voice_mode.config import SAMPLE_RATE, VAD_AGGRESSIVENESS
+
+    try:
+        device = sd.query_devices(kind="input")
+    except Exception as e:
+        click.echo(f"No input device available: {e}")
+        raise SystemExit(1)
+    click.echo(f"Input device: {device['name']} "
+               f"(default rate {device['default_samplerate']:.0f} Hz)")
+    click.echo(f"Listening for {seconds}s at {SAMPLE_RATE} Hz. Say something now...")
+
+    chunks = []
+    started = time.monotonic()
+    first_chunk_at = []
+
+    def callback(indata, frames, time_info, status):
+        if status:
+            click.echo(f"  stream status: {status}")
+        if not first_chunk_at:
+            first_chunk_at.append(time.monotonic() - started)
+        chunks.append(indata.copy().flatten())
+
+    try:
+        with sd.InputStream(samplerate=SAMPLE_RATE, channels=1, dtype=np.int16,
+                            callback=callback):
+            opened_after = time.monotonic() - started
+            time.sleep(seconds)
+    except Exception as e:
+        click.echo(f"Could not open the microphone: {e}")
+        raise SystemExit(1)
+
+    click.echo(f"Stream opened after {opened_after:.1f}s.")
+    if not chunks:
+        click.echo("RESULT: no audio frames arrived at all. The device opened but is "
+                   "not delivering sound. Check that the app is allowed to use the "
+                   "microphone (Windows Settings > Privacy > Microphone, including "
+                   "'Let desktop apps access your microphone'), that nothing else holds "
+                   "it exclusively, and that the right default input is selected. "
+                   "Bluetooth headsets often stall while they switch to call mode.")
+        raise SystemExit(2)
+
+    audio = np.concatenate(chunks)
+    heard = len(audio) / SAMPLE_RATE
+    peak = int(np.max(np.abs(audio.astype(np.int32))))
+    rms = float(np.sqrt(np.mean(audio.astype(float) ** 2)))
+    click.echo(f"First frame after {first_chunk_at[0]:.2f}s; received {heard:.1f}s of audio "
+               f"out of {seconds}s.")
+    click.echo(f"Peak level {peak} of 32767, average level {rms:.0f}.")
+
+    speech_share = None
+    try:
+        import webrtcvad
+        from scipy import signal
+
+        vad = webrtcvad.Vad(VAD_AGGRESSIVENESS)
+        step = int(SAMPLE_RATE * 0.03)
+        flags = []
+        for i in range(0, len(audio) - step, step):
+            frame = signal.resample(audio[i:i + step], 480).astype(np.int16)
+            flags.append(vad.is_speech(frame.tobytes(), 16000))
+        if flags:
+            speech_share = sum(flags) / len(flags)
+            click.echo(f"Speech detector (aggressiveness {VAD_AGGRESSIVENESS}) counted "
+                       f"{speech_share * 100:.0f}% of frames as speech.")
+    except Exception as e:
+        click.echo(f"Speech detector unavailable: {e}")
+
+    if heard < seconds * 0.6:
+        click.echo("RESULT: audio arrived but far less than expected. The input stream is "
+                   "stalling (often a Bluetooth headset or a driver issue).")
+    elif peak < 200:
+        click.echo("RESULT: the microphone is delivering silence. It is muted, the wrong "
+                   "input is selected, or the app has no microphone permission.")
+    elif peak < 2000:
+        click.echo("RESULT: the signal is very quiet. Raise the input volume in Windows "
+                   "sound settings or move closer.")
+    elif speech_share is not None and speech_share < 0.05:
+        click.echo("RESULT: sound is arriving but the speech detector ignores it. Try a "
+                   "lower VOICEMODE_VAD_AGGRESSIVENESS (0 or 1).")
+    else:
+        click.echo("RESULT: the microphone and speech detection look healthy.")
+
+
+@diag.command()
 def registry():
     """Show voice provider registry with all discovered endpoints."""
     from voice_mode.tools.voice_registry import voice_registry

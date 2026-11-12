@@ -1360,6 +1360,18 @@ def record_audio_with_silence_detection(max_duration: float, disable_silence_det
                 
                 if not speech_detected:
                     logger.info(f"✓ Recording completed ({recording_duration:.1f}s) - No speech detected")
+                    # Say WHY: a dead mic (peak ~0), a stalled stream (few chunks) and a
+                    # detector that ignores real sound look identical without this.
+                    try:
+                        peak = int(np.max(np.abs(full_recording.astype(np.int32))))
+                        logger.info(
+                            f"No-speech diagnostics: {len(chunks)} chunks, "
+                            f"{len(full_recording) / SAMPLE_RATE:.1f}s of audio, peak level {peak}/32767, "
+                            f"VAD aggressiveness {effective_vad_aggressiveness}. "
+                            f"Run `voicemode diag mic` to check the microphone."
+                        )
+                    except Exception:
+                        pass
                     if VAD_DEBUG:
                         logger.info(f"[VAD_DEBUG] FINAL STATE: No speech was ever detected during recording")
                 else:

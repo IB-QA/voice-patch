@@ -41,6 +41,24 @@ from .utils import get_event_logger, update_latest_symlinks
 CONTROL_POLL_INTERVAL = 0.05
 
 
+def _pcm_to_wav_bytes(pcm_data: bytes, sample_rate: int) -> bytes:
+    """Wrap raw 16-bit mono PCM in a WAV header, entirely in memory.
+
+    This used to go through a temp file that was deleted while still
+    open, which Windows refuses ("being used by another process"), so saving
+    TTS audio failed there. No file means nothing to lock.
+    """
+    import wave
+
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)  # 16-bit
+        wav_file.setframerate(sample_rate)
+        wav_file.writeframes(pcm_data)
+    return buf.getvalue()
+
+
 async def _poll_control_channel() -> bool:
     """Honour the process-wide control channel between audio chunks (VM-1676/VM-1685).
 
@@ -638,26 +656,14 @@ async def stream_pcm_audio(
                 # PCM format needs special handling - save as WAV
                 if audio_data:
                     # For PCM, we need to save as WAV with proper headers
-                    import wave
-                    import tempfile
-                    with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp_wav:
-                        with wave.open(tmp_wav.name, 'wb') as wav_file:
-                            wav_file.setnchannels(1)
-                            wav_file.setsampwidth(2)  # 16-bit
-                            wav_file.setframerate(SAMPLE_RATE)
-                            wav_file.writeframes(audio_data)
-                        # Read back the WAV file
-                        with open(tmp_wav.name, 'rb') as f:
-                            wav_data = f.read()
-                        import os
-                        os.unlink(tmp_wav.name)
-                        audio_path = save_debug_file(wav_data, "tts", "wav", audio_dir, True, conversation_id)
-                        if audio_path:
-                            logger.info(f"TTS audio saved to: {audio_path}")
-                            # Store audio path in metrics for the caller
-                            metrics.audio_path = audio_path
-                            # Update latest symlinks for quick access to most recent TTS audio
-                            update_latest_symlinks(audio_path, "tts")
+                    wav_data = _pcm_to_wav_bytes(audio_data, SAMPLE_RATE)
+                    audio_path = save_debug_file(wav_data, "tts", "wav", audio_dir, True, conversation_id)
+                    if audio_path:
+                        logger.info(f"TTS audio saved to: {audio_path}")
+                        # Store audio path in metrics for the caller
+                        metrics.audio_path = audio_path
+                        # Update latest symlinks for quick access to most recent TTS audio
+                        update_latest_symlinks(audio_path, "tts")
             except Exception as e:
                 logger.error(f"Failed to save TTS audio: {e}")
         
@@ -906,21 +912,10 @@ async def stream_cartesia_pcm(
         if save_audio and audio_dir and bytes_received > 0:
             try:
                 from .core import save_debug_file
-                import wave
-                import tempfile
-                import os
 
                 audio_buffer.seek(0)
                 pcm_data = audio_buffer.read()
-                with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp_wav:
-                    with wave.open(tmp_wav.name, "wb") as wav_file:
-                        wav_file.setnchannels(1)
-                        wav_file.setsampwidth(2)
-                        wav_file.setframerate(sample_rate)
-                        wav_file.writeframes(pcm_data)
-                    with open(tmp_wav.name, "rb") as f:
-                        wav_data = f.read()
-                    os.unlink(tmp_wav.name)
+                wav_data = _pcm_to_wav_bytes(pcm_data, sample_rate)
                 audio_path = save_debug_file(
                     wav_data, "tts", "wav", audio_dir, True, conversation_id
                 )

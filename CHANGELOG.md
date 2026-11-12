@@ -98,6 +98,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Saving spoken audio no longer fails on Windows** — the WAV was written to a
+  temp file that was deleted while still open, which Windows refuses ("the
+  process cannot access the file because it is being used by another process").
+  It is now built in memory.
+- **The voice hook no longer breaks `converse_continue`** — it treated
+  `converse_continue` like `converse` and added converse-only arguments to it,
+  which the tool rejects, so long voice turns could not be continued. The hook now
+  touches `converse` only.
+- **"No speech detected" now explains itself** — the log records how many audio
+  chunks arrived and the peak level, and the new `voicemode diag mic` listens for
+  a few seconds and reports whether the microphone is silent, stalled, too quiet,
+  or fine.
 - **An unattended install no longer stops when ffmpeg cannot be installed** —
   `voice-mode-install --yes` used to exit before installing VoiceMode or wiring
   any coding tool if a system package (on Windows, ffmpeg via winget) failed,

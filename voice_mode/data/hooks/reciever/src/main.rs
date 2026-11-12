@@ -219,7 +219,9 @@ fn is_converse(s: &str) -> bool {
     let lower = s.to_lowercase();
     let tail = lower.rsplit(['/', ':']).next().unwrap_or(&lower);
     let tail = tail.rsplit("__").next().unwrap_or(tail);
-    tail == "converse" || tail == "converse_continue"
+    // Only `converse`. `converse_continue` takes just job_id and wait_seconds, so
+    // adding converse's arguments to it makes the call fail validation.
+    tail == "converse"
 }
 
 fn is_truthy(s: &str) -> bool {

@@ -47,6 +47,21 @@ def test_mentioning_converse_in_another_tool_is_silent() -> None:
     assert result.stdout == ""
 
 
+def test_converse_continue_is_left_alone() -> None:
+    """converse_continue takes only job_id and wait_seconds. Adding converse's
+    arguments makes the call fail validation and breaks every long voice turn."""
+    for name in ("converse_continue", "mcp__plugin_voicemode_voicemode__converse_continue"):
+        result = _run(
+            {
+                "tool_name": name,
+                "tool_input": {"job_id": "abc", "wait_seconds": 50},
+            },
+            "cursor",
+        )
+        assert result.returncode == 0
+        assert result.stdout == ""
+
+
 def test_claude_forces_wait() -> None:
     result = _run(
         {
