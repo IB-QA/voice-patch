@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   client computer and nothing you say or hear is written to disk: no audio,
   transcripts, conversation logs, inbox, job files, event logs, or hook log.
   The default is unchanged (history is kept). The Windows installer asks, and
-  defaults to leave no trace.
+  keeps history unless you choose leave no trace.
 
 - **Choose which coding tools get VoiceMode** — `voice-mode-install --clients cursor,codex`
   sets up only the tools you name (`--clients none` skips them all). The Windows
