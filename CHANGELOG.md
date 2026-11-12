@@ -53,6 +53,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Windows client install** — `voice-mode-install` accepts native Windows instead of
+  stopping at "Unsupported operating system". It installs VoiceMode with
+  microphone, speaker, and silence-detection support, and it does not install
+  local Whisper or Kokoro. The install fails if `import webrtcvad` does not
+  succeed. `webrtcvad-wheels` 2.0.14.post1 has Windows wheels for Python 3.10
+  through 3.14. Python 3.12 is the recommended Windows version.
+  `simpleaudio` is optional. The installer tries it and continues with a notice
+  if the build fails. On Windows that build needs the Microsoft C++ Build Tools.
+  At the end, the installer offers converse hooks for coding tools whose config
+  directories are already present (Cursor, Claude, Copilot, Codex, and the others).
+
 - **Editable installs work again with a PEP 440 local version** — Hatchling
   rejected `8.12.8-ib`. The package version is now `8.12.8+ib`, and the
   PyPI classifiers use the canonical `Development Status :: 4 - Beta` and

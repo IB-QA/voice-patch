@@ -44,6 +44,20 @@ uvx voice-mode-install --non-interactive
 - **macOS** - Intel and Apple Silicon (via Homebrew)
 - **Ubuntu/Debian** - Using apt package manager
 - **Fedora/RHEL** - Using dnf package manager
+- **Windows** - Client install. Microphone, speakers, and silence detection
+  (`webrtcvad-wheels`) are installed here. Whisper and Kokoro are not.
+  ffmpeg is installed with winget when it is missing.
+  Python 3.12 is the recommended version. 3.10 through 3.14 can install the
+  required wheels. `simpleaudio` is optional: the installer tries it, and a
+  missing Microsoft C++ Build Tools install does not stop VoiceMode.
+
+```bash
+uvx voice-mode-install --yes
+```
+
+At the end the installer lists coding tools it finds (Cursor, Claude Code,
+Claude Desktop, GitHub Copilot, Codex, and others) and asks before installing
+their VoiceMode hooks. `--yes` accepts that prompt.
 
 ## Features
 
@@ -71,6 +85,7 @@ uvx voice-mode-install --non-interactive
    - macOS: `brew install` (installs Homebrew first if needed)
    - Ubuntu/Debian: `sudo apt install`
    - Fedora: `sudo dnf install`
+   - Windows: `winget install` for ffmpeg. Python packages, including silence detection, come from `uv tool install voice-mode`.
 5. **VoiceMode Installation** - Runs `uv tool install voice-mode[==version]`
 6. **Post-Install** - Configures shell completion and verifies installation
 

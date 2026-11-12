@@ -57,6 +57,16 @@ def detect_platform() -> PlatformInfo:
             architecture=architecture,
             is_wsl=is_wsl
         )
+    elif os_type == 'windows':
+        # Native Windows is a VoiceMode client: mic, speakers, and silence
+        # detection. Whisper and Kokoro stay on the machine that hosts them.
+        return PlatformInfo(
+            os_type='windows',
+            os_name='Windows',
+            distribution='windows',
+            architecture=architecture,
+            is_wsl=False
+        )
     else:
         raise RuntimeError(f"Unsupported operating system: {os_type}")
 
@@ -117,6 +127,8 @@ def get_package_manager(distribution: str) -> str:
         return 'apk'
     elif distribution == 'suse':
         return 'zypper'
+    elif distribution == 'windows':
+        return 'winget'
     else:
         raise ValueError(f"Unknown distribution: {distribution}")
 

@@ -34,6 +34,10 @@ class HardwareInfo:
 
     def should_recommend_local_services(self) -> bool:
         """Determine if local services should be recommended."""
+        # Windows clients use Whisper and Kokoro on another machine.
+        if self.platform.os_type == 'windows':
+            return False
+
         # Apple Silicon is great for local services
         if self.is_apple_silicon():
             return True

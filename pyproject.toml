@@ -31,16 +31,21 @@ dependencies = [
     "openai>=2",  # was >=1.0.0 (VM-1640 / VM-1240)
     "pydub",
     "audioop-lts; python_version >= '3.13'",
-    "simpleaudio",
     "httpx",
     "aiohttp",  # Required for Whisper and Kokoro service installers
     "psutil>=5.9.0",
-    "webrtcvad-wheels>=2.0.14",  # Maintained fork with importlib.metadata (no pkg_resources)
+    "webrtcvad-wheels>=2.0.14.post1",  # cp310–cp314 wheels, including Windows win32/win_amd64
     "click>=8.0.0",
     "pyyaml>=6.0.0",
 ]
 
 [project.optional-dependencies]
+playback = [
+    # Fallback speaker used only if sounddevice fails. No Windows wheel after
+    # CPython 3.8, so this is not a hard dependency. The installer attempts it
+    # and continues when a C compiler is missing.
+    "simpleaudio",
+]
 livekit = [
     "livekit-api>=1.2,<2",
     "livekit-agents>=1.6.8,<2",
