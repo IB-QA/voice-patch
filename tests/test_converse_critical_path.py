@@ -225,7 +225,9 @@ class TestConverseSTTFailures:
 
                     result = await getattr(converse, 'fn', converse)(
                         message="Test",
-                        wait_for_response=True
+                        wait_for_response=True,
+                        disable_silence_detection=True,
+                        listen_duration_max=60,
                     )
 
                     # Should indicate STT/transcription failure
