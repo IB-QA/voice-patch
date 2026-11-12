@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Choose which coding tools get VoiceMode** — `voice-mode-install --clients cursor,codex`
+  sets up only the tools you name (`--clients none` skips them all). The Windows
+  installer uses this: it lists the tools it finds and sets up the ones you tick.
+
 - **`converse_inbox` — a user's words are never lost** — if an agent ends its
   turn while the user is still talking, the finished transcript now waits until
   something collects it. `converse_inbox("unread")` returns those transcripts

@@ -73,9 +73,20 @@ def print_error(message: str):
     click.echo(click.style(f"❌ {message}", fg='red'))
 
 
-def offer_client_hooks(dry_run: bool, non_interactive: bool) -> None:
-    """Ask before installing converse hooks for coding tools already on this machine."""
-    found = detect_installed_clients(Path.home())
+def offer_client_hooks(dry_run: bool, non_interactive: bool, clients: str | None = None) -> None:
+    """Ask before installing converse hooks for coding tools already on this machine.
+
+    ``clients`` is a comma list chosen by the person running a graphical
+    installer. ``none`` skips every tool; ``None`` means detect and use all.
+    """
+    if clients is not None:
+        found = [name.strip() for name in clients.split(",") if name.strip() and name.strip() != "none"]
+        if not found:
+            click.echo("No coding tools selected. Add them later with:")
+            click.echo("  voicemode plugin install --client=all --converse-hooks")
+            return
+    else:
+        found = detect_installed_clients(Path.home())
     if not found:
         print_warning("No Cursor, Claude, Copilot, Codex, Antigravity, or Devin directory was found.")
         click.echo("After one of those is installed, run:")
@@ -267,8 +278,9 @@ Examples:
 @click.option('-y', '--yes', 'non_interactive', is_flag=True, help='Run without prompts (auto-accept all)')
 @click.option('-n', '--non-interactive', is_flag=True, help='Run without prompts (deprecated: use --yes/-y)')
 @click.option('-m', '--model', default='base', help='Whisper model to use (base, small, medium, large-v2)')
+@click.option('-c', '--clients', default=None, help='Coding tools to set up, comma separated (or "none"). Default: every tool found')
 @click.version_option(__version__, '-V', '--version')
-def main(dry_run, voice_mode_version, skip_services, non_interactive, model):
+def main(dry_run, voice_mode_version, skip_services, non_interactive, model, clients):
     """VoiceMode Installer - Install VoiceMode and its system dependencies.
 
     This installer will:
@@ -466,7 +478,7 @@ def main(dry_run, voice_mode_version, skip_services, non_interactive, model):
 
         click.echo()
         print_step("Coding-tool hooks...")
-        offer_client_hooks(dry_run=dry_run, non_interactive=non_interactive)
+        offer_client_hooks(dry_run=dry_run, non_interactive=non_interactive, clients=clients)
 
         click.echo()
 

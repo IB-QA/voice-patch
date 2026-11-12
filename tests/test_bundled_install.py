@@ -117,3 +117,23 @@ def test_an_unattended_install_continues_when_system_packages_fail(monkeypatch, 
 
     result = CliRunner().invoke(cli_mod.main, ["--yes", "--skip-services"])
     assert "voicemode" in steps and "hooks" in steps, result.output
+
+
+def test_only_the_tools_the_user_picked_get_hooks(monkeypatch, tmp_path):
+    """The graphical installer passes the tools the user ticked."""
+    from voicemode_install import cli as cli_mod
+
+    ran = []
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setattr(cli_mod, "detect_installed_clients", lambda home: ["cursor", "claude", "codex"])
+    monkeypatch.setattr(cli_mod.shutil, "which", lambda name: "/bin/voicemode")
+    monkeypatch.setattr(
+        cli_mod.subprocess, "run",
+        lambda cmd, **k: ran.append(cmd[cmd.index("--client") + 1]) or type("R", (), {"returncode": 0})(),
+    )
+    cli_mod.offer_client_hooks(dry_run=False, non_interactive=True, clients="cursor,codex")
+    assert ran == ["cursor", "codex"]
+
+    ran.clear()
+    cli_mod.offer_client_hooks(dry_run=False, non_interactive=True, clients="none")
+    assert ran == []
