@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **A source install can supply its own hook program** — set `VOICEMODE_HOOK_BINARY`
+  to a `voicemode_hook` built from `voice_mode/data/hooks/reciever`. The install
+  scripts in the source zip do this when Rust is available, so the converse hook
+  is installed instead of being skipped.
+
 - **Leave no trace mode** — set `VOICEMODE_KEEP_HISTORY=false` on a shared or
   client computer and nothing you say or hear is written to disk: no audio,
   transcripts, conversation logs, inbox, job files, event logs, or hook log.

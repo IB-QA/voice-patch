@@ -58,12 +58,24 @@ def test_merging_keeps_other_servers_and_a_backup(tmp_path):
     assert json.loads((tmp_path / "mcp.json.before-voicemode").read_text()) == original
 
 
+def test_an_environment_variable_can_point_at_the_hook(tmp_path, monkeypatch):
+    binary = tmp_path / "voicemode_hook"
+    binary.write_text("#!/bin/sh\nexit 0\n")
+    binary.chmod(0o755)
+    monkeypatch.setenv("VOICEMODE_HOOK_BINARY", str(binary))
+    monkeypatch.setattr(plugin_mod, "PACKAGED_BINARY", tmp_path / "absent")
+    monkeypatch.setattr(plugin_mod, "BUILD_SH", tmp_path / "absent.sh")
+
+    assert plugin_mod.ensure_cached_hook_binary() == binary
+
+
 def test_a_hook_built_for_another_platform_is_not_installed(tmp_path, monkeypatch):
     foreign = tmp_path / "voicemode_hook"
     foreign.write_bytes(b"\xcf\xfa\xed\xfe not for this machine")
     foreign.chmod(0o755)
     monkeypatch.setattr(plugin_mod, "PACKAGED_BINARY", foreign)
     monkeypatch.setattr(plugin_mod, "BUILD_SH", tmp_path / "missing-build.sh")
+    monkeypatch.delenv("VOICEMODE_HOOK_BINARY", raising=False)
     monkeypatch.setenv("VOICEMODE_HOOK_CACHE_DIR", str(tmp_path / "cache"))
 
     assert plugin_mod.ensure_cached_hook_binary() is None

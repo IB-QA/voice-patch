@@ -253,6 +253,11 @@ def hook_binary_runs(path: Path) -> bool:
 
 def ensure_cached_hook_binary() -> Path | None:
     """Return a hook binary that runs on this machine, or None if there is none."""
+    override = os.environ.get("VOICEMODE_HOOK_BINARY", "").strip()
+    if override:
+        chosen = Path(override)
+        if chosen.is_file() and hook_binary_runs(chosen):
+            return chosen
     cache_dir = Path(os.environ.get("VOICEMODE_HOOK_CACHE_DIR", HOOK_CACHE_DIR))
     cache_bin = cache_dir / "voicemode_hook"
     cache_stamp = cache_dir / "voice_mode_version"
