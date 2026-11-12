@@ -155,3 +155,56 @@ async def test_unknown_and_invalid_job_ids_are_safe(tmp_path):
 
     assert invalid["error"] == "invalid_job_id"
     assert missing["error"] == "job_not_found"
+
+
+@pytest.mark.asyncio
+async def test_a_transcript_nobody_collected_stays_in_the_inbox(tmp_path):
+    release = asyncio.Event()
+
+    async def complete_later() -> str:
+        await release.wait()
+        return "Voice response: please run the tests"
+
+    manager = ConversationJobManager(tmp_path)
+    job = manager.create(complete_later())
+    # The caller got an in-progress reply, then went away for good.
+    await manager.wait(job.job_id, 0.001)
+    assert manager.undelivered()["active"][0]["job_id"] == job.job_id
+
+    release.set()
+    await job.task
+    await asyncio.sleep(0)
+
+    finished = manager.undelivered()["finished"]
+    assert [item["result"] for item in finished] == ["Voice response: please run the tests"]
+
+    manager.mark_collected([job.job_id])
+    assert manager.undelivered()["finished"] == []
+
+
+@pytest.mark.asyncio
+async def test_a_collected_transcript_is_not_reported_again(tmp_path):
+    async def complete() -> str:
+        return "Voice response: hello"
+
+    manager = ConversationJobManager(tmp_path)
+    job = manager.create(complete())
+    assert await manager.wait(job.job_id, 1) == "Voice response: hello"
+    assert manager.undelivered()["finished"] == []
+
+
+@pytest.mark.asyncio
+async def test_another_sessions_transcripts_are_not_listed(tmp_path):
+    (tmp_path / ("a" * 32 + ".json")).write_text(
+        json.dumps(
+            {
+                "job_id": "a" * 32,
+                "status": "completed",
+                "result": "Voice response: for someone else",
+                "delivered": False,
+                "session_key": "another-session",
+                "updated_at": 1,
+            }
+        )
+    )
+    assert ConversationJobManager(tmp_path).undelivered()["finished"] == []

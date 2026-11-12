@@ -15,6 +15,7 @@ from typing import Dict, Any, Optional
 
 from voice_mode.__version__ import __version__
 from voice_mode.config import BASE_DIR
+from voice_mode.inbox import Inbox
 
 
 class ConversationLogger:
@@ -31,6 +32,10 @@ class ConversationLogger:
         """
         self.base_dir = base_dir or Path(BASE_DIR) / "logs" / "conversations"
         self.base_dir.mkdir(parents=True, exist_ok=True)
+        # A logger pointed at a custom folder keeps its inbox there too.
+        self.inbox = Inbox(
+            (Path(BASE_DIR) / "inbox.db") if base_dir is None else (self.base_dir / "inbox.db")
+        )
         
         self.conversation_id = None
         self.current_project_path = os.getcwd()
@@ -154,6 +159,10 @@ class ConversationLogger:
         log_file = self._get_log_file_path(datetime.now().date())
         with open(log_file, 'a') as f:
             f.write(json.dumps(entry) + '\n')
+
+        self.inbox.record(
+            utterance_type, text, self.current_project_path, self.conversation_id
+        )
     
     def _check_conversation_continuity(self):
         """Check if we need to start a new conversation based on time gap."""

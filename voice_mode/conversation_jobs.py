@@ -18,6 +18,7 @@ from typing import Awaitable, Optional
 
 from voice_mode.config import BASE_DIR
 from voice_mode.control_channel import get_control_state
+from voice_mode.inbox import SESSION_KEY
 
 
 logger = logging.getLogger("voicemode.conversation_jobs")
@@ -71,6 +72,9 @@ class ConversationJob:
     result: Optional[str] = None
     error: Optional[str] = None
     polls: int = 0
+    # True once the result has been handed back to a caller. A finished job
+    # that stays False means the user's words never reached an agent.
+    delivered: bool = False
 
 
 # Told to the calling agent on every in-progress reply. A person talking for a
@@ -114,17 +118,21 @@ class ConversationJobManager:
 
         if wait_seconds is None:
             try:
-                return await job.task
+                result = await job.task
+                self._mark_delivered(job)
+                return result
             except asyncio.CancelledError:
                 job.task.cancel()
                 raise
 
         wait_seconds = max(0.0, min(float(wait_seconds), MAX_CONTINUATION_WAIT))
         try:
-            return await asyncio.wait_for(
+            result = await asyncio.wait_for(
                 asyncio.shield(job.task),
                 timeout=wait_seconds,
             )
+            self._mark_delivered(job)
+            return result
         except asyncio.TimeoutError:
             job.polls += 1
             return self._in_progress_result(
@@ -175,6 +183,8 @@ class ConversationJobManager:
             "updated_at": time.time(),
             "result": job.result,
             "error": job.error,
+            "delivered": job.delivered,
+            "session_key": SESSION_KEY,
         }
         try:
             self._jobs_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -191,6 +201,71 @@ class ConversationJobManager:
             logger.debug("Could not persist conversation job %s: %s", job.job_id, exc)
             return
 
+    def _mark_delivered(self, job: ConversationJob) -> None:
+        if not job.delivered:
+            job.delivered = True
+            self._persist(job)
+
+    def undelivered(self) -> dict[str, list[dict]]:
+        """Jobs whose result no caller has collected yet.
+
+        ``finished`` holds transcripts that completed with nobody listening;
+        ``active`` holds recordings still in progress. Only this session's jobs
+        are listed; job files from before delivery tracking existed count as
+        delivered.
+        """
+        finished: list[dict] = []
+        try:
+            paths = sorted(self._jobs_dir.glob("*.json"))
+        except OSError:
+            paths = []
+        for path in paths:
+            try:
+                payload = json.loads(path.read_text())
+            except (OSError, ValueError):
+                continue
+            if (
+                payload.get("status") == "completed"
+                and payload.get("delivered") is False
+                and payload.get("session_key") == SESSION_KEY
+                and isinstance(payload.get("result"), str)
+            ):
+                finished.append(
+                    {
+                        "job_id": payload.get("job_id"),
+                        "finished_at": payload.get("updated_at"),
+                        "result": payload["result"],
+                    }
+                )
+        active = [
+            {"job_id": job.job_id, "elapsed_seconds": round(time.time() - job.created_at)}
+            for job in self._jobs.values()
+            if not job.task.done()
+        ]
+        finished.sort(key=lambda item: item.get("finished_at") or 0)
+        return {"finished": finished, "active": active}
+
+    def mark_collected(self, job_ids: list[str]) -> None:
+        """Record that these results were handed to a caller via the inbox."""
+        for job_id in job_ids:
+            job = self._jobs.get(job_id)
+            if job is not None:
+                self._mark_delivered(job)
+                continue
+            if not self._valid_job_id(job_id):
+                continue
+            path = self._job_path(job_id)
+            try:
+                payload = json.loads(path.read_text())
+                payload["delivered"] = True
+                payload["updated_at"] = time.time()
+                temporary = path.with_name(f".{path.name}.tmp.{os.getpid()}.{uuid.uuid4().hex}")
+                temporary.write_text(json.dumps(payload, ensure_ascii=False))
+                temporary.chmod(0o600)
+                os.replace(temporary, path)
+            except (OSError, ValueError):
+                continue
+
     def _load_terminal_result(self, job_id: str) -> str:
         if not self._valid_job_id(job_id):
             return self._error_result(job_id, "invalid_job_id")
@@ -201,6 +276,7 @@ class ConversationJobManager:
 
         status = payload.get("status")
         if status == "completed" and isinstance(payload.get("result"), str):
+            self.mark_collected([job_id])
             return payload["result"]
         if status in {"failed", "cancelled"}:
             return self._terminal_error_result(

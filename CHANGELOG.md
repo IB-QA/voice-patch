@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`converse_inbox` — a user's words are never lost** — if an agent ends its
+  turn while the user is still talking, the finished transcript now waits until
+  something collects it. `converse_inbox("unread")` returns those transcripts
+  (and any recording still in progress); `"history"` and `"sessions"` read back
+  any voice session on the machine. Every spoken line is stored per session in
+  `~/.voicemode/inbox.db`, and each voice job records whether its result was
+  ever handed to a caller. This is the base for a session transcript view in
+  editors and dashboards.
+
 - **Every push to `main` ships to the voice server** — the new `deliver`
   workflow (`.github/workflows/deliver.yml`) runs the test suite, builds the
   `voice-mode` and `voice-mode-install` wheels, keeps them as a 30-day GitHub
@@ -61,6 +70,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   people to run `claude converse`.
 
 ### Fixed
+
+- **Agents no longer walk away from a user who is still talking** — the
+  `converse_continue` in-progress reply now carries an explicit `instruction`
+  ("do not end your turn; call converse_continue again"), a rising `poll`
+  count, and `elapsed_seconds`, so a long run of waits is visibly progress and
+  not an identical-looking loop. The tool description and the
+  `/voicemode:converse_continue` command say the same.
 
 - **The converse hook is only wired in where it can run** — the packaged
   `voicemode_hook` binary is built for Apple silicon. `voicemode plugin install`
