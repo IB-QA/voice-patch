@@ -22,7 +22,13 @@ jobs:
         with:
           python-version: "3.12"
       - name: System packages
-        run: sudo apt-get update && sudo apt-get install -y portaudio19-dev ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y portaudio19-dev ffmpeg pulseaudio
+      - name: Silent sound server
+        # PortAudio fails at import when it finds no sound server.
+        run: |
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=ci
+          pactl info | head -5
       - name: Tests
         env:
           OPENAI_API_KEY: test-key
