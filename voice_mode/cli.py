@@ -1455,10 +1455,12 @@ from voice_mode.cli_commands import status as status_cmd
 from voice_mode.cli_commands import conch as conch_cmd
 from voice_mode.cli_commands import livekit as livekit_cmd
 from voice_mode.cli_commands import plugin as plugin_cmd
+from voice_mode.cli_commands import hook as hook_cmd
 
 # Add exchanges to main CLI
 voice_mode_main_cli.add_command(exchanges_cmd.exchanges)
 voice_mode_main_cli.add_command(plugin_cmd.plugin)
+voice_mode_main_cli.add_command(hook_cmd.hook)
 # Add unified status command
 voice_mode_main_cli.add_command(status_cmd.status)
 

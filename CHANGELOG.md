@@ -18,6 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ever handed to a caller. This is the base for a session transcript view in
   editors and dashboards.
 
+- **Turn-end guard for Cursor and Claude Code** — `voicemode plugin install
+  --converse-hooks` now also adds a stop hook (`voicemode hook stop-guard`).
+  When an agent is about to end its turn while the user is still recording, or
+  after a finished transcript was never collected, the hook keeps the agent
+  going (Cursor `followup_message`, Claude Code `decision: block`) and points
+  it at `converse_inbox`. It only looks at this project's jobs, pushes the same
+  job at most three times, and always lets the agent stop if anything fails.
+
 - **Every push to `main` ships to the voice server** — the new `deliver`
   workflow (`.github/workflows/deliver.yml`) runs the test suite, builds the
   `voice-mode` and `voice-mode-install` wheels, keeps them as a 30-day GitHub

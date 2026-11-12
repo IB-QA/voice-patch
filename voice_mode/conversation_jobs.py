@@ -185,6 +185,7 @@ class ConversationJobManager:
             "error": job.error,
             "delivered": job.delivered,
             "session_key": SESSION_KEY,
+            "project_path": os.getcwd(),
         }
         try:
             self._jobs_dir.mkdir(parents=True, exist_ok=True, mode=0o700)

@@ -573,6 +573,68 @@ def ensure_codex_toml_mcp(path: Path, command: str) -> Path:
     return path
 
 
+GUARD_MARKER = "hook stop-guard"
+
+
+def stop_guard_command(client: str) -> str:
+    return f'"{voicemode_mcp_command()}" hook stop-guard --client {client}'
+
+
+def _is_stop_guard_entry(entry: object) -> bool:
+    return isinstance(entry, dict) and GUARD_MARKER in _entry_command_blob(entry)
+
+
+def merge_cursor_stop_guard(path: Path) -> Path:
+    """Add the turn-end guard to Cursor's ``stop`` event. Other entries kept."""
+    data = _read_json_object(path) or {"version": 1, "hooks": {}}
+    hooks = data.setdefault("hooks", {})
+    if not isinstance(hooks, dict):
+        hooks = {}
+        data["hooks"] = hooks
+    events = hooks.get("stop", [])
+    if not isinstance(events, list):
+        events = []
+    hooks["stop"] = [e for e in events if not _is_stop_guard_entry(e)]
+    hooks["stop"].append({"command": stop_guard_command("cursor"), "timeout": 15})
+    data.setdefault("version", 1)
+    _write_json(path, data)
+    return path
+
+
+def merge_claude_stop_guard(path: Path) -> Path:
+    """Add the turn-end guard to Claude Code's ``Stop`` event. Other entries kept."""
+    data = _read_json_object(path)
+    bucket = data.setdefault("hooks", {})
+    if not isinstance(bucket, dict):
+        bucket = {}
+        data["hooks"] = bucket
+    events = bucket.get("Stop", [])
+    if not isinstance(events, list):
+        events = []
+    bucket["Stop"] = [e for e in events if not _is_stop_guard_entry(e)]
+    bucket["Stop"].append(
+        {
+            "hooks": [
+                {"type": "command", "command": stop_guard_command("claude"), "timeout": 15}
+            ]
+        }
+    )
+    _write_json(path, data)
+    return path
+
+
+def wire_stop_guard(client: str, output: Path | None) -> list[tuple[str, Path]]:
+    """Keep agents from ending a turn while the user is still talking."""
+    name = user_wire_name(client)
+    if name == "cursor":
+        path = cursor_user_hooks_path(output)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return [("stop-guard", merge_cursor_stop_guard(path))]
+    if name == "claude":
+        return [("stop-guard", merge_claude_stop_guard(claude_user_hooks_path(output)))]
+    return []
+
+
 def wire_antigravity(dest: Path, output: Path | None, converse_hooks: bool) -> tuple[Path, Path | None]:
     cfg = antigravity_config_dir(output)
     cfg.mkdir(parents=True, exist_ok=True)
@@ -756,6 +818,7 @@ def install_plugin(
     converse_hooks: bool,
     output: Path | None,
     binary: Path | None,
+    stop_guard: bool = False,
 ) -> tuple[Path, list[tuple[str, Path]]]:
     dest = plugin_home(client, output)
     parent = dest.parent
@@ -789,6 +852,8 @@ def install_plugin(
             _write_json(dest / "hooks" / "hooks.v1.json", hooks_payload.get("hooks", hooks_payload))
 
     wired = wire_user_level(client, dest, output, converse_hooks)
+    if stop_guard:
+        wired += wire_stop_guard(client, output)
     return dest, wired
 
 
@@ -887,6 +952,8 @@ def plugin_install(
     clients = parse_clients(client)
     if output is None and not yes:
         confirm_live_install(clients, converse_hooks)
+    # The guard needs only the voicemode command, not the platform hook binary.
+    stop_guard = converse_hooks
     binary = ensure_cached_hook_binary() if converse_hooks else None
     if converse_hooks and binary is None:
         click.echo(
@@ -902,7 +969,11 @@ def plugin_install(
             click.echo(f"{name}: shares {dest} (already written)")
             continue
         dest, wired = install_plugin(
-            name, converse_hooks=converse_hooks, output=output, binary=binary
+            name,
+            converse_hooks=converse_hooks,
+            output=output,
+            binary=binary,
+            stop_guard=stop_guard,
         )
         seen_dest.add(dest)
         written.append((name, dest))
