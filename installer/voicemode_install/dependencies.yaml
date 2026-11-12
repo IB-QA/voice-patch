@@ -207,6 +207,19 @@ voicemode:
           check_command: ffmpeg -version
           install_via: homebrew
 
+    windows:  # Native Windows client. Python audio and VAD come from wheels.
+      packages:
+        - name: ffmpeg
+          description: Audio format conversion for speech upload and playback
+          required: true
+          check_command: ffmpeg -version
+          install_via: winget
+          note: >
+            Silence detection is not this package. It is the Python wheel
+            webrtcvad-wheels (imported as webrtcvad), installed with VoiceMode.
+            Windows wheels exist for CPython 3.10 through 3.14. Do not install
+            Whisper or Kokoro on this machine.
+
   whisper:
     description: Whisper STT service dependencies
 
@@ -362,6 +375,10 @@ voicemode:
 # - Linux distributions may need additional repositories (e.g., RPM Fusion for Fedora ffmpeg)
 # - ARM64 systems may need Rust for building certain Python packages from source
 # - WSL requires PulseAudio to be running for audio support
-# - webrtcvad (C extension for silence detection) MUST be compiled during installation on all platforms
-#   This requires gcc/g++, python3-dev/python3-devel to be installed before running 'uv tool install voice-mode'
+# - webrtcvad-wheels (imported as webrtcvad) is the silence-detection package.
+#   Linux may compile it, so gcc and Python headers are required there before
+#   `uv tool install voice-mode`. Windows and macOS install a prebuilt wheel.
+#   webrtcvad-wheels 2.0.14.post1 publishes cp310–cp314 wheels for win32 and win_amd64.
+#   simpleaudio has no Windows wheel after CPython 3.8 and is not installed on Windows;
+#   playback uses sounddevice.
 # - Most other Python packages (numpy, scipy, sounddevice, etc.) have pre-built wheels for x86_64

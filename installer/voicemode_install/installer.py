@@ -1,5 +1,6 @@
 """System package installation."""
 
+import shutil
 import subprocess
 from typing import List, Optional
 
@@ -38,6 +39,8 @@ class PackageInstaller:
                 return self._install_apt(package_names)
             elif self.platform.distribution == 'fedora':
                 return self._install_dnf(package_names)
+            elif self.platform.distribution == 'windows':
+                return self._install_winget(package_names)
             else:
                 print(f"Error: Unsupported distribution: {self.platform.distribution}")
                 return False
@@ -110,6 +113,45 @@ class PackageInstaller:
             print("Error: dnf not found")
             return False
 
+    def _install_winget(self, packages: List[str]) -> bool:
+        """Install Windows packages that have no Python wheel.
+
+        Silence detection itself is the Python package webrtcvad-wheels, installed
+        with VoiceMode. ffmpeg is the system package this path is responsible for.
+        """
+        winget_ids = {
+            'ffmpeg': 'Gyan.FFmpeg',
+        }
+        if not shutil.which('winget'):
+            print("Error: winget is not available.")
+            print("Install ffmpeg and add it to PATH, then run the installer again.")
+            print("Build: https://www.gyan.dev/ffmpeg/builds/")
+            return False
+
+        ok = True
+        for name in packages:
+            package_id = winget_ids.get(name)
+            if not package_id:
+                print(f"Error: No Windows install mapping for required package: {name}")
+                ok = False
+                continue
+            try:
+                subprocess.run(
+                    [
+                        'winget', 'install', '--id', package_id, '-e',
+                        '--accept-source-agreements', '--accept-package-agreements',
+                    ],
+                    check=True,
+                    capture_output=False,
+                )
+            except subprocess.CalledProcessError as e:
+                print(f"winget installation of {name} failed: {e}")
+                ok = False
+            except FileNotFoundError:
+                print("Error: winget not found")
+                return False
+        return ok
+
     def install_voicemode(self, version: Optional[str] = None) -> bool:
         """
         Install or upgrade voice-mode using uv tool install --upgrade.
@@ -146,5 +188,108 @@ class PackageInstaller:
             return False
         except FileNotFoundError:
             print("Error: uv not found. Please install uv first:")
-            print("  curl -LsSf https://astral.sh/uv/install.sh | sh")
+            print("  macOS/Linux: curl -LsSf https://astral.sh/uv/install.sh | sh")
+            print("  Windows: powershell -ExecutionPolicy ByPass -c \"irm https://astral.sh/uv/install.ps1 | iex\"")
             return False
+
+
+def voice_mode_tool_python() -> Optional[str]:
+    """Return the Python inside the uv tool environment for voice-mode."""
+    tool_dir = None
+    try:
+        result = subprocess.run(
+            ['uv', 'tool', 'dir'],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=10,
+        )
+        tool_dir = result.stdout.strip()
+    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+        tool_dir = None
+
+    from pathlib import Path
+    roots = []
+    if tool_dir:
+        roots.append(Path(tool_dir) / 'voice-mode')
+    roots.append(Path.home() / '.local' / 'share' / 'uv' / 'tools' / 'voice-mode')
+
+    for root in roots:
+        for relative in ('bin/python', 'Scripts/python.exe', 'Scripts/python'):
+            candidate = root / relative
+            if candidate.exists():
+                return str(candidate)
+    return None
+
+
+def verify_silence_detection(dry_run: bool = False) -> bool:
+    """Fail the install if the VoiceMode environment cannot import webrtcvad.
+
+    Without that import, recording runs for the full listen time and never
+    stops on silence.
+    """
+    if dry_run:
+        print("[DRY RUN] Would verify: import webrtcvad, sounddevice")
+        return True
+
+    python = voice_mode_tool_python()
+    if not python:
+        print("Error: Could not find the voice-mode tool Python.")
+        print("Silence detection was not verified.")
+        return False
+
+    result = subprocess.run(
+        [python, '-c', 'import webrtcvad, sounddevice'],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout or '').strip()
+        print("Error: Silence detection is not importable in the VoiceMode environment.")
+        if detail:
+            print(detail)
+        print("Required package: webrtcvad-wheels>=2.0.14.post1 (import name: webrtcvad).")
+        print("Windows wheels exist for Python 3.10 through 3.14, win32 and win_amd64.")
+        print("sounddevice supplies the microphone and speakers, including on Python 3.12 and 3.14.")
+        return False
+    return True
+
+
+def attempt_optional_simpleaudio(dry_run: bool = False) -> str:
+    """Try the playback fallback. Never fail the install.
+
+    Returns ``installed``, ``skipped``, or ``dry-run``.
+    """
+    if dry_run:
+        print("[DRY RUN] Would try: uv pip install simpleaudio into the voice-mode environment")
+        return "dry-run"
+
+    python = voice_mode_tool_python()
+    if not python:
+        return "skipped"
+
+    already = subprocess.run(
+        [python, "-c", "import simpleaudio"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if already.returncode == 0:
+        return "installed"
+
+    result = subprocess.run(
+        ["uv", "pip", "install", "--python", python, "simpleaudio"],
+        capture_output=False,
+        timeout=180,
+    )
+    if result.returncode != 0:
+        return "skipped"
+
+    check = subprocess.run(
+        [python, "-c", "import simpleaudio"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    return "installed" if check.returncode == 0 else "skipped"

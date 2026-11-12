@@ -12,7 +12,12 @@ import click
 from . import __version__
 from .checker import DependencyChecker
 from .hardware import HardwareInfo
-from .installer import PackageInstaller
+from .clients import detect_installed_clients
+from .installer import (
+    PackageInstaller,
+    attempt_optional_simpleaudio,
+    verify_silence_detection,
+)
 from .logger import InstallLogger
 from .system import detect_platform, get_system_info, check_command_exists, check_homebrew_installed
 
@@ -66,6 +71,60 @@ def print_warning(message: str):
 def print_error(message: str):
     """Print an error message."""
     click.echo(click.style(f"❌ {message}", fg='red'))
+
+
+def offer_client_hooks(dry_run: bool, non_interactive: bool) -> None:
+    """Ask before installing converse hooks for coding tools already on this machine."""
+    found = detect_installed_clients(Path.home())
+    if not found:
+        print_warning("No Cursor, Claude, Copilot, Codex, Antigravity, or Devin directory was found.")
+        click.echo("After one of those is installed, run:")
+        click.echo("  voicemode plugin install --client=<name> --converse-hooks")
+        return
+
+    click.echo("Coding tools found: " + ", ".join(found))
+    click.echo("Claude Code and Claude Desktop share the Claude install.")
+    if dry_run:
+        print_step("[DRY RUN] Would offer VoiceMode hooks for: " + ", ".join(found))
+        return
+
+    if non_interactive:
+        accepted = True
+    else:
+        accepted = click.confirm("Install VoiceMode hooks for these tools?", default=True)
+    if not accepted:
+        click.echo("Skipped hooks. Add them later with:")
+        click.echo("  voicemode plugin install --client=all --converse-hooks")
+        return
+
+    executable = shutil.which("voicemode")
+    if not executable:
+        for candidate in (
+            Path.home() / ".local" / "bin" / "voicemode.exe",
+            Path.home() / ".local" / "bin" / "voicemode",
+        ):
+            if candidate.exists():
+                executable = str(candidate)
+                break
+    if not executable:
+        print_warning("voicemode is not on PATH in this terminal yet.")
+        click.echo("Restart the terminal, then run:")
+        click.echo(
+            "  voicemode plugin install --client="
+            + ",".join(found)
+            + " --converse-hooks --yes"
+        )
+        return
+
+    for name in found:
+        print_step(f"Installing hooks for {name}...")
+        result = subprocess.run(
+            [executable, "plugin", "install", "--client", name, "--converse-hooks", "--yes"],
+        )
+        if result.returncode == 0:
+            print_success(f"Hooks installed for {name}")
+        else:
+            print_warning(f"Hook install for {name} did not finish. Retry that client later.")
 
 
 def get_installed_version() -> str | None:
@@ -259,6 +318,12 @@ def main(dry_run, voice_mode_version, skip_services, non_interactive, model):
         click.echo(f"Detected: {platform_info.os_name} ({platform_info.architecture})")
         if platform_info.is_wsl:
             print_warning("WSL detected - additional audio configuration may be needed")
+        if platform_info.os_type == 'windows':
+            # This machine is a client. The speech models stay on the host.
+            skip_services = True
+            print_step("Windows client install")
+            click.echo("Microphone, speakers, and silence detection are installed here.")
+            click.echo("Whisper and Kokoro are not installed on Windows.")
         click.echo()
 
         # Ensure Homebrew is installed on macOS (before checking dependencies)
@@ -372,6 +437,26 @@ def main(dry_run, voice_mode_version, skip_services, non_interactive, model):
             logger.log_install('voicemode', ['voice-mode'], False)
             if not dry_run:
                 sys.exit(1)
+
+        if verify_silence_detection(dry_run=dry_run):
+            print_success("Silence detection is available (webrtcvad)")
+        else:
+            print_error("Silence detection is missing. Recording will not stop when you stop talking.")
+            logger.log_install('silence-detection', ['webrtcvad-wheels'], False)
+            if not dry_run:
+                sys.exit(1)
+
+        playback = attempt_optional_simpleaudio(dry_run=dry_run)
+        if playback == "installed":
+            print_success("Optional speaker fallback simpleaudio is installed")
+        elif playback == "skipped":
+            print_warning("simpleaudio was not installed. Speakers still use sounddevice.")
+            click.echo("This fallback needs a C compiler. On Windows that is the Microsoft C++ Build Tools.")
+            click.echo("VoiceMode works without it.")
+
+        click.echo()
+        print_step("Coding-tool hooks...")
+        offer_client_hooks(dry_run=dry_run, non_interactive=non_interactive)
 
         click.echo()
 
@@ -491,8 +576,14 @@ def main(dry_run, voice_mode_version, skip_services, non_interactive, model):
             click.echo("Next steps:")
             click.echo("  1. Restart your terminal (or source your shell rc file)")
             click.echo("  2. Run: voicemode --help")
-            click.echo("  3. Configure with Claude Code:")
-            click.echo("     claude mcp add --scope user voicemode -- uvx voice-mode")
+            if platform_info.os_type == 'windows':
+                click.echo("  3. Point this client at the machine hosting the models:")
+                click.echo("     VOICEMODE_STT_BASE_URLS=http://<host>:<whisper-port>/v1")
+                click.echo("     VOICEMODE_TTS_BASE_URLS=http://<host>:<kokoro-port>/v1")
+                click.echo("     Use the ports that host is actually listening on.")
+            else:
+                click.echo("  3. Configure with Claude Code:")
+                click.echo("     claude mcp add --scope user voicemode -- uvx voice-mode")
             click.echo()
             click.echo(f"Installation log: {logger.get_log_path()}")
 
