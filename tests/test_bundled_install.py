@@ -149,3 +149,12 @@ def test_only_the_tools_the_user_picked_get_hooks(monkeypatch, tmp_path):
     ran.clear()
     cli_mod.offer_client_hooks(dry_run=False, non_interactive=True, clients="none")
     assert ran == []
+
+
+def test_mcp_entries_use_the_plain_command_name(monkeypatch):
+    """Configs must say `voicemode`, not a full path to voicemode.exe."""
+    from voice_mode.cli_commands import plugin
+
+    monkeypatch.setattr(plugin.shutil, "which", lambda name: r"C:\Users\x\.local\bin\voicemode.exe")
+    for client in ("cursor", "claude", "copilot", "codex", "generic"):
+        assert plugin.mcp_server_entry(client)["command"] == "voicemode"

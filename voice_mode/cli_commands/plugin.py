@@ -203,7 +203,9 @@ def devin_user_hooks_path(output: Path | None) -> Path:
 
 
 def voicemode_mcp_command() -> str:
-    return shutil.which("voicemode") or "voicemode"
+    # Plain name, never a resolved path: a full path to voicemode.exe goes stale
+    # when the tool is reinstalled or moved, and it is noisy in every config file.
+    return "voicemode"
 
 
 def parse_clients(raw: str) -> list[str]:

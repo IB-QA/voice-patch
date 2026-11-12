@@ -102,6 +102,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   temp file that was deleted while still open, which Windows refuses ("the
   process cannot access the file because it is being used by another process").
   It is now built in memory.
+- **MCP configs say `voicemode`, not a full path** — the plugin installer used to
+  write the resolved path to `voicemode.exe` into every client's config, which
+  goes stale on reinstall. It now writes the plain command name.
 - **The voice hook no longer breaks `converse_continue`** — it treated
   `converse_continue` like `converse` and added converse-only arguments to it,
   which the tool rejects, so long voice turns could not be continued. The hook now
