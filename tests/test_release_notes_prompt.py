@@ -46,7 +46,7 @@ def test_release_notes_prompt_parses_changelog():
         
         # Check clean output (no header/footer)
         assert "Voice Mode Release Notes" not in result
-        assert "https://github.com/IB-QA/voice-patchvoicemode" not in result
+        assert "https://github.com/IB-QA/voice-patch" not in result
 
 
 def test_release_notes_prompt_handles_missing_changelog():

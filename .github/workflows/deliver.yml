@@ -1,0 +1,77 @@
+name: Build and deliver to the voice server
+
+# Every push to main is tested, built, kept as a GitHub artifact, and sent to
+# the model server at voice.ibqai.com. That server bakes the Mac and Windows
+# installers itself, so the client certificates never leave it.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deliver
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          python-version: "3.12"
+      - name: System packages
+        run: sudo apt-get update && sudo apt-get install -y portaudio19-dev ffmpeg
+      - name: Tests
+        env:
+          OPENAI_API_KEY: test-key
+        run: uv run --extra test pytest -m "not slow" -q --no-cov
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          python-version: "3.12"
+      - name: Build VoiceMode and its installer
+        run: |
+          uv build --wheel --out-dir out
+          uv build --wheel --out-dir out installer
+          ls -l out
+      - uses: actions/upload-artifact@v7
+        with:
+          name: voicemode-${{ github.sha }}
+          path: out/*.whl
+          retention-days: 30
+
+  deliver:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: voice-server
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: voicemode-${{ github.sha }}
+          path: out
+      - name: Send to voice.ibqai.com
+        env:
+          TOKEN: ${{ secrets.VOICE_DEPLOY_TOKEN }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          set -eu
+          for wheel in out/*.whl; do
+            name=$(basename "$wheel")
+            sum=$(sha256sum "$wheel" | cut -d' ' -f1)
+            curl -fsS --retry 3 -X POST \
+              -H "Authorization: Bearer $TOKEN" \
+              -H "X-Sha256: $sum" \
+              -H "Content-Type: application/octet-stream" \
+              --data-binary "@$wheel" \
+              "https://voice.ibqai.com/publish/$COMMIT/$name"
+          done
+          curl -fsS --retry 3 -X POST \
+            -H "Authorization: Bearer $TOKEN" \
+            "https://voice.ibqai.com/publish/$COMMIT/done"

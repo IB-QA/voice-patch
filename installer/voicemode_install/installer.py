@@ -1,5 +1,6 @@
 """System package installation."""
 
+import os
 import shutil
 import subprocess
 from typing import List, Optional
@@ -162,20 +163,20 @@ class PackageInstaller:
         Returns:
             True if installation succeeded, False otherwise.
         """
+        # A built wheel or other uv source, for example the one bundled in an installer.
+        source = os.environ.get('VOICEMODE_INSTALL_SOURCE', '').strip()
+        if source:
+            cmd = ['uv', 'tool', 'install', '--upgrade', '--force', source]
+        elif version:
+            cmd = ['uv', 'tool', 'install', '--upgrade', f'voice-mode=={version}']
+        else:
+            cmd = ['uv', 'tool', 'install', '--upgrade', 'voice-mode']
+
         if self.dry_run:
-            if version:
-                print(f"[DRY RUN] Would install: uv tool install --upgrade voice-mode=={version}")
-            else:
-                print("[DRY RUN] Would install: uv tool install --upgrade voice-mode")
+            print(f"[DRY RUN] Would install: {' '.join(cmd)}")
             return True
 
         try:
-            # Always use --upgrade to ensure we get the latest/requested version
-            # This also implies --refresh to check for new versions
-            if version:
-                cmd = ['uv', 'tool', 'install', '--upgrade', f'voice-mode=={version}']
-            else:
-                cmd = ['uv', 'tool', 'install', '--upgrade', 'voice-mode']
 
             result = subprocess.run(
                 cmd,

@@ -171,7 +171,7 @@ def commit_and_tag(version, packages=None):
 # a `v*` tag push there). Resolve the remote dynamically by URL — never assume
 # the remote is named "origin": post-2026-06-10 migration, origin -> ms2 (a bare
 # git host with no Actions), so a tag push to origin ships nothing.
-CANONICAL_GITHUB = ("IB-QA", "voicemode")
+CANONICAL_GITHUB = ("IB-QA", "voice-patch")
 
 
 def _parse_remote_url(url):
@@ -222,7 +222,7 @@ def get_remotes():
 
 
 def resolve_github_remote(remotes=None):
-    """Return the name of the remote pointing at github.com/IB-QA/voicemode.
+    """Return the name of the remote pointing at github.com/IB-QA/voice-patch.
 
     Matches by parsed host + owner/repo so a fork remote (e.g.
     Sallvainian/voicemode) is never selected. Honours a
@@ -254,7 +254,7 @@ def push_to_remote(version):
 
     if github_remote is None:
         print(
-            "\n❌ No GitHub remote for github.com/IB-QA/voicemode is configured."
+            "\n❌ No GitHub remote for github.com/IB-QA/voice-patch is configured."
         )
         print(f"   Remotes found: {', '.join(remotes) or '(none)'}")
         print(
@@ -262,7 +262,7 @@ def push_to_remote(version):
             " tag push to GitHub, so this release would ship nothing."
         )
         print("   Add it, then re-run:")
-        print("     git remote add github https://github.com/IB-QA/voice-patchvoicemode.git")
+        print("     git remote add github https://github.com/IB-QA/voice-patch.git")
         print("   (or set VOICEMODE_GITHUB_REMOTE=<remote-name> for a non-canonical clone)")
         return False
 
@@ -409,7 +409,7 @@ Examples:
     print("1. Create a GitHub release with changelog")
     print("2. Publish packages to PyPI")
     print()
-    print("Monitor progress at: https://github.com/IB-QA/voice-patchvoicemode/actions")
+    print("Monitor progress at: https://github.com/IB-QA/voice-patch/actions")
 
     return 0
 

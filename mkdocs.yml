@@ -4,7 +4,7 @@ site_description: Natural voice conversations for AI assistants
 site_author: Voice Mode Team
 
 repo_name: IB-QA/voicemode
-repo_url: https://github.com/IB-QA/voice-patchvoicemode
+repo_url: https://github.com/IB-QA/voice-patch
 edit_uri: edit/main/docs/
 
 theme:
@@ -105,7 +105,7 @@ nav:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/IB-QA/voice-patchvoicemode
+      link: https://github.com/IB-QA/voice-patch
     - icon: fontawesome/brands/x-twitter
       link: https://twitter.com/getvoicemode
     - icon: fontawesome/brands/youtube

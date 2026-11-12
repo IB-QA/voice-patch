@@ -1,6 +1,6 @@
 # VoiceMode
 
-**Private working clone derived from [IB-QA/voicemode](https://github.com/IB-QA/voice-patchvoicemode).**
+**Private working clone derived from [IB-QA/voicemode](https://github.com/IB-QA/voice-patch).**
 
 > Natural voice conversations with MCP-capable coding agents
 
@@ -163,7 +163,7 @@ nix profile install github:IB-QA/voicemode
 #### From source
 
 ```bash
-git clone https://github.com/IB-QA/voice-patchvoicemode.git
+git clone https://github.com/IB-QA/voice-patch.git
 cd voicemode
 uv tool install -e .
 ```
@@ -209,7 +209,7 @@ Full documentation: [voicemode.dev](https://voicemode.dev)
 ## Links
 
 - **Website**: [voicemode.dev](https://voicemode.dev)
-- **GitHub**: [github.com/IB-QA/voicemode](https://github.com/IB-QA/voice-patchvoicemode)
+- **GitHub**: [github.com/IB-QA/voicemode](https://github.com/IB-QA/voice-patch)
 - **PyPI**: [pypi.org/project/voice-mode](https://pypi.org/project/voice-mode/)
 - **YouTube**: [@getvoicemode](https://youtube.com/@getvoicemode)
 - **Twitter/X**: [@getvoicemode](https://twitter.com/getvoicemode)

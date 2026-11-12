@@ -97,6 +97,23 @@ def block_dangerous_commands(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def drop_leaked_log_file_handlers():
+    """Tests that reload config add FileHandlers under their temp home; once that
+    folder is deleted, every later log call in the run raises FileNotFoundError."""
+    import logging
+
+    names = ("voicemode", "voicemode.trace", "")
+    before = {name: list(logging.getLogger(name).handlers) for name in names}
+    yield
+    for name in names:
+        logger = logging.getLogger(name)
+        for handler in list(logger.handlers):
+            if handler not in before[name] and isinstance(handler, logging.FileHandler):
+                logger.removeHandler(handler)
+                handler.close()
+
+
+@pytest.fixture(autouse=True)
 def isolate_home_directory(tmp_path, monkeypatch):
     """
     Redirect Path.home() and os.path.expanduser() to a temporary directory.

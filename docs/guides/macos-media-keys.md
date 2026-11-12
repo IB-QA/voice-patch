@@ -42,7 +42,7 @@ install cleanly but silently do nothing for VoiceMode.
 ## 3. Load the config
 
 VoiceMode ships the Hammerspoon config in its own repo checkout:
-[`scripts/hammerspoon/voicemode-media-keys.lua`](https://github.com/IB-QA/voice-patchvoicemode/blob/master/scripts/hammerspoon/voicemode-media-keys.lua).
+[`scripts/hammerspoon/voicemode-media-keys.lua`](https://github.com/IB-QA/voice-patch/blob/master/scripts/hammerspoon/voicemode-media-keys.lua).
 `dofile` it from `~/.hammerspoon/init.lua`, pointing at wherever you checked
 out `voicemode`:
 

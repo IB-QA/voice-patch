@@ -363,7 +363,7 @@ class TestTtsModelSelection:
             assert _select_tts_model_for_endpoint("local") == "tts-1"
             assert _select_tts_model_for_endpoint("unknown") == "tts-1"
 
-    def test_global_set_to_mlx_repo_id_IB-QAs_env(self):
+    def test_global_set_to_mlx_repo_id_ib_qa_env(self):
         """Global TTS_MODELS set to an mlx repo id (IB-QA's env workaround):
         mlx-audio gets that repo via step 3; kokoro skips the incompatible
         repo id and falls to its built-in default 'tts-1'."""

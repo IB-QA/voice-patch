@@ -241,27 +241,38 @@ def plugin_home(client: str, output: Path | None) -> Path:
     return plugin_parent(client, output) / "voicemode"
 
 
-def ensure_cached_hook_binary() -> Path:
+def hook_binary_runs(path: Path) -> bool:
+    """The packaged binary is built for one platform; a hook that cannot start
+    would block converse in clients whose hooks fail closed (Copilot)."""
+    try:
+        result = subprocess.run([str(path)], input="", capture_output=True, timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return result.returncode == 0
+
+
+def ensure_cached_hook_binary() -> Path | None:
+    """Return a hook binary that runs on this machine, or None if there is none."""
     cache_dir = Path(os.environ.get("VOICEMODE_HOOK_CACHE_DIR", HOOK_CACHE_DIR))
     cache_bin = cache_dir / "voicemode_hook"
     cache_stamp = cache_dir / "voice_mode_version"
     stamped = cache_stamp.read_text(encoding="utf-8").strip() if cache_stamp.is_file() else ""
-    if cache_bin.is_file() and os.access(cache_bin, os.X_OK) and stamped == VERSION:
+    if cache_bin.is_file() and stamped == VERSION and hook_binary_runs(cache_bin):
         return cache_bin
 
     cache_dir.mkdir(parents=True, exist_ok=True)
-    source = PACKAGED_BINARY if PACKAGED_BINARY.is_file() else None
-    if source is None and BUILD_SH.is_file():
-        subprocess.run(["sh", str(BUILD_SH), str(cache_bin)], check=True)
-        cache_stamp.write_text(VERSION + "\n", encoding="utf-8")
-        cache_bin.chmod(cache_bin.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
-        return cache_bin
-    if source is None:
-        raise click.ClickException(
-            f"Hook binary missing ({PACKAGED_BINARY}) and {BUILD_SH} is not available"
-        )
-    shutil.copy2(source, cache_bin)
+    if PACKAGED_BINARY.is_file() and hook_binary_runs(PACKAGED_BINARY):
+        shutil.copy2(PACKAGED_BINARY, cache_bin)
+    elif BUILD_SH.is_file() and shutil.which("sh") and shutil.which("cargo"):
+        try:
+            subprocess.run(["sh", str(BUILD_SH), str(cache_bin)], check=True)
+        except subprocess.CalledProcessError:
+            return None
+    else:
+        return None
     cache_bin.chmod(cache_bin.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+    if not hook_binary_runs(cache_bin):
+        return None
     cache_stamp.write_text(VERSION + "\n", encoding="utf-8")
     return cache_bin
 
@@ -440,6 +451,9 @@ ChatGPT web has no agent hook runtime. `--client=chatgpt` installs into the Code
 
 def _write_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    backup = path.with_name(path.name + ".before-voicemode")
+    if path.is_file() and not backup.exists():
+        shutil.copy2(path, backup)
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
@@ -741,7 +755,7 @@ def install_plugin(
     *,
     converse_hooks: bool,
     output: Path | None,
-    binary: Path,
+    binary: Path | None,
 ) -> tuple[Path, list[tuple[str, Path]]]:
     dest = plugin_home(client, output)
     parent = dest.parent
@@ -755,7 +769,8 @@ def install_plugin(
 
     dest.mkdir(parents=True, exist_ok=True)
     _copy_agents_templates(dest)
-    copy_cached_binary_into_plugin(dest, binary)
+    if binary is not None:
+        copy_cached_binary_into_plugin(dest, binary)
     _write_json(dest / ".mcp.json", mcp_payload(client))
     (dest / "README.md").write_text(_plugin_readme(client, dest), encoding="utf-8")
 
@@ -872,7 +887,13 @@ def plugin_install(
     clients = parse_clients(client)
     if output is None and not yes:
         confirm_live_install(clients, converse_hooks)
-    binary = ensure_cached_hook_binary()
+    binary = ensure_cached_hook_binary() if converse_hooks else None
+    if converse_hooks and binary is None:
+        click.echo(
+            "warning: the converse hook cannot run on this machine (no matching "
+            "binary and no cargo to build it). Installing MCP and skills without it."
+        )
+        converse_hooks = False
     written: list[tuple[str, Path]] = []
     seen_dest: set[Path] = set()
     for name in clients:

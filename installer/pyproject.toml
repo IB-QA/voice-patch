@@ -34,9 +34,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/IB-QA/voice-patchvoicemode"
-Repository = "https://github.com/IB-QA/voice-patchvoicemode"
-Issues = "https://github.com/IB-QA/voice-patchvoicemode/issues"
+Homepage = "https://github.com/IB-QA/voice-patch"
+Repository = "https://github.com/IB-QA/voice-patch"
+Issues = "https://github.com/IB-QA/voice-patch/issues"
 
 [project.scripts]
 voice-mode-install = "voicemode_install.cli:main"

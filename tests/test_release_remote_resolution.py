@@ -1,5 +1,5 @@
 """Regression tests for VM-1565: release.py must push the v-tag to the GitHub
-remote (canonical IB-QA/voicemode), not a hardcoded 'origin'.
+remote (canonical IB-QA/voice-patch), not a hardcoded 'origin'.
 
 Post the 2026-06-10 failmode migration, `origin` points at ms2 (a bare git host
 with no Actions). The old hardcoded `git push origin` shipped the tag to ms2 only,
@@ -24,7 +24,7 @@ _spec.loader.exec_module(release)
 # The real-world post-migration layout this bug was filed against.
 REMOTES_POST_MIGRATION = {
     "origin": "ms2:git/repos/voicemode",
-    "github": "https://github.com/IB-QA/voice-patchvoicemode.git",
+    "github": "https://github.com/IB-QA/voice-patch.git",
     "fork": "https://github.com/Sallvainian/voicemode.git",
 }
 
@@ -43,21 +43,21 @@ class TestResolveGithubRemote:
         assert release.resolve_github_remote(remotes) is None
 
     def test_matches_ssh_scp_form(self):
-        remotes = {"origin": "git@github.com:IB-QA/voicemode.git"}
+        remotes = {"origin": "git@github.com:IB-QA/voice-patch.git"}
         assert release.resolve_github_remote(remotes) == "origin"
 
     def test_matches_ssh_host_alias(self):
         # ssh-config Host alias form (git@github.com_work:...) must still match.
-        remotes = {"gh": "git@github.com_work:IB-QA/voicemode.git"}
+        remotes = {"gh": "git@github.com_work:IB-QA/voice-patch.git"}
         assert release.resolve_github_remote(remotes) == "gh"
 
     def test_matches_ssh_url_form(self):
-        remotes = {"gh": "ssh://git@github.com/IB-QA/voicemode.git"}
+        remotes = {"gh": "ssh://git@github.com/IB-QA/voice-patch.git"}
         assert release.resolve_github_remote(remotes) == "gh"
 
     def test_origin_can_be_the_github_remote(self):
         # Pre-migration / CI clones where origin IS github should still resolve.
-        remotes = {"origin": "https://github.com/IB-QA/voice-patchvoicemode.git"}
+        remotes = {"origin": "https://github.com/IB-QA/voice-patch.git"}
         assert release.resolve_github_remote(remotes) == "origin"
 
     def test_env_override(self, monkeypatch):
