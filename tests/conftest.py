@@ -237,3 +237,9 @@ def mock_subprocess(monkeypatch):
     monkeypatch.setattr("subprocess.Popen", mock.Popen)
     monkeypatch.setattr("subprocess.run", mock.run)
     return mock
+
+
+@pytest.fixture(autouse=True)
+def never_touch_the_real_copilot_registry(monkeypatch):
+    """Installer tests must not run `copilot plugin install` on the developer's machine."""
+    monkeypatch.setenv("VOICEMODE_COPILOT_SKIP_PLUGIN_REGISTER", "1")

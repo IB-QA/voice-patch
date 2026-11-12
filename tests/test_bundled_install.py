@@ -158,3 +158,55 @@ def test_mcp_entries_use_the_plain_command_name(monkeypatch):
     monkeypatch.setattr(plugin.shutil, "which", lambda name: r"C:\Users\x\.local\bin\voicemode.exe")
     for client in ("cursor", "claude", "copilot", "codex", "generic"):
         assert plugin.mcp_server_entry(client)["command"] == "voicemode"
+
+
+class _Done:
+    def __init__(self, code=0, out=""):
+        self.returncode, self.stdout, self.stderr = code, out, ""
+
+
+def test_copilot_plugin_is_registered_with_the_copilot_cli(monkeypatch, tmp_path):
+    from voice_mode.cli_commands import plugin
+
+    monkeypatch.delenv("VOICEMODE_COPILOT_SKIP_PLUGIN_REGISTER")
+    monkeypatch.setattr(plugin.shutil, "which", lambda name: "/bin/copilot")
+    calls = []
+
+    def fake_run(cmd, **kw):
+        calls.append(cmd[1:])
+        return _Done(0, 'Plugin "voicemode" installed successfully.')
+
+    monkeypatch.setattr(plugin.subprocess, "run", fake_run)
+    assert plugin.register_copilot_plugin(tmp_path) is True
+    assert calls == [["plugin", "uninstall", "voicemode"], ["plugin", "install", str(tmp_path)]]
+
+
+def test_copilot_registration_falls_back_when_the_cli_is_missing_or_refuses(monkeypatch, tmp_path):
+    from voice_mode.cli_commands import plugin
+
+    monkeypatch.delenv("VOICEMODE_COPILOT_SKIP_PLUGIN_REGISTER")
+    monkeypatch.setattr(plugin.shutil, "which", lambda name: None)
+    assert plugin.register_copilot_plugin(tmp_path) is False
+
+    monkeypatch.setattr(plugin.shutil, "which", lambda name: "/bin/copilot")
+    monkeypatch.setattr(plugin.subprocess, "run", lambda cmd, **kw: _Done(1, "no"))
+    assert plugin.register_copilot_plugin(tmp_path) is False
+
+
+def test_registered_copilot_plugin_replaces_the_user_level_entries(monkeypatch, tmp_path):
+    """The plugin carries the MCP server and hook; writing both would load them twice."""
+    from voice_mode.cli_commands import plugin
+
+    mcp = tmp_path / "mcp-config.json"
+    hooks = tmp_path / "voicemode-converse.json"
+    mcp.write_text('{"mcpServers": {"voicemode": {}, "other": {"command": "x"}}}')
+    hooks.write_text("{}")
+    monkeypatch.setenv("VOICEMODE_COPILOT_MCP", str(mcp))
+    monkeypatch.setenv("VOICEMODE_COPILOT_HOOKS", str(hooks))
+    monkeypatch.setattr(plugin, "register_copilot_plugin", lambda dest: True)
+
+    written = plugin.wire_user_level("copilot", tmp_path / "plugin", None, True)
+
+    assert written == [("plugin", tmp_path / "plugin")]
+    assert json.loads(mcp.read_text())["mcpServers"] == {"other": {"command": "x"}}
+    assert not hooks.exists()

@@ -698,6 +698,47 @@ def copilot_user_hook_payload(dest: Path) -> dict:
     }
 
 
+def register_copilot_plugin(dest: Path) -> bool:
+    """Register the plugin folder with GitHub Copilot CLI (`copilot plugin install`).
+
+    Copilot keeps its own plugin registry, so copying a folder into place is not
+    enough: it never shows up. Returns False when the CLI is missing or refuses,
+    and the caller falls back to the user-level MCP and hook files.
+    """
+    if os.environ.get("VOICEMODE_COPILOT_SKIP_PLUGIN_REGISTER"):
+        return False
+    copilot = shutil.which("copilot")
+    if not copilot:
+        return False
+    try:
+        # Reinstall so an upgrade replaces the old copy; failure here just means
+        # it was not installed yet.
+        subprocess.run([copilot, "plugin", "uninstall", "voicemode"],
+                       capture_output=True, text=True, timeout=60)
+        result = subprocess.run([copilot, "plugin", "install", str(dest)],
+                                capture_output=True, text=True, timeout=120)
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return result.returncode == 0 and "installed successfully" in (result.stdout or "")
+
+
+def remove_copilot_user_entries(output: Path | None) -> None:
+    """Drop the VoiceMode MCP entry and hook file an earlier install wrote."""
+    mcp_path = copilot_user_mcp_path(output)
+    try:
+        if mcp_path.is_file():
+            data = json.loads(mcp_path.read_text())
+            servers = data.get("mcpServers")
+            if isinstance(servers, dict) and "voicemode" in servers:
+                del servers["voicemode"]
+                _write_json(mcp_path, data)
+        hooks_path = copilot_user_hooks_path(output)
+        if hooks_path.is_file():
+            hooks_path.unlink()
+    except (OSError, ValueError):
+        pass
+
+
 def wire_user_level(
     client: str,
     dest: Path,
@@ -745,6 +786,13 @@ def wire_user_level(
         return written
 
     if name == "copilot":
+        # Preferred: let Copilot register the plugin itself. It then lists and
+        # enables it, and the plugin already carries the MCP server and hook, so
+        # writing the user-level files as well would load both twice.
+        if register_copilot_plugin(dest):
+            remove_copilot_user_entries(output)
+            written.append(("plugin", dest))
+            return written
         mcp_path = merge_mcp_servers(
             copilot_user_mcp_path(output), {"voicemode": mcp_server_entry("copilot")}
         )

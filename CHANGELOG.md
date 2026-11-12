@@ -102,6 +102,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   temp file that was deleted while still open, which Windows refuses ("the
   process cannot access the file because it is being used by another process").
   It is now built in memory.
+- **GitHub Copilot now actually gets the plugin** — Copilot keeps its own plugin
+  registry, so the plugin folder the installer copied into place never appeared.
+  The installer now runs `copilot plugin install` on it, which registers and
+  enables it, and drops the duplicate user-level MCP and hook entries. Without
+  the Copilot CLI it falls back to the user-level files as before.
 - **MCP configs say `voicemode`, not a full path** — the plugin installer used to
   write the resolved path to `voicemode.exe` into every client's config, which
   goes stale on reinstall. It now writes the plain command name.
