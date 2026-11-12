@@ -96,6 +96,10 @@ def load_voicemode_env():
 # VOICEMODE_VAD_DEBUG=false
 
 # Save all audio and transcriptions (true/false)
+# Set to false on a shared or client computer. Nothing spoken or heard is then
+# saved: no audio, transcripts, conversation logs, inbox, jobs or event logs.
+# VOICEMODE_KEEP_HISTORY=true
+
 # VOICEMODE_SAVE_ALL=false
 
 # Save audio files (true/false)
@@ -493,12 +497,20 @@ VAD_DEBUG = os.getenv("VOICEMODE_VAD_DEBUG", "").lower() in ("true", "1", "yes",
 DEBUG_DIR = LOGS_DIR / "debug"  # Debug files now go under logs
 
 # Master save-all configuration
+# "Leave no trace": with VOICEMODE_KEEP_HISTORY=false nothing the user says or
+# hears is written to disk. This wins over every other save setting.
+KEEP_HISTORY = os.getenv("VOICEMODE_KEEP_HISTORY", "true").lower() in ("true", "1", "yes", "on")
+
 SAVE_ALL = os.getenv("VOICEMODE_SAVE_ALL", "").lower() in ("true", "1", "yes", "on")
 
 # Audio saving configuration
 # Enable if SAVE_ALL is true, DEBUG is true, or individually enabled
 SAVE_AUDIO = SAVE_ALL or DEBUG or os.getenv("VOICEMODE_SAVE_AUDIO", "").lower() in ("true", "1", "yes", "on")
 SAVE_TRANSCRIPTIONS = SAVE_ALL or DEBUG or os.getenv("VOICEMODE_SAVE_TRANSCRIPTIONS", "").lower() in ("true", "1", "yes", "on")
+if not KEEP_HISTORY:
+    SAVE_ALL = False
+    SAVE_AUDIO = False
+    SAVE_TRANSCRIPTIONS = False
 
 # Audio feedback configuration
 AUDIO_FEEDBACK_ENABLED = os.getenv("VOICEMODE_AUDIO_FEEDBACK", "true").lower() in ("true", "1", "yes", "on")
@@ -994,7 +1006,7 @@ TTS_TRAILING_SILENCE = float(os.getenv("VOICEMODE_TTS_TRAILING_SILENCE", "0.5"))
 
 # Event logging configuration
 # Event logs are enabled by default, or if SAVE_ALL is true
-EVENT_LOG_ENABLED = SAVE_ALL or os.getenv("VOICEMODE_EVENT_LOG_ENABLED", "true").lower() in ("true", "1", "yes", "on")
+EVENT_LOG_ENABLED = KEEP_HISTORY and (SAVE_ALL or os.getenv("VOICEMODE_EVENT_LOG_ENABLED", "true").lower() in ("true", "1", "yes", "on"))
 EVENT_LOG_DIR = str(
     expand_path(os.getenv("VOICEMODE_EVENT_LOG_DIR", str(LOGS_DIR / "events")))
 )

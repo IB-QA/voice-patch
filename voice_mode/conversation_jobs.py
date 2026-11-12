@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Awaitable, Optional
 
-from voice_mode.config import BASE_DIR
+from voice_mode.config import BASE_DIR, KEEP_HISTORY
 from voice_mode.control_channel import get_control_state
 from voice_mode.inbox import SESSION_KEY
 
@@ -175,6 +175,9 @@ class ConversationJobManager:
         self._persist(job)
 
     def _persist(self, job: ConversationJob) -> None:
+        if not KEEP_HISTORY:
+            # Leave no trace: the job lives in memory only.
+            return
         payload = {
             "schema_version": JOB_SCHEMA_VERSION,
             "job_id": job.job_id,

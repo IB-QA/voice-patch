@@ -69,6 +69,14 @@ fn main() {
     log_path.push(".voicemode/logs/converse-pre-tool-use.jsonl");
     let _ = fs::create_dir_all(log_path.parent().unwrap());
 
+    // The log copies every spoken message, so "leave no trace" turns it off.
+    if !keep_history() {
+        if let Ok(Some(output_payload)) = run_res {
+            println!("{}", output_payload);
+        }
+        return;
+    }
+
     if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(&log_path) {
         if let Ok(parsed_json) = serde_json::from_str::<serde_json::Value>(&input_str) {
             let log_obj = serde_json::json!({
@@ -93,6 +101,16 @@ fn main() {
         }
         println!("{}", output_payload);
     }
+}
+
+fn keep_history() -> bool {
+    let home = env::var("HOME").unwrap_or_default();
+    let configs = read_env_file(&format!("{}/.voicemode/voicemode.env", home));
+    env::var("VOICEMODE_KEEP_HISTORY")
+        .ok()
+        .or_else(|| configs.get("VOICEMODE_KEEP_HISTORY").cloned())
+        .map(|v| is_truthy(&v))
+        .unwrap_or(true)
 }
 
 fn run_pipeline(input_str: &str, client_arg: &str) -> Result<Option<String>, Box<dyn std::error::Error>> {

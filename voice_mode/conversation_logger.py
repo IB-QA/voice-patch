@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 
 from voice_mode.__version__ import __version__
-from voice_mode.config import BASE_DIR
+from voice_mode.config import BASE_DIR, KEEP_HISTORY
 from voice_mode.inbox import Inbox
 
 
@@ -131,6 +131,9 @@ class ConversationLogger:
             duration_ms: Duration of the audio in milliseconds
             metadata: Additional metadata about the utterance
         """
+        if not KEEP_HISTORY:
+            return
+
         # Check if we need to start a new conversation
         self._check_conversation_continuity()
         
