@@ -348,7 +348,7 @@ async def _update_mlx_audio_service_files(
         )
 
         service_path.parent.mkdir(parents=True, exist_ok=True)
-        service_path.write_text(content)
+        service_path.write_text(content, encoding="utf-8")
 
         result["success"] = True
         result["updated"] = True

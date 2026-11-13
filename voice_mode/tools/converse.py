@@ -2371,7 +2371,7 @@ def _emit_converse_state(
         state_path = BASE_DIR / "state.json"
         state_path.parent.mkdir(parents=True, exist_ok=True)
         tmp_path = state_path.with_name(f".{state_path.name}.tmp.{os.getpid()}")
-        tmp_path.write_text(json.dumps(payload, indent=2))
+        tmp_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
         os.replace(tmp_path, state_path)
     except Exception as e:
         logger.debug(f"_emit_converse_state: failed to write state.json (swallowed): {e}")

@@ -50,6 +50,104 @@ def _service_file_name(service_name: str) -> str:
     return _SERVICE_FILE_NAMES.get(service_name, service_name)
 
 
+# --- Windows (Task Scheduler) backend -------------------------------------
+# Services run as Scheduled Tasks in user or machine scope; see
+# voice_mode.utils.services.windows and docs/architecture/adr.
+
+_WINDOWS_SERVICES = {"whisper", "kokoro", "voicemode"}
+
+
+async def _wait_for_port(port: int, up: bool, timeout: float) -> bool:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if (find_process_by_port(port) is not None) == up:
+            return True
+        await asyncio.sleep(1)
+    return False
+
+
+def _windows_unsupported(service_name: str) -> Optional[str]:
+    if service_name not in _WINDOWS_SERVICES:
+        return f"❌ {service_name} is not supported on Windows"
+    return None
+
+
+async def _windows_start(service_name: str, port: int) -> str:
+    from voice_mode.utils.services import windows as win
+
+    if msg := _windows_unsupported(service_name):
+        return msg
+    if win.get_task(service_name) is None:
+        return f"❌ {service_name} is not installed. Run: voicemode service install {service_name}"
+    result = win.start_task(service_name)
+    if result.returncode != 0:
+        return f"❌ Failed to start {service_name}: {(result.stderr or result.stdout).strip()}"
+    if await _wait_for_port(port, True, 120):
+        return f"✅ {service_name.capitalize()} started on port {port}"
+    return f"⏳ {service_name.capitalize()} task started but port {port} is not listening yet; check logs"
+
+
+async def _windows_stop(service_name: str, port: int) -> str:
+    from voice_mode.utils.services import windows as win
+
+    if msg := _windows_unsupported(service_name):
+        return msg
+    if find_process_by_port(port) is None:
+        if win.get_task(service_name) is not None:
+            win.stop_task(service_name)
+        return f"{service_name.capitalize()} is not running"
+    if win.get_task(service_name) is not None:
+        win.stop_task(service_name)
+    # Stopping the task does not always reap the server child process.
+    win.kill_port_owner(port)
+    if await _wait_for_port(port, False, 15):
+        return f"✅ {service_name.capitalize()} stopped"
+    return f"❌ {service_name.capitalize()} is still running on port {port}"
+
+
+async def _windows_enable(service_name: str) -> str:
+    from voice_mode.utils.services import windows as win
+
+    if msg := _windows_unsupported(service_name):
+        return msg
+    if win.get_task(service_name) is None:
+        return f"❌ {service_name} is not installed. Run: voicemode service install {service_name}"
+    result = win.enable_task(service_name)
+    if result.returncode != 0:
+        return f"❌ Failed to enable {service_name}: {(result.stderr or result.stdout).strip()}"
+    scope = win.installed_scope(service_name)
+    return f"✅ {service_name.capitalize()} enabled ({scope.value if scope else 'unknown'} scope)"
+
+
+async def _windows_disable(service_name: str) -> str:
+    from voice_mode.utils.services import windows as win
+
+    if msg := _windows_unsupported(service_name):
+        return msg
+    if win.get_task(service_name) is None:
+        return f"{service_name.capitalize()} service is not installed"
+    result = win.disable_task(service_name)
+    if result.returncode != 0:
+        return f"❌ Failed to disable {service_name}: {(result.stderr or result.stdout).strip()}"
+    return f"✅ {service_name.capitalize()} auto-start disabled"
+
+
+def _windows_logs(service_name: str, lines: int) -> str:
+    from voice_mode.utils.services import windows as win
+
+    stem = _service_file_name(service_name)
+    sections = []
+    for base in win.candidate_base_dirs():
+        log_dir = base / "logs" / stem
+        for label, name in (("startup", "startup.log"), ("stdout", f"{stem}.out.log"), ("stderr", f"{stem}.err.log")):
+            path = log_dir / name
+            if path.exists():
+                tail = path.read_text(encoding="utf-8", errors="replace").splitlines()[-lines:]
+                if tail:
+                    sections.append(f"=== {label} ({path}) ===\n" + "\n".join(tail))
+    return "\n\n".join(sections) if sections else f"No logs found for {service_name}"
+
+
 def get_service_config_vars(service_name: str) -> Dict[str, Any]:
     """Get configuration variables for service templates.
 
@@ -164,10 +262,10 @@ async def install_voicemode_start_script() -> Dict[str, Any]:
         if not template_path.exists():
             return {"success": False, "error": f"Template not found: {template_path}"}
 
-        template_content = template_path.read_text()
+        template_content = template_path.read_text(encoding="utf-8")
 
         # Write the start script
-        with open(start_script_path, 'w') as f:
+        with open(start_script_path, 'w', encoding='utf-8') as f:
             f.write(template_content)
 
         # Make executable
@@ -205,7 +303,7 @@ def load_service_template(service_name: str) -> str:
     if not template_path.exists():
         raise FileNotFoundError(f"Service template not found: {template_path}")
 
-    return template_path.read_text()
+    return template_path.read_text(encoding="utf-8")
 
 
 def create_service_file(service_name: str) -> tuple[Path, str]:
@@ -436,6 +534,9 @@ async def start_service(service_name: str) -> str:
     )
     if existing_process:
         return f"{service_name.capitalize()} is already running on port {port}"
+
+    if platform.system() == "Windows":
+        return await _windows_start(service_name, port)
 
     system = platform.system()
 
@@ -688,6 +789,8 @@ async def stop_service(service_name: str) -> str:
         port = read_livekit_browser_port()
     else:
         port = 3000
+    if platform.system() == "Windows":
+        return await _windows_stop(service_name, port)
     system = platform.system()
 
     # Map service name to file name (voicemode -> serve, mlx_audio -> mlx-audio).
@@ -791,6 +894,8 @@ async def enable_service(service_name: str) -> str:
     Uses create_service_file() as single source of truth for service file generation.
     """
     system = platform.system()
+    if system == "Windows":
+        return await _windows_enable(service_name)
 
     try:
         # Create service file using the unified function
@@ -848,7 +953,7 @@ async def enable_service(service_name: str) -> str:
         service_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Write service file
-        service_path.write_text(content)
+        service_path.write_text(content, encoding="utf-8")
 
         if system == "Darwin":
             # Load with launchctl
@@ -893,6 +998,8 @@ async def enable_service(service_name: str) -> str:
 async def disable_service(service_name: str) -> str:
     """Disable a service from starting at boot/login."""
     system = platform.system()
+    if system == "Windows":
+        return await _windows_disable(service_name)
 
     # Map service name to file name (voicemode uses "serve" in file names)
     file_name = _service_file_name(service_name)
@@ -962,6 +1069,9 @@ async def view_logs(service_name: str, lines: Optional[int] = None) -> str:
     log_name = _service_file_name(service_name)
 
     try:
+        if system == "Windows" and service_name not in {"livekit", "livekit_web"}:
+            return _windows_logs(service_name, lines)
+
         if service_name in {"livekit", "livekit_web"}:
             logs = []
             stem = "livekit-web" if service_name == "livekit_web" else "livekit"
@@ -1010,14 +1120,14 @@ async def view_logs(service_name: str, lines: Optional[int] = None) -> str:
 
                 logs = []
                 if out_log.exists():
-                    with open(out_log) as f:
+                    with open(out_log, encoding='utf-8', errors='replace') as f:
                         stdout_lines = f.readlines()[-lines:]
                         if stdout_lines:
                             logs.append(f"=== stdout (last {len(stdout_lines)} lines) ===")
                             logs.extend(stdout_lines)
 
                 if err_log.exists():
-                    with open(err_log) as f:
+                    with open(err_log, encoding='utf-8', errors='replace') as f:
                         stderr_lines = f.readlines()[-lines:]
                         if stderr_lines:
                             if logs:

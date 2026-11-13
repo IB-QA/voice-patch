@@ -276,7 +276,7 @@ class ConchQueue:
         best = {}  # session_id -> (WaiterEntry, Path)
         for f in sorted(qdir.glob("*.json")):
             try:
-                data = json.loads(f.read_text())
+                data = json.loads(f.read_text(encoding="utf-8"))
             except (json.JSONDecodeError, OSError, ValueError):
                 if clean:
                     cls._unlink(f)  # corrupt entry
@@ -315,7 +315,7 @@ class ConchQueue:
         match = None
         for f in sorted(qdir.glob("*.json")):
             try:
-                data = json.loads(f.read_text())
+                data = json.loads(f.read_text(encoding="utf-8"))
             except (json.JSONDecodeError, OSError, ValueError):
                 continue
             if data.get("session_id") == session_id:
@@ -329,7 +329,7 @@ class ConchQueue:
         """Drop the grant if it names no one or a session that is no longer live."""
         gf = cls._grant_file()
         try:
-            g = json.loads(gf.read_text())
+            g = json.loads(gf.read_text(encoding="utf-8"))
         except (FileNotFoundError, json.JSONDecodeError, OSError, ValueError):
             return
         sid = g.get("session_id")
@@ -341,7 +341,7 @@ class ConchQueue:
         """Clear the grant if it currently names ``session_id``."""
         gf = cls._grant_file()
         try:
-            g = json.loads(gf.read_text())
+            g = json.loads(gf.read_text(encoding="utf-8"))
         except (FileNotFoundError, json.JSONDecodeError, OSError, ValueError):
             return
         if g.get("session_id") == session_id:
@@ -429,7 +429,7 @@ class ConchQueue:
         if qdir.exists():
             for f in sorted(qdir.glob("*.json")):
                 try:
-                    data = json.loads(f.read_text())
+                    data = json.loads(f.read_text(encoding="utf-8"))
                 except (json.JSONDecodeError, OSError, ValueError):
                     continue
                 if data.get("session_id") == session_id:
@@ -637,7 +637,7 @@ class ConchQueue:
         """
         gf = cls._grant_file()
         try:
-            g = json.loads(gf.read_text())
+            g = json.loads(gf.read_text(encoding="utf-8"))
         except (FileNotFoundError, json.JSONDecodeError, OSError, ValueError):
             return None
         sid = g.get("session_id")

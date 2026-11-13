@@ -29,7 +29,7 @@ def parse_env_file(file_path: Path) -> Dict[str, str]:
     if not file_path.exists():
         return config
 
-    with open(file_path, 'r') as f:
+    with open(file_path, 'r', encoding='utf-8') as f:
         lines = f.readlines()
 
     i = 0
@@ -136,7 +136,7 @@ def write_env_file(file_path: Path, config: Dict[str, str], preserve_comments: b
     commented_config_pattern = re.compile(r'^#\s*([A-Z][A-Z0-9_]*)=')
 
     if file_path.exists() and preserve_comments:
-        with open(file_path, 'r') as f:
+        with open(file_path, 'r', encoding='utf-8') as f:
             lines = f.readlines()
 
         i = 0
@@ -260,7 +260,7 @@ def write_env_file(file_path: Path, config: Dict[str, str], preserve_comments: b
 
     # Write the file
     file_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(file_path, 'w') as f:
+    with open(file_path, 'w', encoding='utf-8') as f:
         if existing_lines:
             f.writelines(existing_lines)
         else:

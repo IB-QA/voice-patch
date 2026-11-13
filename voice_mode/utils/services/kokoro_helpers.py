@@ -17,6 +17,15 @@ def find_kokoro_fastapi() -> Optional[str]:
         Path.home() / "kokoro-fastapi",
         Path("/opt/kokoro-fastapi"),
     ]
+
+    if platform.system() == "Windows":
+        from voice_mode.utils.services.windows import candidate_base_dirs
+
+        for base in candidate_base_dirs():
+            path = base / "services" / "kokoro"
+            if (path / "start-kokoro.ps1").is_file() and (path / ".venv").is_dir():
+                return str(path)
+        return None
     
     for path in paths_to_check:
         if path.exists() and path.is_dir():
@@ -78,7 +87,7 @@ def is_kokoro_starting_up() -> Optional[str]:
                     return "loading models (please wait)"
 
                 # Check for start script running
-                if 'start-gpu_mac.sh' in cmdline_str or 'start-cpu.sh' in cmdline_str or 'start-gpu.sh' in cmdline_str:
+                if 'start-gpu_mac.sh' in cmdline_str or 'start-cpu.sh' in cmdline_str or 'start-gpu.sh' in cmdline_str or 'start-kokoro.ps1' in cmdline_str:
                     if 'kokoro' in cmdline_str:
                         return "starting up"
 

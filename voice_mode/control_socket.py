@@ -354,7 +354,7 @@ class ControlSocketListener:
         if not stat.S_ISSOCK(st.st_mode):
             logger.warning("refusing to unlink non-socket at control path %s", path)
             return
-        if st.st_uid != os.getuid():
+        if hasattr(os, "getuid") and st.st_uid != os.getuid():
             logger.warning(
                 "refusing to unlink control socket %s owned by uid %s (not %s)",
                 path, st.st_uid, os.getuid(),
@@ -389,7 +389,7 @@ class ControlSocketListener:
                 # drive the channel. Reject a definite mismatch; fail open (with a
                 # debug note) only when the platform can't tell us the UID.
                 peer = _peer_uid(conn)
-                if peer is not None and peer != os.getuid():
+                if peer is not None and hasattr(os, "getuid") and peer != os.getuid():
                     logger.warning(
                         "control listener: rejecting connection from uid %s (not %s)",
                         peer, os.getuid(),

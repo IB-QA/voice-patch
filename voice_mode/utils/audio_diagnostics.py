@@ -23,7 +23,7 @@ def check_system_audio_packages() -> Dict[str, bool]:
     # Check if we're in WSL
     is_wsl = False
     if os.path.exists("/proc/version"):
-        with open("/proc/version", "r") as f:
+        with open("/proc/version", "r", encoding="utf-8") as f:
             is_wsl = "microsoft" in f.read().lower() or "wsl" in f.read().lower()
     
     # Required packages for Ubuntu/Debian
@@ -84,7 +84,7 @@ def get_audio_error_help(error: Exception) -> str:
         
         # WSL-specific suggestions
         if os.path.exists("/proc/version"):
-            with open("/proc/version", "r") as f:
+            with open("/proc/version", "r", encoding="utf-8") as f:
                 if "microsoft" in f.read().lower() or "wsl" in f.read().lower():
                     suggestions.append("\nWSL detected. Additional steps may be required:")
                     suggestions.append("  1. Ensure PulseAudio is running: pulseaudio --start")
@@ -152,7 +152,7 @@ def diagnose_audio_setup() -> List[str]:
     
     # Check if WSL
     if system == "Linux" and os.path.exists("/proc/version"):
-        with open("/proc/version", "r") as f:
+        with open("/proc/version", "r", encoding="utf-8") as f:
             if "microsoft" in f.read().lower() or "wsl" in f.read().lower():
                 findings.append("Environment: WSL detected")
     

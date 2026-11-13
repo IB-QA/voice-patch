@@ -57,11 +57,11 @@ async def update_whisper_service_files(
     source_template = Path(__file__).parent.parent.parent.parent / "templates" / "scripts" / "start-whisper-server.sh"
     if source_template.exists():
         logger.info(f"Loading template from source: {source_template}")
-        template_content = source_template.read_text()
+        template_content = source_template.read_text(encoding="utf-8")
     else:
         try:
             template_resource = files("voice_mode.templates.scripts").joinpath("start-whisper-server.sh")
-            template_content = template_resource.read_text()
+            template_content = template_resource.read_text(encoding="utf-8")
             logger.info("Loaded template from package resources")
         except Exception as e:
             logger.warning(f"Failed to load template script: {e}. Using fallback inline script.")
@@ -151,7 +151,7 @@ exec "$SERVER_BIN" \\
 """
     
     start_script_path = os.path.join(bin_dir, "start-whisper-server.sh")
-    with open(start_script_path, 'w') as f:
+    with open(start_script_path, 'w', encoding='utf-8') as f:
         f.write(template_content)
     os.chmod(start_script_path, 0o755)
     
@@ -172,10 +172,10 @@ exec "$SERVER_BIN" \\
         source_template = Path(__file__).parent.parent.parent.parent / "templates" / "launchd" / "com.voicemode.whisper.plist"
         if source_template.exists():
             logger.info(f"Loading plist template from source: {source_template}")
-            plist_content = source_template.read_text()
+            plist_content = source_template.read_text(encoding="utf-8")
         else:
             template_resource = files("voice_mode.templates.launchd").joinpath("com.voicemode.whisper.plist")
-            plist_content = template_resource.read_text()
+            plist_content = template_resource.read_text(encoding="utf-8")
             logger.info("Loaded plist template from package resources")
         
         # Replace placeholders with expanded paths
@@ -190,7 +190,7 @@ exec "$SERVER_BIN" \\
             pass
         
         # Write updated plist
-        with open(plist_path, 'w') as f:
+        with open(plist_path, 'w', encoding='utf-8') as f:
             f.write(plist_content)
         
         result["success"] = True
@@ -228,11 +228,11 @@ exec "$SERVER_BIN" \\
         source_template = Path(__file__).parent.parent.parent.parent / "templates" / "systemd" / "voicemode-whisper.service"
         if source_template.exists():
             logger.info(f"Loading systemd template from source: {source_template}")
-            service_content = source_template.read_text()
+            service_content = source_template.read_text(encoding="utf-8")
         else:
             try:
                 template_resource = files("voice_mode.templates.systemd").joinpath("voicemode-whisper.service")
-                service_content = template_resource.read_text()
+                service_content = template_resource.read_text(encoding="utf-8")
                 logger.info("Loaded systemd template from package resources")
             except Exception as e:
                 logger.warning(f"Failed to load template: {e}. Using fallback inline template.")
@@ -268,7 +268,7 @@ WantedBy=default.target
         service_content = service_content.replace("{WHISPER_PORT}", str(WHISPER_PORT))
 
         # Write systemd service file
-        with open(service_path, 'w') as f:
+        with open(service_path, 'w', encoding='utf-8') as f:
             f.write(service_content)
         
         # Reload systemd
@@ -316,10 +316,15 @@ async def whisper_install(
     auto_enable: Optional[Union[bool, str]] = None,
     version: str = "latest",
     skip_core_ml: Union[bool, str] = False,
-    skip_deps: Union[bool, str] = False
+    skip_deps: Union[bool, str] = False,
+    scope: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Install whisper.cpp with automatic system detection and configuration.
+
+    On Windows a prebuilt release is installed and run by a Task Scheduler task.
+    scope selects 'user' (logon task, no admin) or 'machine' (boot task, admin);
+    the default 'auto' picks machine when elevated, otherwise user.
 
     Supports macOS (with Metal) and Linux (with CUDA if available).
     On Apple Silicon Macs, automatically downloads pre-built Core ML models
@@ -342,6 +347,19 @@ async def whisper_install(
         Installation status with paths and configuration details
     """
     try:
+        if platform.system() == "Windows":
+            from voice_mode.utils.services.windows_install import install_whisper_windows, to_bool as _to_bool
+
+            return await install_whisper_windows(
+                model=model,
+                scope=scope,
+                force_reinstall=_to_bool(force_reinstall),
+                auto_enable=None if auto_enable is None else _to_bool(auto_enable),
+                skip_deps=_to_bool(skip_deps),
+                use_gpu=None if use_gpu is None else _to_bool(use_gpu),
+                no_model=_to_bool(no_model),
+            )
+
         # Check for and migrate old installations
         migration_msg = auto_migrate_if_needed("whisper")
 

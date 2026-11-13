@@ -31,7 +31,20 @@ VOICEMODE_PLUGIN_DIR_CURSOR=~/.cursor/plugins/local
 VOICEMODE_HOOK_CACHE_DIR=~/.voicemode/services/hooks
 ```
 
-The hook binary is built into `~/.voicemode/services/hooks/` when missing or when the VoiceMode version changes, then copied into the plugin `bin/`. Unix ARM64/x86_64 for now (not Windows).
+The hook binary (`voicemode_hook`) is built per OS into `~/.voicemode/services/hooks/` when missing or when the VoiceMode version changes, then copied into the plugin `bin/`. The Cargo target directory is kept outside the package.
+
+### Rust toolchain
+
+Building the hook needs `cargo`. The installer looks for it on `PATH` and in `~/.cargo/bin`. If it is missing, it offers a user-level [rustup](https://rustup.rs) install (no admin rights needed):
+
+```bash
+voicemode plugin install --client=cursor --install-rust      # install Rust without asking
+voicemode plugin install --client=cursor --no-install-rust   # never install Rust
+```
+
+### GitHub Copilot
+
+The Copilot plugin is registered through `copilot plugin install` and carries both the MCP server and the hook. Its hooks are not tied to `~/.claude/settings.json`.
 
 Some clients also expose a marketplace. That is optional and client-specific. The supported VoiceMode path is `voicemode plugin install`.
 
@@ -47,8 +60,8 @@ or:
 
 ```bash
 uv tool install voice-mode
-voicemode service install whisper
-voicemode service install kokoro
+voicemode service install whisper --model large-v3-turbo   # see: service install whisper --help
+voicemode service install kokoro                            # see: service install kokoro --help
 ```
 
 ## Slash Commands

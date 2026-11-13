@@ -24,6 +24,16 @@ def harden_windows_console() -> bool:
     """
     if sys.platform != "win32":
         return False
+    # Legacy code pages (cp1252) cannot encode the emoji used in CLI output and
+    # crash with UnicodeEncodeError, which also hides the real error. Reconfigure
+    # in place; errors="replace" keeps output flowing on any stream.
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            try:
+                reconfigure(encoding="utf-8", errors="replace")
+            except Exception:
+                pass
     try:
         import click._compat as click_compat
 
@@ -446,111 +456,210 @@ def _echo_missing_dependencies(result):
         click.echo(f"     • {dep}")
 
 
-@service.command('install')
-@click.argument('service_name', type=click.Choice(VALID_SERVICES, case_sensitive=False), metavar='SERVICE')
-@click.option('--force', '-f', is_flag=True, help='Force reinstall even if already installed')
-@click.option(
-    '--rotate-credentials',
-    is_flag=True,
-    help='Generate new LiveKit API credentials (LiveKit only)',
-)
+from voice_mode.tools.whisper.models import WHISPER_MODEL_REGISTRY
+
+
+def _whisper_model_table() -> str:
+    """Model list for ``service install whisper --help`` (name, size, note)."""
+
+    lines = ["\b"]
+    for name, info in WHISPER_MODEL_REGISTRY.items():
+        size = info["size_mb"]
+        size_text = f"{size / 1000:.1f} GB" if size >= 1000 else f"{size} MB"
+        default = " (default)" if name == DEFAULT_WHISPER_MODEL else ""
+        lines.append(f"  {name:<16} {size_text:>8}  {info['languages']}, {info['description']}{default}")
+    return "\n".join(lines)
+
+
+def _install_scope_option(func):
+    return click.option(
+        '--scope',
+        type=click.Choice(['auto', 'user', 'machine'], case_sensitive=False),
+        default='auto',
+        show_default=True,
+        help='Windows only: auto = machine-wide when elevated (admin), otherwise per-user. '
+             'Ignored on macOS/Linux, which always install for the current user.',
+    )(func)
+
+
+def _report_install(label, result, extra_lines=()):
+    """Print the outcome of an install tool call (dict result or plain text)."""
+    if not isinstance(result, dict):
+        click.echo(result)
+        return
+    if result.get('success'):
+        if result.get('already_installed'):
+            click.echo(f"✅ {label} already installed")
+        else:
+            click.echo(f"✅ {label} installed successfully")
+        for key, text in (
+            ('install_path', 'Install path'),
+            ('version', 'Version'),
+            ('scope', 'Scope'),
+            ('model', 'Model'),
+            ('device', 'Device'),
+            ('entry_point', 'Entry point'),
+            ('service_url', 'Service URL'),
+            ('start_script', 'Start script'),
+        ):
+            if result.get(key):
+                click.echo(f"   {text}: {result[key]}")
+        if result.get('gpu_enabled'):
+            click.echo("   GPU acceleration: enabled")
+        if result.get('enabled'):
+            click.echo("   Auto-start: enabled")
+        for line in extra_lines:
+            click.echo(line)
+        if result.get('migration_message'):
+            click.echo(f"\n{result['migration_message']}")
+        if result.get('next_steps'):
+            click.echo("\nNext steps:")
+            for step in result['next_steps']:
+                click.echo(f"   - {step}")
+        if result.get('model_error'):
+            click.secho(f"⚠️  Model download failed: {result['model_error']}", fg='yellow')
+            click.echo("   Try: voicemode whisper model <name>")
+    else:
+        click.echo(f"❌ {label} installation failed: {result.get('error', 'Unknown error')}")
+        if result.get('details'):
+            click.echo(f"   Details: {result['details']}")
+        _echo_missing_dependencies(result)
+
+
+@service.group('install', invoke_without_command=True)
 @click.help_option('-h', '--help')
-def service_install(service_name, force, rotate_credentials):
+@click.pass_context
+def service_install(ctx):
     """Install a voice service.
 
     \b
-    Downloads and installs the service software:
-      whisper    whisper.cpp speech-to-text server
-      kokoro     Kokoro text-to-speech server
-      voicemode  Already installed (enables the HTTP server)
-      mlx-audio  Apple Silicon: unified Whisper STT + Kokoro TTS + Qwen3-TTS
+    Services (run `voicemode service install SERVICE --help` for its options):
+      whisper    whisper.cpp speech-to-text server (choose model, CPU/GPU)
+      kokoro     Kokoro text-to-speech server (choose CPU/GPU)
+      voicemode  HTTP MCP server for remote access (already installed)
+      mlx-audio  Apple Silicon: unified Whisper + Kokoro + Qwen3-TTS
       livekit    Secure local LiveKit SFU
 
     \b
     Examples:
-      voicemode service install whisper
-      voicemode service install kokoro --force
+      voicemode service install whisper --model large-v3-turbo
+      voicemode service install whisper --model small --no-gpu
+      voicemode service install kokoro --device gpu
       voicemode service install mlx-audio
-      voicemode service install livekit
     """
-    if service_name == 'whisper':
-        from voice_mode.tools.whisper.install import whisper_install
-        result = asyncio.run(getattr(whisper_install, 'fn', whisper_install)(force_reinstall=force))
-        # Handle dict result from tool
-        if isinstance(result, dict):
-            if result.get("success"):
-                click.echo(f"✅ Whisper installed successfully")
-                if result.get('install_path'):
-                    click.echo(f"   Install path: {result['install_path']}")
-            else:
-                click.echo(f"❌ Whisper installation failed: {result.get('error', 'Unknown error')}")
-                _echo_missing_dependencies(result)
-        else:
-            click.echo(result)
-    elif service_name == 'kokoro':
-        from voice_mode.tools.kokoro.install import kokoro_install
-        result = asyncio.run(getattr(kokoro_install, 'fn', kokoro_install)(force_reinstall=force))
-        if isinstance(result, dict):
-            if result.get("success"):
-                click.echo(f"✅ Kokoro installed successfully")
-                if result.get('install_path'):
-                    click.echo(f"   Install path: {result['install_path']}")
-            else:
-                click.echo(f"❌ Kokoro installation failed: {result.get('error', 'Unknown error')}")
-                _echo_missing_dependencies(result)
-        else:
-            click.echo(result)
-    elif service_name == 'voicemode':
+    if ctx.invoked_subcommand is None:
+        click.echo(ctx.get_help())
+
+
+@service_install.command('whisper', epilog="Available models:\n\n" + _whisper_model_table())
+@click.option('--model', '-m', default=DEFAULT_WHISPER_MODEL, show_default=True,
+              type=click.Choice(sorted(WHISPER_MODEL_REGISTRY)),
+              metavar='MODEL',
+              help='Whisper model to download and activate (list below). '
+                   'large-v3-turbo is the most accurate practical choice.')
+@click.option('--no-model', is_flag=True, help='Install the server only; do not download a model')
+@click.option('--use-gpu/--no-gpu', default=None,
+              help='GPU acceleration. Default: auto-detect (Windows: CUDA build when an NVIDIA GPU is '
+                   'present; macOS: Metal; Linux: CUDA). --no-gpu forces the CPU build.')
+@click.option('--install-dir', help='Directory to install whisper.cpp (macOS/Linux)')
+@click.option('--version', default='latest', show_default=True, help='whisper.cpp version (macOS/Linux build)')
+@click.option('--auto-enable/--no-auto-enable', default=None, help='Start the service at boot/login')
+@click.option('--skip-core-ml', is_flag=True, help='Apple Silicon: skip the Core ML model download')
+@click.option('--skip-deps', is_flag=True, help='Skip dependency checks (advanced)')
+@click.option('--force', '-f', is_flag=True, help='Force reinstall even if already installed')
+@_install_scope_option
+@click.help_option('-h', '--help')
+def service_install_whisper(model, no_model, use_gpu, install_dir, version, auto_enable,
+                            skip_core_ml, skip_deps, force, scope):
+    """Install the whisper.cpp speech-to-text (STT) server on port 2022."""
+    from voice_mode.tools.whisper.install import whisper_install
+    result = asyncio.run(getattr(whisper_install, 'fn', whisper_install)(
+        install_dir=install_dir, model=model, no_model=no_model, use_gpu=use_gpu,
+        force_reinstall=force, auto_enable=auto_enable, version=version,
+        skip_core_ml=skip_core_ml, skip_deps=skip_deps, scope=scope,
+    ))
+    _report_install("Whisper", result)
+
+
+@service_install.command('kokoro')
+@click.option('--device', type=click.Choice(['auto', 'cpu', 'gpu'], case_sensitive=False),
+              default='auto', show_default=True,
+              help='Windows: auto picks CUDA torch when an NVIDIA GPU is present, else CPU. '
+                   'A GPU build that cannot use the GPU falls back to CPU. macOS/Linux choose automatically.')
+@click.option('--install-dir', help='Directory to install Kokoro-FastAPI (macOS/Linux)')
+@click.option('--models-dir', help='Directory for Kokoro models (macOS/Linux)')
+@click.option('--port', default=8880, show_default=True, type=int, help='Port for the service (macOS/Linux)')
+@click.option('--no-models', is_flag=True, help='Skip downloading models')
+@click.option('--version', default='latest', show_default=True, help='Kokoro-FastAPI version')
+@click.option('--auto-enable/--no-auto-enable', default=None, help='Start the service at boot/login')
+@click.option('--skip-deps', is_flag=True, help='Skip dependency checks (advanced)')
+@click.option('--force', '-f', is_flag=True, help='Force reinstall even if already installed')
+@_install_scope_option
+@click.help_option('-h', '--help')
+def service_install_kokoro(device, install_dir, models_dir, port, no_models, version,
+                           auto_enable, skip_deps, force, scope):
+    """Install the Kokoro text-to-speech (TTS) server on port 8880."""
+    from voice_mode.tools.kokoro.install import kokoro_install
+    result = asyncio.run(getattr(kokoro_install, 'fn', kokoro_install)(
+        install_dir=install_dir, models_dir=models_dir, port=port,
+        install_models=not no_models, force_reinstall=force, auto_enable=auto_enable,
+        version=version, skip_deps=skip_deps, scope=scope, device=device.lower(),
+    ))
+    _report_install("Kokoro", result)
+
+
+@service_install.command('voicemode')
+@click.option('--auto-enable/--no-auto-enable', default=None, help='Start the service at boot/login')
+@_install_scope_option
+@click.help_option('-h', '--help')
+def service_install_voicemode(auto_enable, scope):
+    """Install the VoiceMode HTTP MCP server (port 8765) as a background service."""
+    if sys.platform == 'win32':
+        from voice_mode.utils.services.windows_install import install_voicemode_serve_windows
+        result = asyncio.run(install_voicemode_serve_windows(scope=scope, auto_enable=auto_enable))
+    else:
         from voice_mode.tools.service import install_voicemode_start_script
         result = asyncio.run(install_voicemode_start_script())
-        if result.get("success"):
-            click.echo(f"✅ VoiceMode start script installed successfully")
-            if result.get('start_script'):
-                click.echo(f"   Start script: {result['start_script']}")
-        else:
-            click.echo(f"❌ VoiceMode installation failed: {result.get('error', 'Unknown error')}")
-            _echo_missing_dependencies(result)
-    elif service_name == 'mlx-audio':
-        from voice_mode.tools.mlx_audio.install import mlx_audio_install
-        result = asyncio.run(mlx_audio_install(force_reinstall=force))
-        if isinstance(result, dict):
-            if result.get("success"):
-                click.echo("✅ mlx-audio installed successfully")
-                if result.get('entry_point'):
-                    click.echo(f"   Entry point: {result['entry_point']}")
-                if result.get('service_url'):
-                    click.echo(f"   Service URL: {result['service_url']}")
-                patch = result.get('patch') or {}
-                if patch.get('already_patched'):
-                    click.echo("   server.py: already patched (sentinel present)")
-                elif patch.get('success'):
-                    click.echo("   server.py: patched (backup at "
-                               f"{patch.get('backup_path', '?')})")
-            else:
-                click.echo(f"❌ mlx-audio installation failed: {result.get('error', 'Unknown error')}")
-                _echo_missing_dependencies(result)
-        else:
-            click.echo(result)
-    elif service_name == 'livekit':
-        livekit_install = importlib.import_module(
-            "voice_mode.tools.livekit.install"
-        ).livekit_install
-        install_fn = getattr(livekit_install, 'fn', livekit_install)
-        result = asyncio.run(install_fn(
-            force_reinstall=force,
-            rotate_credentials=rotate_credentials,
-        ))
-        if result.get("success"):
-            click.echo("✅ LiveKit installed successfully")
-            click.echo(f"   Binary: {result['binary']}")
-            click.echo(f"   Config: {result['config_path']}")
-        else:
-            click.echo(
-                f"❌ LiveKit installation failed: "
-                f"{result.get('error', 'Unknown error')}"
-            )
+    _report_install("VoiceMode service", result)
+
+
+@service_install.command('mlx-audio')
+@click.option('--port', default=None, type=int, help='Port for the service (default 8890)')
+@click.option('--bind-lan', is_flag=True, help='Listen on the LAN instead of loopback only')
+@click.option('--auto-enable/--no-auto-enable', default=None, help='Start the service at login')
+@click.option('--force', '-f', is_flag=True, help='Force reinstall even if already installed')
+@click.help_option('-h', '--help')
+def service_install_mlx_audio(port, bind_lan, auto_enable, force):
+    """Apple Silicon only: unified Whisper STT + Kokoro TTS + Qwen3-TTS (port 8890)."""
+    from voice_mode.tools.mlx_audio.install import mlx_audio_install
+    kwargs = dict(bind_lan=bind_lan, force_reinstall=force, auto_enable=auto_enable)
+    if port is not None:
+        kwargs['port'] = port
+    result = asyncio.run(mlx_audio_install(**kwargs))
+    patch = result.get('patch') or {} if isinstance(result, dict) else {}
+    extra = []
+    if patch.get('already_patched'):
+        extra.append("   server.py: already patched (sentinel present)")
+    elif patch.get('success'):
+        extra.append(f"   server.py: patched (backup at {patch.get('backup_path', '?')})")
+    _report_install("mlx-audio", result, extra)
+
+
+@service_install.command('livekit')
+@click.option('--force', '-f', is_flag=True, help='Force reinstall even if already installed')
+@click.option('--rotate-credentials', is_flag=True, help='Generate new LiveKit API credentials')
+@click.help_option('-h', '--help')
+def service_install_livekit(force, rotate_credentials):
+    """Install the secure local LiveKit SFU (port 7880)."""
+    livekit_install = importlib.import_module("voice_mode.tools.livekit.install").livekit_install
+    install_fn = getattr(livekit_install, 'fn', livekit_install)
+    result = asyncio.run(install_fn(force_reinstall=force, rotate_credentials=rotate_credentials))
+    if result.get("success"):
+        click.echo("✅ LiveKit installed successfully")
+        click.echo(f"   Binary: {result['binary']}")
+        click.echo(f"   Config: {result['config_path']}")
     else:
-        click.echo(f"❌ Unknown service: {service_name}")
+        click.echo(f"❌ LiveKit installation failed: {result.get('error', 'Unknown error')}")
 
 
 @service.command('uninstall')
@@ -565,7 +674,12 @@ def service_install(service_name, force, rotate_credentials):
 @click.help_option('-h', '--help')
 def service_uninstall(service_name, remove_models, remove_all_data):
     """Uninstall service software through the unified lifecycle."""
-    if service_name == 'whisper':
+    if sys.platform == 'win32' and service_name in ('whisper', 'kokoro'):
+        from voice_mode.utils.services.windows_install import uninstall_service_windows
+        result = uninstall_service_windows(
+            service_name, remove_models=remove_models, remove_all_data=remove_all_data
+        )
+    elif service_name == 'whisper':
         whisper_uninstall = importlib.import_module(
             "voice_mode.tools.whisper.uninstall"
         ).whisper_uninstall
@@ -1118,7 +1232,7 @@ def config_get(key):
     
     # Look for the key
     found = False
-    with open(env_file, 'r') as f:
+    with open(env_file, 'r', encoding='utf-8') as f:
         for line in f:
             line = line.strip()
             if line.startswith('#') or not line:
@@ -1703,7 +1817,7 @@ def _build_turns_from_cli(say_items, ask_items, script, default_voice):
             source = 'stdin'
         else:
             try:
-                with open(os.path.expanduser(script), 'r') as fh:
+                with open(os.path.expanduser(script), 'r', encoding='utf-8') as fh:
                     raw = fh.read()
             except OSError as e:
                 raise click.UsageError(f"--script: could not read {script}: {e}")
@@ -2396,7 +2510,7 @@ def completions(shell, install):
         install_path.parent.mkdir(parents=True, exist_ok=True)
         
         # Write completion script to file
-        install_path.write_text(completion_script)
+        install_path.write_text(completion_script, encoding="utf-8")
         click.echo(f"✅ Installed {shell} completions to {install_path}")
         
         # Provide shell-specific instructions

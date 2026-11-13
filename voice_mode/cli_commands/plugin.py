@@ -263,7 +263,83 @@ def hook_binary_runs(path: Path) -> bool:
     return result.returncode == 0
 
 
-def ensure_cached_hook_binary() -> Path | None:
+def find_cargo() -> str | None:
+    """cargo on PATH, or in rustup's default home (a fresh install is not on PATH yet)."""
+    found = shutil.which("cargo")
+    if found:
+        return found
+    home = Path(os.environ.get("CARGO_HOME", Path.home() / ".cargo"))
+    candidate = home / "bin" / ("cargo.exe" if sys.platform == "win32" else "cargo")
+    return str(candidate) if candidate.is_file() else None
+
+
+def install_rust() -> str | None:
+    """Install a user-level Rust toolchain with rustup (no admin needed)."""
+    try:
+        if sys.platform == "win32":
+            import tempfile
+            import urllib.request
+
+            arch = "aarch64" if "ARM" in os.environ.get("PROCESSOR_ARCHITECTURE", "").upper() else "x86_64"
+            url = f"https://static.rust-lang.org/rustup/dist/{arch}-pc-windows-msvc/rustup-init.exe"
+            with tempfile.TemporaryDirectory() as tmp:
+                init = Path(tmp) / "rustup-init.exe"
+                urllib.request.urlretrieve(url, init)
+                subprocess.run([str(init), "-y", "--profile", "minimal"], check=True)
+        else:
+            import tempfile
+            import urllib.request
+
+            with tempfile.TemporaryDirectory() as tmp:
+                script = Path(tmp) / "rustup.sh"
+                urllib.request.urlretrieve("https://sh.rustup.rs", script)
+                subprocess.run(["sh", str(script), "-y", "--profile", "minimal"], check=True)
+    except (OSError, subprocess.SubprocessError) as exc:
+        click.echo(f"warning: Rust install failed: {exc}")
+        return None
+    return find_cargo()
+
+
+def resolve_cargo(install_rust_choice: bool | None) -> str | None:
+    """Find cargo; offer to install Rust when it is missing.
+
+    ``install_rust_choice``: True installs without asking, False never does,
+    None asks when a person is at the terminal.
+    """
+    cargo = find_cargo()
+    if cargo or install_rust_choice is False:
+        return cargo
+    if install_rust_choice is None:
+        if not sys.stdin.isatty():
+            return None
+        click.echo("Rust (cargo) is needed to build the VoiceMode hook for this operating system.")
+        if sys.platform == "win32":
+            click.echo("It also needs the Visual Studio C++ Build Tools (the MSVC linker).")
+        if not click.confirm("Install Rust for your user account with rustup?", default=True):
+            return None
+    return install_rust()
+
+
+def build_hook_binary(cargo: str, dest: Path) -> bool:
+    """Build voicemode_hook for the current OS and copy it to ``dest``."""
+    # A build dir outside the package: installed wheels are often read-only.
+    target_dir = HOOK_CACHE_DIR / "target"
+    try:
+        subprocess.run(
+            [cargo, "build", "--release", "--manifest-path", str(CARGO_MANIFEST),
+             "--target-dir", str(target_dir)],
+            check=True,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    built = target_dir / "release" / HOOK_BIN_NAME
+    if not built.is_file():
+        return False
+    shutil.copy2(built, dest)
+    return True
+
+
+def ensure_cached_hook_binary(install_rust_choice: bool | None = None) -> Path | None:
     """Return a hook binary that runs on this machine, or None if there is none."""
     override = os.environ.get("VOICEMODE_HOOK_BINARY", "").strip()
     if override:
@@ -280,22 +356,9 @@ def ensure_cached_hook_binary() -> Path | None:
     cache_dir.mkdir(parents=True, exist_ok=True)
     if PACKAGED_BINARY.is_file() and hook_binary_runs(PACKAGED_BINARY):
         shutil.copy2(PACKAGED_BINARY, cache_bin)
-    elif sys.platform == "win32" and CARGO_MANIFEST.is_file() and shutil.which("cargo"):
-        try:
-            subprocess.run(
-                ["cargo", "build", "--release", "--manifest-path", str(CARGO_MANIFEST)],
-                check=True,
-            )
-        except subprocess.CalledProcessError:
-            return None
-        built = CARGO_MANIFEST.parent / "target" / "release" / HOOK_BIN_NAME
-        if not built.is_file():
-            return None
-        shutil.copy2(built, cache_bin)
-    elif BUILD_SH.is_file() and shutil.which("sh") and shutil.which("cargo"):
-        try:
-            subprocess.run(["sh", str(BUILD_SH), str(cache_bin)], check=True)
-        except subprocess.CalledProcessError:
+    elif CARGO_MANIFEST.is_file():
+        cargo = resolve_cargo(install_rust_choice)
+        if not cargo or not build_hook_binary(cargo, cache_bin):
             return None
     else:
         return None
@@ -332,7 +395,7 @@ def plugin_hooks_payload(client: str, dest: Path) -> dict:
                 "preToolUse": [
                     {
                         "command": command,
-                        "timeout": 2,
+                        "timeout": 10,
                         "matcher": "MCP:converse",
                     }
                 ]
@@ -346,7 +409,7 @@ def plugin_hooks_payload(client: str, dest: Path) -> dict:
                     {
                         "type": "command",
                         "command": command,
-                        "timeoutSec": 2,
+                        "timeoutSec": 10,
                     }
                 ]
             },
@@ -372,7 +435,7 @@ def plugin_hooks_payload(client: str, dest: Path) -> dict:
                         {
                             "type": "command",
                             "command": command,
-                            "timeout": 2,
+                            "timeout": 10,
                         }
                     ],
                 }
@@ -566,7 +629,7 @@ def nested_pretool_entry(command: str) -> dict:
             {
                 "type": "command",
                 "command": command,
-                "timeout": 2,
+                "timeout": 10,
             }
         ],
     }
@@ -678,7 +741,7 @@ def cursor_user_hook_entry(dest: Path) -> dict:
     binary = dest / "bin" / HOOK_BIN_NAME
     return {
         "command": f'"{binary}" --client=cursor',
-        "timeout": 2,
+        "timeout": 10,
         "matcher": "MCP:converse",
     }
 
@@ -713,7 +776,7 @@ def copilot_user_hook_payload(dest: Path) -> dict:
                     "type": "command",
                     "bash": quoted,
                     "powershell": f"& {quoted}",
-                    "timeoutSec": 2,
+                    "timeoutSec": 10,
                 }
             ]
         },
@@ -757,7 +820,7 @@ def remove_copilot_user_entries(output: Path | None) -> None:
     mcp_path = copilot_user_mcp_path(output)
     try:
         if mcp_path.is_file():
-            data = json.loads(mcp_path.read_text())
+            data = json.loads(mcp_path.read_text(encoding="utf-8"))
             servers = data.get("mcpServers")
             if isinstance(servers, dict) and "voicemode" in servers:
                 del servers["voicemode"]
@@ -1032,20 +1095,29 @@ def plugin() -> None:
     is_flag=True,
     help="Skip confirmation before writing user-level hooks and MCP files.",
 )
+@click.option(
+    "--install-rust/--no-install-rust",
+    default=None,
+    help="Install Rust (rustup, user-level) when the hook must be built and cargo "
+    "is missing. Default: ask when run in a terminal.",
+)
 @click.help_option("-h", "--help")
 def plugin_install(
-    client: str, converse_hooks: bool, output: Path | None, yes: bool
+    client: str, converse_hooks: bool, output: Path | None, yes: bool,
+    install_rust: bool | None,
 ) -> None:
     clients = parse_clients(client)
     if output is None and not yes:
         confirm_live_install(clients, converse_hooks)
     # The guard needs only the voicemode command, not the platform hook binary.
     stop_guard = converse_hooks
-    binary = ensure_cached_hook_binary() if converse_hooks else None
+    binary = ensure_cached_hook_binary(install_rust) if converse_hooks else None
     if converse_hooks and binary is None:
         click.echo(
             "warning: the converse hook cannot run on this machine (no matching "
-            "binary and no cargo to build it). Installing MCP and skills without it."
+            "binary, and Rust/cargo is missing or the build failed). Re-run with "
+            "--install-rust to set Rust up, or install it from https://rustup.rs. "
+            "Installing MCP and skills without the converse hook."
         )
         converse_hooks = False
     written: list[tuple[str, Path]] = []

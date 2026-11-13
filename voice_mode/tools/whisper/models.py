@@ -210,7 +210,7 @@ def set_active_model(model_name: str) -> None:
     multiline_quote = None
 
     if config_path.exists():
-        with open(config_path, 'r') as f:
+        with open(config_path, 'r', encoding='utf-8') as f:
             for line in f:
                 stripped = line.strip()
 
@@ -252,7 +252,7 @@ def set_active_model(model_name: str) -> None:
         lines.append(f"VOICEMODE_WHISPER_MODEL={model_name}\n")
 
     # Write the updated configuration
-    with open(config_path, 'w') as f:
+    with open(config_path, 'w', encoding='utf-8') as f:
         f.writelines(lines)
 
 

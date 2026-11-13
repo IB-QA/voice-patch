@@ -12,7 +12,7 @@ def quickstart() -> str:
     """Basic usage examples and getting started guide."""
     doc_path = DOCS_DIR / "quickstart.md"
     if doc_path.exists():
-        return doc_path.read_text()
+            return doc_path.read_text(encoding="utf-8")
     return "Documentation file not found."
 
 
@@ -21,7 +21,7 @@ def parameters() -> str:
     """Complete parameter reference with descriptions."""
     doc_path = DOCS_DIR / "parameters.md"
     if doc_path.exists():
-        return doc_path.read_text()
+            return doc_path.read_text(encoding="utf-8")
     return "Documentation file not found."
 
 
@@ -30,7 +30,7 @@ def languages() -> str:
     """Non-English language support guide."""
     doc_path = DOCS_DIR / "languages.md"
     if doc_path.exists():
-        return doc_path.read_text()
+            return doc_path.read_text(encoding="utf-8")
     return "Documentation file not found."
 
 
@@ -39,7 +39,7 @@ def patterns() -> str:
     """Best practices and conversation patterns."""
     doc_path = DOCS_DIR / "patterns.md"
     if doc_path.exists():
-        return doc_path.read_text()
+            return doc_path.read_text(encoding="utf-8")
     return "Documentation file not found."
 
 
@@ -48,5 +48,5 @@ def troubleshooting() -> str:
     """Audio, VAD, and connectivity troubleshooting."""
     doc_path = DOCS_DIR / "troubleshooting.md"
     if doc_path.exists():
-        return doc_path.read_text()
+            return doc_path.read_text(encoding="utf-8")
     return "Documentation file not found."

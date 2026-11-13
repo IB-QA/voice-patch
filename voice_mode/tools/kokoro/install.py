@@ -55,7 +55,7 @@ async def update_kokoro_service_files(
 
         # Write service file
         service_path.parent.mkdir(parents=True, exist_ok=True)
-        service_path.write_text(content)
+        service_path.write_text(content, encoding="utf-8")
 
         result["success"] = True
         result["updated"] = True
@@ -100,7 +100,9 @@ async def kokoro_install(
     force_reinstall: Union[bool, str] = False,
     auto_enable: Optional[Union[bool, str]] = None,
     version: str = "latest",
-    skip_deps: Union[bool, str] = False
+    skip_deps: Union[bool, str] = False,
+    scope: Optional[str] = None,
+    device: str = "auto"
 ) -> Dict[str, Any]:
     """
     Install and setup ai-cora/Kokoro-FastAPI TTS service using the simple 3-step approach.
@@ -130,6 +132,18 @@ async def kokoro_install(
         Installation status with service configuration details
     """
     try:
+        if platform.system() == "Windows":
+            from voice_mode.utils.services.windows_install import install_kokoro_windows, to_bool
+
+            return await install_kokoro_windows(
+                scope=scope,
+                version=version,
+                force_reinstall=to_bool(force_reinstall),
+                auto_enable=None if auto_enable is None else to_bool(auto_enable),
+                skip_deps=to_bool(skip_deps),
+                device=device,
+            )
+
         # Convert port to integer if provided as string
         if isinstance(port, str):
             try:
@@ -241,12 +255,12 @@ async def kokoro_install(
                     # If a custom port is requested, create custom start script
                     if port != 8880 and os.path.exists(start_script_path):
                         logger.info(f"Creating custom start script for port {port}")
-                        with open(start_script_path, 'r') as f:
+                        with open(start_script_path, 'r', encoding='utf-8') as f:
                             script_content = f.read()
                         modified_script = script_content.replace("--port 8880", f"--port {port}")
                         custom_script_name = f"start-custom-{port}.sh"
                         custom_script_path = os.path.join(install_dir, custom_script_name)
-                        with open(custom_script_path, 'w') as f:
+                        with open(custom_script_path, 'w', encoding='utf-8') as f:
                             f.write(modified_script)
                         os.chmod(custom_script_path, 0o755)
                         start_script_path = custom_script_path
@@ -305,7 +319,7 @@ async def kokoro_install(
                 check=True
             )
             # Add UV to PATH for this session
-            os.environ["PATH"] = f"{os.path.expanduser('~/.cargo/bin')}:{os.environ['PATH']}"
+            os.environ["PATH"] = f"{os.path.expanduser('~/.cargo/bin')}{os.pathsep}{os.environ['PATH']}"
         
         # Remove existing installation if force_reinstall
         if force_reinstall and os.path.exists(install_dir):
@@ -368,8 +382,8 @@ async def kokoro_install(
         
         # If a custom port is requested, we need to modify the start script
         if port != 8880:
-            logger.info(f"Creating custom start script for port {port}")
-            with open(start_script_path, 'r') as f:
+            logger.info(f"Creating custom start script for port {port}")
+            with open(start_script_path, 'r', encoding='utf-8') as f:
                 script_content = f.read()
             
             # Replace the port in the script
@@ -377,8 +391,8 @@ async def kokoro_install(
             
             # Create a custom start script
             custom_script_name = f"start-custom-{port}.sh"
-            custom_script_path = os.path.join(install_dir, custom_script_name)
-            with open(custom_script_path, 'w') as f:
+            custom_script_path = os.path.join(install_dir, custom_script_name)
+            with open(custom_script_path, 'w', encoding='utf-8') as f:
                 f.write(modified_script)
             os.chmod(custom_script_path, 0o755)
             start_script_path = custom_script_path

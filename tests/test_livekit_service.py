@@ -302,7 +302,12 @@ def test_cli_exposes_unified_livekit_lifecycle():
     )
     assert install_help.exit_code == 0
     assert "livekit" in install_help.output
-    assert "--rotate-credentials" in install_help.output
+    livekit_help = runner.invoke(
+        voice_mode_main_cli,
+        ["service", "install", "livekit", "--help"],
+    )
+    assert livekit_help.exit_code == 0
+    assert "--rotate-credentials" in livekit_help.output
     start_help = runner.invoke(
         voice_mode_main_cli,
         ["service", "start", "--help"],

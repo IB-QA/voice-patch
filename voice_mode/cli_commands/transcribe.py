@@ -92,7 +92,7 @@ def audio_command(
         
         # Write output
         if output:
-            Path(output).write_text(content)
+            Path(output).write_text(content, encoding="utf-8")
             click.echo(f"Transcription saved to {output}")
         else:
             click.echo(content)

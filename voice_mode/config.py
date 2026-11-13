@@ -409,7 +409,7 @@ VOICEMODE_VOICES=af_sky
 # OpenAI API key for cloud TTS/STT
 # OPENAI_API_KEY=your-key-here
 '''
-        with open(default_path, 'w') as f:
+        with open(default_path, 'w', encoding='utf-8') as f:
             f.write(default_config)
         os.chmod(default_path, 0o600)  # Secure permissions
         config_files = [default_path]
@@ -417,7 +417,7 @@ VOICEMODE_VOICES=af_sky
     # Load configuration from all files in order (global first, project-specific last)
     for config_path in config_files:
         if config_path.exists():
-            with open(config_path, 'r') as f:
+            with open(config_path, 'r', encoding='utf-8') as f:
                 lines = f.readlines()
                 i = 0
                 while i < len(lines):
@@ -1052,7 +1052,7 @@ def setup_logging() -> logging.Logger:
         debug_log_file = debug_log_dir / f"voicemode_debug_{datetime.now().strftime('%Y-%m-%d')}.log"
         
         # Set up file handler for debug logs
-        debug_handler = logging.FileHandler(debug_log_file, mode='a')
+        debug_handler = logging.FileHandler(debug_log_file, mode='a', encoding='utf-8')
         debug_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
         
         # Enable debug logging for httpx and openai
@@ -1070,8 +1070,9 @@ def setup_logging() -> logging.Logger:
         
         # Legacy trace file support
         trace_file = Path.home() / ".voicemode" / "logs" / "trace" / "voicemode_trace.log"
+        trace_file.parent.mkdir(parents=True, exist_ok=True)
         trace_logger = logging.getLogger("voicemode.trace")
-        trace_handler = logging.FileHandler(trace_file, mode='a')
+        trace_handler = logging.FileHandler(trace_file, mode='a', encoding='utf-8')
         trace_handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
         trace_logger.addHandler(trace_handler)
         trace_logger.setLevel(logging.DEBUG)
@@ -1090,8 +1091,9 @@ def setup_logging() -> logging.Logger:
     
     # Also log to file in debug mode
     if DEBUG:
+        DEBUG_DIR.mkdir(parents=True, exist_ok=True)
         debug_log_file = DEBUG_DIR / "voicemode_debug.log"
-        file_handler = logging.FileHandler(debug_log_file, mode='a')
+        file_handler = logging.FileHandler(debug_log_file, mode='a', encoding='utf-8')
         file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
         logger.addHandler(file_handler)
         logger.info(f"Debug logging to file: {debug_log_file}")

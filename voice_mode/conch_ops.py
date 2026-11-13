@@ -339,7 +339,7 @@ def force_clear_lock() -> Optional[dict]:
     payload = None
     lock = Conch.LOCK_FILE
     try:
-        payload = json.loads(lock.read_text())
+        payload = json.loads(lock.read_text(encoding="utf-8"))
     except (FileNotFoundError, json.JSONDecodeError, OSError, ValueError):
         payload = None
     try:

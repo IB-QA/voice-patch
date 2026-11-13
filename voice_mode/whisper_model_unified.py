@@ -6,6 +6,16 @@ import json
 from pathlib import Path
 
 
+def _whisper_server_running() -> bool:
+    """True when a whisper-server process exists (pgrep does not exist on Windows)."""
+    import psutil
+
+    for proc in psutil.process_iter(["name"]):
+        if "whisper-server" in (proc.info.get("name") or "").lower():
+            return True
+    return False
+
+
 def model_name_completion(ctx, args, incomplete):
     """Provide shell completion for model names."""
     from voice_mode.tools.whisper.models import WHISPER_MODEL_REGISTRY
@@ -169,8 +179,8 @@ def whisper_model_unified(model_name, all, no_install, no_activate, no_restart):
             # Check if whisper service is running and restart if needed
             if not no_restart:
                 try:
-                    result = subprocess.run(['pgrep', '-f', 'whisper-server'], capture_output=True)
-                    if result.returncode == 0:
+                    result = _whisper_server_running()
+                    if result:
                         # Service is running, restart it
                         click.echo(f"\nRestarting whisper service...")
 
@@ -189,8 +199,8 @@ def whisper_model_unified(model_name, all, no_install, no_activate, no_restart):
             else:
                 # no_restart flag was used
                 try:
-                    result = subprocess.run(['pgrep', '-f', 'whisper-server'], capture_output=True)
-                    if result.returncode == 0:
+                    result = _whisper_server_running()
+                    if result:
                         click.echo(f"\n⚠️  Please restart the whisper service for changes to take effect:")
                         click.echo(f"  {click.style('voicemode whisper restart', fg='yellow', bold=True)}")
                         click.echo(f"  (auto-restart skipped due to --no-restart flag)")
@@ -221,8 +231,8 @@ def whisper_model_unified(model_name, all, no_install, no_activate, no_restart):
 
     # Check service status
     try:
-        result = subprocess.run(['pgrep', '-f', 'whisper-server'], capture_output=True)
-        if result.returncode == 0:
+        result = _whisper_server_running()
+        if result:
             click.echo(f"\nWhisper service status: {click.style('Running', fg='green')}")
     except:
         pass

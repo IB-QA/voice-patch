@@ -218,7 +218,7 @@ class Conch:
         safe to take — stale clearance unlinks dead/expired holds separately).
         """
         try:
-            data = json.loads(cls.LOCK_FILE.read_text())
+            data = json.loads(cls.LOCK_FILE.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError, ValueError):
             return False
         if not data.get("held"):
@@ -277,7 +277,7 @@ class Conch:
             "held": True,
             "expires": expires,
         }
-        cls.LOCK_FILE.write_text(json.dumps(data, indent=2))
+        cls.LOCK_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
     def acquire(
         self,
@@ -303,7 +303,7 @@ class Conch:
         self.LOCK_FILE.parent.mkdir(parents=True, exist_ok=True)
 
         self._acquire_time = datetime.now()
-        self.LOCK_FILE.write_text(json.dumps(self._payload(held=False), indent=2))
+        self.LOCK_FILE.write_text(json.dumps(self._payload(held=False), indent=2), encoding="utf-8")
         self._acquired = True
         return True
 
@@ -405,7 +405,7 @@ class Conch:
             return
 
         try:
-            data = json.loads(self.LOCK_FILE.read_text())
+            data = json.loads(self.LOCK_FILE.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
             return
 
@@ -620,7 +620,7 @@ class Conch:
             return False
 
         try:
-            data = json.loads(cls.LOCK_FILE.read_text())
+            data = json.loads(cls.LOCK_FILE.read_text(encoding="utf-8"))
             pid = data.get("pid")
 
             if pid is None:
@@ -661,7 +661,7 @@ class Conch:
             return None
 
         try:
-            return json.loads(cls.LOCK_FILE.read_text())
+            return json.loads(cls.LOCK_FILE.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
             return None
 

@@ -9,72 +9,48 @@ from pathlib import Path
 
 import click
 
-from . import __version__
+from . import __version__, ui
 from .checker import DependencyChecker
 from .hardware import HardwareInfo
 from .clients import detect_installed_clients
 from .installer import (
     PackageInstaller,
     attempt_optional_simpleaudio,
+    is_windows_admin,
     verify_silence_detection,
+    voicemode_command,
 )
 from .logger import InstallLogger
 from .system import detect_platform, get_system_info, check_command_exists, check_homebrew_installed
 
 
-LOGO = """
-    ╔════════════════════════════════════════════╗
-    ║                                            ║
-    ║   ██╗   ██╗ ██████╗ ██╗ ██████╗███████╗    ║
-    ║   ██║   ██║██╔═══██╗██║██╔════╝██╔════╝    ║
-    ║   ██║   ██║██║   ██║██║██║     █████╗      ║
-    ║   ╚██╗ ██╔╝██║   ██║██║██║     ██╔══╝      ║
-    ║    ╚████╔╝ ╚██████╔╝██║╚██████╗███████╗    ║
-    ║     ╚═══╝   ╚═════╝ ╚═╝ ╚═════╝╚══════╝    ║
-    ║                                            ║
-    ║   ███╗   ███╗ ██████╗ ██████╗ ███████╗     ║
-    ║   ████╗ ████║██╔═══██╗██╔══██╗██╔════╝     ║
-    ║   ██╔████╔██║██║   ██║██║  ██║█████╗       ║
-    ║   ██║╚██╔╝██║██║   ██║██║  ██║██╔══╝       ║
-    ║   ██║ ╚═╝ ██║╚██████╔╝██████╔╝███████╗     ║
-    ║   ╚═╝     ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝     ║
-    ║                                            ║
-    ║            VoiceMode Installer             ║
-    ║                                            ║
-    ╚════════════════════════════════════════════╝
-"""
-
-
 def print_logo():
-    """Display the VoiceMode logo in Claude Code orange."""
-    # Use ANSI 256-color code 208 (dark orange) which matches Claude Code orange (RGB 208, 128, 0)
-    # This works on xterm-256color and other 256-color terminals
-    click.echo('\033[38;5;208m' + '\033[1m' + LOGO + '\033[0m')
+    """Display the Agent Voice Connect banner."""
+    ui.print_banner(__version__)
 
 
 def print_step(message: str):
     """Print a step message."""
-    click.echo(click.style(f"🔧 {message}", fg='blue'))
+    ui.message("run", message)
 
 
 def print_success(message: str):
     """Print a success message."""
-    click.echo(click.style(f"✅ {message}", fg='green'))
+    ui.message("ok", message)
 
 
 def print_warning(message: str):
-    """Print a warning message in Claude Code orange."""
-    # Use ANSI 256-color code 208 (dark orange)
-    click.echo('\033[38;5;208m' + f"⚠️  {message}" + '\033[0m')
+    """Print a warning message."""
+    ui.message("warn", message)
 
 
 def print_error(message: str):
     """Print an error message."""
-    click.echo(click.style(f"❌ {message}", fg='red'))
+    ui.message("fail", message)
 
 
 def choose_clients(found: list[str]) -> list[str]:
-    """Let the person pick which detected coding tools get VoiceMode.
+    """Let the person pick which detected coding agents get voice hooks.
 
     Accepts numbers ("1,3"), tool names, ``all`` or ``none``. Pressing Enter
     means none. Without an interactive terminal nothing is changed.
@@ -84,9 +60,9 @@ def choose_clients(found: list[str]) -> list[str]:
         return []
 
     click.echo("")
-    click.echo("Which of these should VoiceMode be added to?")
+    click.echo(ui.paint("Which agents should get voice?", bold=True))
     for number, name in enumerate(found, start=1):
-        click.echo(f"  {number}. {name}")
+        click.echo(f"  {ui.paint(f'{number})', fg='cyan')} {ui.client_label(name)}")
     click.echo("Type numbers separated by commas (for example 1,3), 'all', or 'none'.")
     answer = click.prompt("Your choice", default="none", show_default=True).strip().lower()
 
@@ -126,15 +102,14 @@ def offer_client_hooks(dry_run: bool, non_interactive: bool, clients: str | None
     else:
         found = detect_installed_clients(Path.home())
     if not found:
-        print_warning("No Cursor, Claude, Copilot, Codex, Antigravity, or Devin directory was found.")
+        print_warning("No supported coding agent was found (" + ", ".join(ui.SUPPORTED_AGENTS) + ").")
         click.echo("After one of those is installed, run:")
         click.echo("  voicemode plugin install --client=<name> --converse-hooks")
         return
 
-    click.echo("Coding tools found: " + ", ".join(found))
-    click.echo("Claude Code and Claude Desktop share the Claude install.")
+    click.echo("Agents found: " + ", ".join(ui.client_label(n) for n in found))
     if dry_run:
-        print_step("[DRY RUN] Would offer VoiceMode hooks for: " + ", ".join(found))
+        print_step("[DRY RUN] Would offer voice hooks for: " + ", ".join(found))
         return
 
     if clients is None:
@@ -319,9 +294,10 @@ Examples:
 @click.option('-c', '--clients', default=None, help='Coding tools to set up, comma separated (or "none"). Default: every tool found')
 @click.version_option(__version__, '-V', '--version')
 def main(dry_run, voice_mode_version, skip_services, non_interactive, model, clients):
-    """VoiceMode Installer - Install VoiceMode and its system dependencies.
+    """Agent Voice Connect installer - set up voice for your coding agents.
 
-    This installer will:
+    Works with Cursor, Claude Code, GitHub Copilot, Antigravity, Codex,
+    ChatGPT and Devin. This installer will:
 
       1. Detect your operating system and architecture
 
@@ -337,6 +313,8 @@ def main(dry_run, voice_mode_version, skip_services, non_interactive, model, cli
 
       7. Verify the installation
     """
+    ui.configure_streams()
+
     # Detect non-interactive environment (no TTY)
     if not sys.stdin.isatty() and not non_interactive and not dry_run:
         click.echo("Error: Running in non-interactive environment without --yes flag", err=True)
@@ -349,31 +327,41 @@ def main(dry_run, voice_mode_version, skip_services, non_interactive, model, cli
 
     try:
         # Clear screen and show logo
-        if not dry_run:
+        if not dry_run and ui.use_color():
             click.clear()
         print_logo()
         click.echo()
 
         if dry_run:
-            click.echo(click.style("DRY RUN MODE - No changes will be made", fg='yellow', bold=True))
+            click.echo(ui.paint("DRY RUN MODE - No changes will be made", fg='yellow', bold=True))
             click.echo()
 
         # Detect platform
+        ui.section("System")
         print_step("Detecting platform...")
         platform_info = detect_platform()
         system_info = get_system_info()
 
         logger.log_start(system_info)
 
-        click.echo(f"Detected: {platform_info.os_name} ({platform_info.architecture})")
+        rows = [("Platform", f"{platform_info.os_name} ({platform_info.architecture})")]
+        try:
+            _hw = HardwareInfo(platform_info)
+            rows.append(("CPU cores", str(_hw.cpu_count)))
+            rows.append(("Memory", f"{_hw.total_ram_gb:.0f} GB"))
+        except Exception:
+            pass
+        if platform_info.os_type == 'windows':
+            rows.append(("Scope", "machine-wide (administrator)" if is_windows_admin() else "current user"))
+        ui.print_table(rows)
         if platform_info.is_wsl:
             print_warning("WSL detected - additional audio configuration may be needed")
         if platform_info.os_type == 'windows':
-            # This machine is a client. The speech models stay on the host.
-            skip_services = True
-            print_step("Windows client install")
-            click.echo("Microphone, speakers, and silence detection are installed here.")
-            click.echo("Whisper and Kokoro are not installed on Windows.")
+            click.echo("Microphone, speakers, silence detection and local Whisper/Kokoro services are installed.")
+            if is_windows_admin():
+                click.echo("Running as administrator: services are installed machine-wide.")
+            else:
+                click.echo("Running without administrator rights: services are installed for your user only.")
         click.echo()
 
         # Ensure Homebrew is installed on macOS (before checking dependencies)
@@ -386,7 +374,7 @@ def main(dry_run, voice_mode_version, skip_services, non_interactive, model, cli
             installed_version = get_installed_version()
             latest_version = get_latest_version()
 
-            click.echo(click.style("✓ VoiceMode is currently installed", fg='green'))
+            click.echo(f"{ui.status_mark('ok')} Agent Voice Connect is currently installed")
 
             if installed_version:
                 click.echo(f"  Installed version: {installed_version}")
@@ -406,7 +394,7 @@ def main(dry_run, voice_mode_version, skip_services, non_interactive, model, cli
                         sys.exit(0)
                 elif installed_version and latest_version and installed_version == latest_version:
                     click.echo()
-                    click.echo(click.style("✓ VoiceMode is up-to-date", fg='green'))
+                    click.echo(f"{ui.status_mark('ok')} Already up to date")
                     if non_interactive:
                         click.echo("Reinstalling...")
                     elif not click.confirm("Reinstall anyway?", default=False):
@@ -429,6 +417,7 @@ def main(dry_run, voice_mode_version, skip_services, non_interactive, model, cli
             click.echo()
 
         # Check dependencies
+        ui.section("Step 1/3  System dependencies")
         print_step("Checking system dependencies...")
         checker = DependencyChecker(platform_info)
         core_deps = checker.check_core_dependencies()
@@ -440,12 +429,10 @@ def main(dry_run, voice_mode_version, skip_services, non_interactive, model, cli
 
         # Display summary
         click.echo()
-        click.echo("System Dependencies:")
         for pkg in core_deps:
             if pkg.required:
-                status = "✓" if pkg.installed else "✗"
-                color = "green" if pkg.installed else "red"
-                click.echo(f"  {click.style(status, fg=color)} {pkg.name} - {pkg.description}")
+                mark = ui.status_mark("ok" if pkg.installed else "fail")
+                click.echo(f"  {mark} {pkg.name} - {pkg.description}")
 
         click.echo()
 
@@ -486,7 +473,8 @@ def main(dry_run, voice_mode_version, skip_services, non_interactive, model, cli
         click.echo()
 
         # Install VoiceMode
-        print_step("Installing VoiceMode...")
+        ui.section("Step 2/3  Install")
+        print_step("Installing Agent Voice Connect (voice-mode)...")
         installer = PackageInstaller(platform_info, dry_run=dry_run, non_interactive=non_interactive)
 
         if installer.install_voicemode(version=voice_mode_version):
@@ -558,9 +546,7 @@ def main(dry_run, voice_mode_version, skip_services, non_interactive, model, cli
         # Hardware recommendations for services
         if not skip_services and not dry_run:
             click.echo()
-            click.echo("━" * 70)
-            click.echo(click.style("Local Voice Services", fg='blue', bold=True))
-            click.echo("━" * 70)
+            ui.section("Step 3/3  Local voice services (optional)")
             click.echo()
 
             hardware = HardwareInfo(platform_info)
@@ -572,11 +558,20 @@ def main(dry_run, voice_mode_version, skip_services, non_interactive, model, cli
             if hardware.should_recommend_local_services():
                 if non_interactive or click.confirm("Install local voice services now?", default=True):
                     model_flag = f" --model {model}" if model != 'base' else ''
+                    vm = voicemode_command()
+                    scope_args = []
+                    if platform_info.os_type == 'windows':
+                        scope = 'machine' if is_windows_admin() else 'user'
+                        scope_args = ['--scope', scope]
+                        if scope == 'machine':
+                            click.echo("Administrator detected: services install machine-wide and start at boot.")
+                        else:
+                            click.echo("No administrator rights: services install for your user and start at logon.")
 
                     # Install Whisper
                     click.echo()
                     print_step(f"Installing Whisper STT service (model: {model})...")
-                    whisper_cmd = ['voicemode', 'service', 'install', 'whisper']
+                    whisper_cmd = [vm, 'service', 'install', 'whisper'] + scope_args
                     if model != 'base':
                         whisper_cmd.extend(['--model', model])
                     try:
@@ -597,7 +592,7 @@ def main(dry_run, voice_mode_version, skip_services, non_interactive, model, cli
                     # Install Kokoro
                     click.echo()
                     print_step("Installing Kokoro TTS service...")
-                    kokoro_cmd = ['voicemode', 'service', 'install', 'kokoro']
+                    kokoro_cmd = [vm, 'service', 'install', 'kokoro'] + scope_args
                     try:
                         result = subprocess.run(kokoro_cmd, check=True)
                         if result.returncode == 0:
@@ -621,9 +616,9 @@ def main(dry_run, voice_mode_version, skip_services, non_interactive, model, cli
 
         # Completion summary
         click.echo()
-        click.echo("━" * 70)
-        click.echo(click.style("Installation Complete!", fg='green', bold=True))
-        click.echo("━" * 70)
+        ui.print_rule()
+        click.echo(f"{ui.status_mark('ok')} {ui.paint('Installation complete', fg='green', bold=True)}")
+        ui.print_rule()
         click.echo()
 
         logger.log_complete(success=True, voicemode_installed=True)
@@ -631,19 +626,16 @@ def main(dry_run, voice_mode_version, skip_services, non_interactive, model, cli
         if dry_run:
             click.echo("DRY RUN: No changes were made to your system")
         else:
-            click.echo("VoiceMode has been successfully installed!")
+            click.echo("Agent Voice Connect is installed.")
             click.echo()
             click.echo("Next steps:")
             click.echo("  1. Restart your terminal (or source your shell rc file)")
             click.echo("  2. Run: voicemode --help")
-            if platform_info.os_type == 'windows':
-                click.echo("  3. Point this client at the machine hosting the models:")
-                click.echo("     VOICEMODE_STT_BASE_URLS=http://<host>:<whisper-port>/v1")
-                click.echo("     VOICEMODE_TTS_BASE_URLS=http://<host>:<kokoro-port>/v1")
-                click.echo("     Use the ports that host is actually listening on.")
-            else:
-                click.echo("  3. Configure with Claude Code:")
-                click.echo("     claude mcp add --scope user voicemode -- uvx voice-mode")
+            click.echo("  3. Check local services: voicemode status")
+            click.echo("  4. Connect your agents (" + ", ".join(ui.SUPPORTED_AGENTS) + "):")
+            click.echo("     voicemode plugin install --client=all --converse-hooks")
+            click.echo("  5. MCP-capable clients can launch this executable directly:")
+            click.echo(f'     "{voicemode_command()}"')
             click.echo()
             click.echo(f"Installation log: {logger.get_log_path()}")
 

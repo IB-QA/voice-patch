@@ -64,7 +64,7 @@ def detect_platform() -> str:
     elif system == "linux":
         # Check for WSL
         try:
-            with open("/proc/version", "r") as f:
+            with open("/proc/version", "r", encoding="utf-8") as f:
                 proc_version = f.read().lower()
                 if "microsoft" in proc_version or "wsl" in proc_version:
                     # Detect distro within WSL
