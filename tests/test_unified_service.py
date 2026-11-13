@@ -66,6 +66,7 @@ class TestUnifiedServiceTool:
             result = await service("kokoro", "start")
             assert "already running" in result
     
+    @pytest.mark.skipif(sys.platform == 'win32', reason='mocks the POSIX launcher; Windows is covered by test_windows_services.py')
     @pytest.mark.asyncio
     async def test_start_whisper_service(self):
         """Test starting whisper service"""
@@ -89,6 +90,7 @@ class TestUnifiedServiceTool:
             assert "started successfully" in result
             assert "PID: 12345" in result
     
+    @pytest.mark.skipif(sys.platform == 'win32', reason='mocks the POSIX launcher; Windows is covered by test_windows_services.py')
     @pytest.mark.asyncio
     async def test_start_whisper_missing_binary(self):
         """Test starting whisper when binary is missing"""

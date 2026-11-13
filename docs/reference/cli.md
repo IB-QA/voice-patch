@@ -228,6 +228,41 @@ Commands:
 
 ## Service Management
 
+### service install
+`voicemode service install` is a group with one subcommand per service. Use
+`voicemode service install --help` to list services and
+`voicemode service install SERVICE --help` for that service's options.
+
+```bash
+voicemode service install whisper [--model MODEL | --no-model] [--use-gpu | --no-gpu]
+    [--install-dir DIR] [--version VER] [--auto-enable] [--skip-core-ml]
+    [--skip-deps] [--force] [--scope auto|user|machine]
+voicemode service install kokoro [--device auto|cpu|gpu]   # --device: Windows
+    [--install-dir DIR] [--models-dir DIR] [--port PORT] [--no-models]
+    [--version VER] [--auto-enable] [--skip-deps] [--force] [--scope auto|user|machine]
+voicemode service install voicemode [--auto-enable] [--scope auto|user|machine]
+voicemode service install mlx-audio [--port PORT] [--bind-lan] [--auto-enable] [--force]
+voicemode service install livekit [--force] [--rotate-credentials]
+```
+
+`--model` accepts tiny (39 MB), tiny.en, base (142 MB, default), base.en, small (466 MB),
+small.en, medium (1.5 GB), medium.en, large-v2 (2.9 GB), large-v3 (3.1 GB) and
+large-v3-turbo (1.6 GB, recommended). The chosen model is activated
+(`VOICEMODE_WHISPER_MODEL`). On Windows with an NVIDIA GPU, Whisper uses the CUDA build and
+Kokoro uses CUDA torch, falling back to CPU. See
+[Windows local services](../guides/windows-local-services.md) and
+[ADR 0005](../architecture/adr/0005-unified-service-install-cli-and-gpu-variants.md).
+
+### plugin install
+```bash
+voicemode plugin install --client=cursor|claude|copilot|antigravity|codex|chatgpt|devin
+    [--install-rust | --no-install-rust]
+```
+Detects `cargo` (on `PATH` or in `~/.cargo/bin`), offers a user-level rustup install, and
+builds `voicemode_hook` for the current OS into `~/.voicemode/services/hooks`. The Copilot
+plugin is registered through `copilot plugin install` and carries the MCP server and hook;
+hooks are not tied to `~/.claude/settings.json`. See [Plugins](../guides/plugins.md).
+
 ### whisper
 Manage Whisper STT service
 

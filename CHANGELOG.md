@@ -7,7 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [8.13.1] - 2026-11-13
+
 ### Added
+
+- ADRs 0005 (unified service install CLI and GPU variants) and 0006 (cross-platform terminal/log portability); both added to the ADR index and `mkdocs.yml`.
+- `voicemode service install whisper --model` now activates the chosen model (`VOICEMODE_WHISPER_MODEL`); `service install whisper --help` lists every model with its size (tiny 39 MB to large-v3-turbo 1.6 GB).
+- Windows GPU: Whisper uses the prebuilt CUDA 12.4 build (`whisper-bin-win-cuda-12.4.0-x64.zip`) when `nvidia-smi` finds an NVIDIA GPU and it starts, else the CPU build (recorded in `bin\.variant`). Kokoro installs torch CUDA wheels from `cu130` then `cu128` (upstream's `cu124` lacks Blackwell), verified with `torch.cuda.is_available()`, else CPU torch (recorded in `<kokoro>\.device`, override `VOICEMODE_KOKORO_DEVICE`). `kokoro --device auto|cpu|gpu`. Verified on an RTX PRO 500 Blackwell laptop GPU; the first Whisper request takes about 45 s (CUDA kernel JIT), warm about 0.8 s STT and 0.2 s TTS. Intel iGPU/NPU are not used.
+- `voicemode plugin install` detects `cargo` (`PATH` or `~/.cargo/bin`), offers a user-level rustup install (`--install-rust/--no-install-rust`) and builds `voicemode_hook` per OS into `~/.voicemode/services/hooks`. Clients: cursor, claude, copilot, antigravity, codex, chatgpt, devin. The Copilot plugin is registered via `copilot plugin install` and carries MCP and hook.
+- Docs: GPU, install options, turbo model, warm-up and troubleshooting in `docs/guides/windows-local-services.md`; install-with-options and GPU selection diagrams in `docs/architecture/windows-workflows.md`; CLI reference and agent skill/command updates; a "Reproducing the debug view" note.
+
+### Changed
+
+- `voicemode service install` is now a command group with per-service options (`whisper`, `kokoro`, `voicemode`, `mlx-audio`, `livekit`); `--help` lists services and each subcommand shows its own options. Old invocations such as `service install whisper --force` still work.
+- Recommended Whisper model is `large-v3-turbo` (`voicemode whisper model large-v3-turbo`).
+- Copilot plugin hooks are no longer tied to `~/.claude/settings.json`.
+- Installer (`voice-mode-install`) terminal UI redesigned and rebranded as "Agent Voice Connect": header panel, sectioned steps, system table, neutral agent list (no Claude-specific wording), ASCII fallback for non-UTF-8 consoles, `NO_COLOR` and non-TTY output. Flags and install logic are unchanged. See `docs/guides/installer-ui.md`.
+
+### Fixed
+
+- `converse_continue` crashed on Windows with a `'charmap'` error: conversation job files are now written as UTF-8, and all text file I/O uses `encoding="utf-8"`.
+- Console is UTF-8 on Windows; pydub `SyntaxWarning` noise is suppressed.
+- `voicemode whisper model` no longer calls POSIX `pgrep` when switching models on Windows; `os.getuid` and `PATH` splitting are guarded for Windows.
+- Terminal/log parity: `voicemode converse` prints the same INFO/DEBUG startup lines on every OS when `VOICEMODE_DEBUG=true` (and `VOICEMODE_SAVE_ALL=true` for audio/debug directories). The Mac showing them was configuration, not code. See ADR 0006.
+- The installer UI is now "Agent Voice Connect" (`docs/guides/installer-ui.md`).
+
+## [8.13.0] - 2026-11-13
+
+### Added
+
+- Windows local services: `voicemode service install whisper|kokoro|voicemode` with `--scope auto|user|machine`. Admin installs machine-wide (`%ProgramData%\VoiceMode`, starts at boot as SYSTEM); non-admin installs per user (`~\.voicemode`, starts at logon). Backed by Task Scheduler. See `docs/architecture/adr/0001-windows-local-services.md`.
+- Windows installer installs local Whisper/Kokoro and picks the scope from admin rights.
+- Docs: Windows local services user guide (`docs/guides/windows-local-services.md`) covering install scopes, commands, MCP client setup, autostart testing, troubleshooting and DO/DON'T.
+- Docs: architecture decision records 0001-0004 (Windows local services, running MCP from the local `voicemode.exe`, Windows console UTF-8 and portability fixes, multi-platform installer scope selection), an ADR index and template under `docs/architecture/adr/`.
+- Docs: Windows workflow and sequence diagrams (`docs/architecture/windows-workflows.md`).
+- Docs: `windows-services` agent command and skill under `.agents/`, and a Windows local services section in `CLAUDE.md`.
+
 
 - **The voice hook ignores ordinary agent work** — it now acts only when the
   tool being called is `converse` or `converse_continue`. A prompt, or another

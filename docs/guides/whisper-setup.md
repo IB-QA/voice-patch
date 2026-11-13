@@ -6,10 +6,13 @@ Whisper is a local speech recognition service that converts audio to text for Vo
 
 ```bash
 # Install whisper service with default base model (includes Core ML on Apple Silicon!)
-voicemode whisper service install
+voicemode service install whisper
 
-# Install with a different model
-voicemode whisper service install --model large-v3
+# Install with a different model (recommended: large-v3-turbo)
+voicemode service install whisper --model large-v3-turbo
+
+# See every option and model size
+voicemode service install whisper --help
 
 # List available models and their status
 voicemode whisper model --all
@@ -33,10 +36,10 @@ VoiceMode includes an installation tool that sets up Whisper.cpp automatically:
 
 ```bash
 # Install with default base model (142MB) - good balance of speed and accuracy
-voicemode whisper service install
+voicemode service install whisper
 
 # Install with a specific model
-voicemode whisper service install --model small
+voicemode service install whisper --model small
 ```
 
 This will:

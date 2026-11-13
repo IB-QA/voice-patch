@@ -12,6 +12,25 @@ def test_not_applied_off_windows(monkeypatch):
     assert cli.harden_windows_console() is False
 
 
+def test_reconfigures_streams_to_utf8_so_emoji_output_cannot_crash(monkeypatch):
+    class Stream:
+        def __init__(self):
+            self.calls = []
+
+        def reconfigure(self, **kwargs):
+            self.calls.append(kwargs)
+
+    out, err = Stream(), Stream()
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setattr(sys, "stdout", out)
+    monkeypatch.setattr(sys, "stderr", err)
+
+    cli.harden_windows_console()
+
+    assert out.calls == [{"encoding": "utf-8", "errors": "replace"}]
+    assert err.calls == [{"encoding": "utf-8", "errors": "replace"}]
+
+
 def test_replaces_click_console_writer_on_windows(monkeypatch):
     monkeypatch.setattr(sys, "platform", "win32")
     sentinel = object()

@@ -106,7 +106,7 @@ def get_whisper_version_info() -> Dict[str, Any]:
             info["build_type"] = "CMake"
             
             # Parse CMake cache for feature flags
-            with open(whisper_dir / "build" / "CMakeCache.txt") as f:
+            with open(whisper_dir / "build" / "CMakeCache.txt", encoding="utf-8", errors="replace") as f:
                 cmake_content = f.read()
                 if "WHISPER_COREML:BOOL=ON" in cmake_content:
                     info["coreml_supported"] = True

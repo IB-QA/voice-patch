@@ -196,7 +196,7 @@ class ConversationJobManager:
             temporary = path.with_name(
                 f".{path.name}.tmp.{os.getpid()}.{uuid.uuid4().hex}"
             )
-            temporary.write_text(json.dumps(payload, ensure_ascii=False))
+            temporary.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
             temporary.chmod(0o600)
             os.replace(temporary, path)
         except OSError as exc:
@@ -225,7 +225,7 @@ class ConversationJobManager:
             paths = []
         for path in paths:
             try:
-                payload = json.loads(path.read_text())
+                payload = json.loads(path.read_text(encoding="utf-8"))
             except (OSError, ValueError):
                 continue
             if (
@@ -260,11 +260,11 @@ class ConversationJobManager:
                 continue
             path = self._job_path(job_id)
             try:
-                payload = json.loads(path.read_text())
+                payload = json.loads(path.read_text(encoding="utf-8"))
                 payload["delivered"] = True
                 payload["updated_at"] = time.time()
                 temporary = path.with_name(f".{path.name}.tmp.{os.getpid()}.{uuid.uuid4().hex}")
-                temporary.write_text(json.dumps(payload, ensure_ascii=False))
+                temporary.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
                 temporary.chmod(0o600)
                 os.replace(temporary, path)
             except (OSError, ValueError):
@@ -274,7 +274,7 @@ class ConversationJobManager:
         if not self._valid_job_id(job_id):
             return self._error_result(job_id, "invalid_job_id")
         try:
-            payload = json.loads(self._job_path(job_id).read_text())
+            payload = json.loads(self._job_path(job_id).read_text(encoding="utf-8"))
         except (OSError, ValueError):
             return self._error_result(job_id, "job_not_found")
 

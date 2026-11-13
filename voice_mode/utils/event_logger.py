@@ -257,7 +257,7 @@ class EventLogger:
         
         # Append event
         try:
-            with open(self.log_file, 'a') as f:
+            with open(self.log_file, 'a', encoding='utf-8') as f:
                 f.write(json.dumps(event.to_dict()) + '\n')
         except Exception as e:
             logger.error(f"Failed to write event to log: {e}")

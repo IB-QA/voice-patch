@@ -49,7 +49,7 @@ async def check_audio_dependencies() -> Dict[str, Any]:
         # Check if WSL
         is_wsl = False
         if result["platform"] == "Linux" and os.path.exists("/proc/version"):
-            with open("/proc/version", "r") as f:
+            with open("/proc/version", "r", encoding="utf-8") as f:
                 if "microsoft" in f.read().lower() or "wsl" in f.read().lower():
                     is_wsl = True
                     result["environment"] = "WSL"

@@ -220,6 +220,33 @@ class PackageInstaller:
             return False
 
 
+def is_windows_admin() -> bool:
+    """True when running elevated on Windows; always False elsewhere."""
+    if os.name != 'nt':
+        return False
+    try:
+        import ctypes
+        return bool(ctypes.windll.shell32.IsUserAnAdmin())
+    except Exception:
+        return False
+
+
+def voicemode_command() -> str:
+    """Absolute path of the installed voicemode executable.
+
+    The uv tool folder may not be on PATH yet in the installing shell, so prefer
+    the file uv just wrote over a bare `voicemode` lookup.
+    """
+    python = voice_mode_tool_python()
+    if python:
+        from pathlib import Path
+        scripts = Path(python).parent
+        for name in ('voicemode.exe', 'voicemode'):
+            if (scripts / name).exists():
+                return str(scripts / name)
+    return shutil.which('voicemode') or 'voicemode'
+
+
 def voice_mode_tool_python() -> Optional[str]:
     """Return the Python inside the uv tool environment for voice-mode."""
     tool_dir = None

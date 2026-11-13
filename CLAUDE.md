@@ -197,6 +197,24 @@ Quick reference:
 - **voicemode-macos** - Native macOS app
 - **voicemode-meta** - Project coordination and operations
 
+## Windows local services
+
+Windows runs Whisper (:2022) and Kokoro (:8880) locally as Scheduled Tasks. Admin installs
+machine-wide (`%ProgramData%\VoiceMode`, starts at boot); non-admin installs per user
+(`~\.voicemode`, starts at logon). `--scope auto|user|machine`; machine without elevation
+errors and never downgrades. MCP clients run the installed `voicemode.exe`, not
+`uvx voice-mode`. LiveKit is out of scope. Machine scope and real reboot autostart are
+unverified. GPU: whisper uses the CUDA build and Kokoro CUDA torch on NVIDIA (fallback CPU);
+use `voicemode service install <svc> --help` and `--model large-v3-turbo`. See `.agents/skills/windows-services/SKILL.md`,
+`docs/guides/windows-local-services.md`, `docs/architecture/adr/` and
+`docs/architecture/windows-workflows.md`.
+
+Log/terminal portability: DO pass `encoding="utf-8"` to every text `open`/`read_text`/
+`write_text`; DO guard POSIX-only calls (`os.getuid`, `pgrep`, `which`, `:`-split `PATH`);
+DO use `VOICEMODE_DEBUG=true` and `VOICEMODE_SAVE_ALL=true` to get the same debug view on
+every OS. DON'T add OS-specific log output or hand-write install commands.
+`tests/test_portability.py` guards this (ADR 0006).
+
 ## See Also
 
 - **[skills/voicemode/SKILL.md](skills/voicemode/SKILL.md)** - Voice interaction usage and MCP tools

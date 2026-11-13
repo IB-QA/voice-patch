@@ -64,7 +64,7 @@ def pending_jobs(
         return []
     for path in paths:
         try:
-            job = json.loads(path.read_text())
+            job = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             continue
         if not _matches(job.get("project_path"), roots):
@@ -85,7 +85,7 @@ def pending_jobs(
 
 def _push_counts(path: Path) -> dict[str, int]:
     try:
-        data = json.loads(path.read_text())
+        data = json.loads(path.read_text(encoding="utf-8"))
         return {str(k): int(v) for k, v in data.items()}
     except (OSError, ValueError, AttributeError):
         return {}
@@ -134,7 +134,7 @@ def decide(
         counts[str(job["job_id"])] = counts.get(str(job["job_id"]), 0) + 1
     try:
         state_path.parent.mkdir(parents=True, exist_ok=True)
-        state_path.write_text(json.dumps(counts))
+        state_path.write_text(json.dumps(counts), encoding="utf-8")
     except OSError:
         pass
 

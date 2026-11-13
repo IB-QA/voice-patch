@@ -58,8 +58,9 @@ def detect_platform() -> PlatformInfo:
             is_wsl=is_wsl
         )
     elif os_type == 'windows':
-        # Native Windows is a VoiceMode client: mic, speakers, and silence
-        # detection. Whisper and Kokoro stay on the machine that hosts them.
+        # Native Windows runs the full stack: mic/speakers client plus local
+        # Whisper and Kokoro as Task Scheduler tasks (machine scope when the
+        # installer is elevated, per-user scope otherwise).
         return PlatformInfo(
             os_type='windows',
             os_name='Windows',

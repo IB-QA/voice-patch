@@ -26,15 +26,21 @@ def test_windows_is_a_supported_platform(monkeypatch):
     assert get_package_manager(info.distribution) == "winget"
 
 
-def test_windows_client_does_not_install_local_speech_servers():
+def test_windows_recommends_local_speech_servers_on_capable_hardware():
     info = PlatformInfo(
         os_type="windows",
         os_name="Windows",
         distribution="windows",
         architecture="x86_64",
     )
+    hardware = HardwareInfo(info)
+    hardware.total_ram_gb = 16
+    hardware.cpu_count = 8
 
-    assert HardwareInfo(info).should_recommend_local_services() is False
+    assert hardware.should_recommend_local_services() is True
+
+    hardware.total_ram_gb = 4
+    assert hardware.should_recommend_local_services() is False
 
 
 def test_windows_core_dependency_is_ffmpeg_not_a_compiler():

@@ -60,7 +60,7 @@ def get_whisper_version() -> Dict[str, Any]:
                     cmake_cache = whisper_dir / "build" / "CMakeCache.txt"
                     if cmake_cache.exists():
                         build_info = {}
-                        with open(cmake_cache) as f:
+                        with open(cmake_cache, encoding='utf-8', errors='replace') as f:
                             for line in f:
                                 if "CMAKE_BUILD_TYPE" in line:
                                     build_info["build_type"] = line.split("=")[1].strip()

@@ -20,7 +20,7 @@ def changelog_resource() -> str:
     for path in possible_paths:
         if path.exists():
             try:
-                return path.read_text()
+                return path.read_text(encoding="utf-8")
             except Exception as e:
                 return f"Error reading CHANGELOG.md from {path}: {str(e)}"
     

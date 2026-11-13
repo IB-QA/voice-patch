@@ -24,9 +24,20 @@ voicemode service restart SERVICE
 voicemode service enable SERVICE
 voicemode service disable SERVICE
 voicemode service logs SERVICE [-n LINES]
-voicemode service install SERVICE
+voicemode service install SERVICE        # whisper, kokoro, voicemode, mlx-audio, livekit
+voicemode service install SERVICE --help # options for that service
 voicemode service uninstall SERVICE
 ```
+
+`voicemode service install` is a group; each service has its own options
+(`whisper`: `--model`, `--no-model`, `--use-gpu/--no-gpu`, `--install-dir`, `--version`,
+`--auto-enable`, `--skip-core-ml`, `--skip-deps`, `--force`, `--scope`; `kokoro`:
+`--device auto|cpu|gpu`, `--install-dir`, `--models-dir`, `--port`, `--no-models`,
+`--version`, `--auto-enable`, `--skip-deps`, `--force`, `--scope`; `voicemode`:
+`--auto-enable`, `--scope`; `mlx-audio`: `--port`, `--bind-lan`, `--auto-enable`,
+`--force`). Run `voicemode service install SERVICE --help` for details. The Whisper model
+chosen at install is also activated. On Windows, see the
+[local services guide](../../guides/windows-local-services.md) for GPU variants.
 
 The older top-level Kokoro and Whisper groups shown below remain available for
 backward compatibility.

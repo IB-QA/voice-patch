@@ -31,7 +31,7 @@ def test_plugin_install_cursor_to_tmp(tmp_path: Path, monkeypatch) -> None:
     dummy = _dummy_binary(tmp_path / "src" / "voicemode_hook")
     monkeypatch.setattr(plugin_mod, "PACKAGED_BINARY", dummy)
     monkeypatch.setattr(plugin_mod, "BUILD_SH", tmp_path / "missing-build.sh")
-    monkeypatch.setattr(plugin_mod, "ensure_cached_hook_binary", lambda: dummy)
+    monkeypatch.setattr(plugin_mod, "ensure_cached_hook_binary", lambda *_a, **_k: dummy)
 
     out = tmp_path / "plugins"
     (out / "cursor").mkdir(parents=True)
@@ -73,7 +73,7 @@ def test_plugin_install_all_clients_share_chatgpt_with_codex(tmp_path: Path, mon
     dummy = _dummy_binary(tmp_path / "src" / "voicemode_hook")
     monkeypatch.setattr(plugin_mod, "PACKAGED_BINARY", dummy)
     monkeypatch.setattr(plugin_mod, "BUILD_SH", tmp_path / "missing-build.sh")
-    monkeypatch.setattr(plugin_mod, "ensure_cached_hook_binary", lambda: dummy)
+    monkeypatch.setattr(plugin_mod, "ensure_cached_hook_binary", lambda *_a, **_k: dummy)
 
     out = tmp_path / "plugins"
     for name in plugin_mod.CLIENTS:
@@ -126,7 +126,7 @@ def test_antigravity_merges_existing_mcp_servers(tmp_path: Path, monkeypatch) ->
     dummy = _dummy_binary(tmp_path / "src" / "voicemode_hook")
     monkeypatch.setattr(plugin_mod, "PACKAGED_BINARY", dummy)
     monkeypatch.setattr(plugin_mod, "BUILD_SH", tmp_path / "missing-build.sh")
-    monkeypatch.setattr(plugin_mod, "ensure_cached_hook_binary", lambda: dummy)
+    monkeypatch.setattr(plugin_mod, "ensure_cached_hook_binary", lambda *_a, **_k: dummy)
 
     cfg = tmp_path / "gemini-config"
     cfg.mkdir()
@@ -157,7 +157,7 @@ def test_cursor_merges_user_hooks_without_dropping_others(tmp_path: Path, monkey
     dummy = _dummy_binary(tmp_path / "src" / "voicemode_hook")
     monkeypatch.setattr(plugin_mod, "PACKAGED_BINARY", dummy)
     monkeypatch.setattr(plugin_mod, "BUILD_SH", tmp_path / "missing-build.sh")
-    monkeypatch.setattr(plugin_mod, "ensure_cached_hook_binary", lambda: dummy)
+    monkeypatch.setattr(plugin_mod, "ensure_cached_hook_binary", lambda *_a, **_k: dummy)
 
     user_hooks = tmp_path / "cursor-user-hooks.json"
     user_hooks.write_text(
@@ -200,7 +200,7 @@ def _prime_plugin(monkeypatch, tmp_path: Path):
     dummy = _dummy_binary(tmp_path / "src" / "voicemode_hook")
     monkeypatch.setattr(plugin_mod, "PACKAGED_BINARY", dummy)
     monkeypatch.setattr(plugin_mod, "BUILD_SH", tmp_path / "missing-build.sh")
-    monkeypatch.setattr(plugin_mod, "ensure_cached_hook_binary", lambda: dummy)
+    monkeypatch.setattr(plugin_mod, "ensure_cached_hook_binary", lambda *_a, **_k: dummy)
     return dummy
 
 
@@ -422,3 +422,28 @@ def test_chatgpt_wires_codex_user_paths(tmp_path: Path, monkeypatch) -> None:
     assert (out / "codex" / "user-hooks.json").is_file()
     assert "[mcp_servers.voicemode]" in (out / "codex" / "config.toml").read_text()
     assert not (out / "chatgpt" / "voicemode").exists()
+
+
+def test_resolve_cargo_uses_existing_toolchain(monkeypatch):
+    monkeypatch.setattr(plugin_mod, "find_cargo", lambda: "/x/cargo")
+    monkeypatch.setattr(plugin_mod, "install_rust", lambda: pytest.fail("must not install"))
+    assert plugin_mod.resolve_cargo(None) == "/x/cargo"
+
+
+def test_resolve_cargo_never_installs_when_declined(monkeypatch):
+    monkeypatch.setattr(plugin_mod, "find_cargo", lambda: None)
+    monkeypatch.setattr(plugin_mod, "install_rust", lambda: pytest.fail("must not install"))
+    assert plugin_mod.resolve_cargo(False) is None
+
+
+def test_resolve_cargo_does_not_prompt_without_a_terminal(monkeypatch):
+    monkeypatch.setattr(plugin_mod, "find_cargo", lambda: None)
+    monkeypatch.setattr(plugin_mod.sys.stdin, "isatty", lambda: False, raising=False)
+    monkeypatch.setattr(plugin_mod, "install_rust", lambda: pytest.fail("must not install"))
+    assert plugin_mod.resolve_cargo(None) is None
+
+
+def test_resolve_cargo_installs_when_asked(monkeypatch):
+    monkeypatch.setattr(plugin_mod, "find_cargo", lambda: None)
+    monkeypatch.setattr(plugin_mod, "install_rust", lambda: "/new/cargo")
+    assert plugin_mod.resolve_cargo(True) == "/new/cargo"

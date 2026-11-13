@@ -79,7 +79,7 @@ After installation, restart your terminal or reload your shell configuration."""
         # Try to detect the Linux distribution
         distro_info = {}
         try:
-            with open('/etc/os-release', 'r') as f:
+            with open('/etc/os-release', 'r', encoding='utf-8') as f:
                 for line in f:
                     if '=' in line:
                         key, value = line.strip().split('=', 1)

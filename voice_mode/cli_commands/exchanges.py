@@ -393,11 +393,11 @@ def export(conversation, date, days, format, include_audio, output):
         for conv in conversations.values():
             data.append(conv.to_dict())
         
-        with open(output, 'w') as f:
+        with open(output, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, default=str)
     
     elif format == 'csv':
-        with open(output, 'w') as f:
+        with open(output, 'w', encoding='utf-8') as f:
             # Write header
             f.write(formatter.csv_header() + '\n')
             
@@ -406,7 +406,7 @@ def export(conversation, date, days, format, include_audio, output):
                 f.write(formatter.csv(exchange) + '\n')
     
     elif format == 'markdown':
-        with open(output, 'w') as f:
+        with open(output, 'w', encoding='utf-8') as f:
             for conv in conversations.values():
                 f.write(formatter.markdown(conv, include_metadata=True))
                 f.write('\n\n---\n\n')
@@ -421,14 +421,14 @@ def export(conversation, date, days, format, include_audio, output):
             # Write individual conversation files
             for conv in conversations.values():
                 conv_file = output_dir / f"{conv.id}.html"
-                with open(conv_file, 'w') as f:
+                with open(conv_file, 'w', encoding='utf-8') as f:
                     f.write(formatter.html(conv))
             
             click.echo(f"Exported {len(conversations)} conversations to {output_dir}/")
         else:
             # Single conversation
             conv = list(conversations.values())[0]
-            with open(output, 'w') as f:
+            with open(output, 'w', encoding='utf-8') as f:
                 f.write(formatter.html(conv))
     
     if include_audio:

@@ -61,7 +61,7 @@ fn main() {
         eprintln!("[RUST END] Execution took {}ms ({} ns)", elapsed_ns / 1_000_000, elapsed_ns);
     }
 
-    let home = env::var("HOME").unwrap_or_default();
+    let home = home_dir();
     let mut log_path = PathBuf::from(&home);
     log_path.push(".voicemode/logs/converse-pre-tool-use.jsonl");
     let _ = fs::create_dir_all(log_path.parent().unwrap());
@@ -100,8 +100,15 @@ fn main() {
     }
 }
 
+// HOME is unset on Windows; without a fallback the log landed in the current directory.
+fn home_dir() -> String {
+    env::var("HOME")
+        .or_else(|_| env::var("USERPROFILE"))
+        .unwrap_or_default()
+}
+
 fn keep_history() -> bool {
-    let home = env::var("HOME").unwrap_or_default();
+    let home = home_dir();
     let configs = read_env_file(&format!("{}/.voicemode/voicemode.env", home));
     env::var("VOICEMODE_KEEP_HISTORY")
         .ok()
@@ -117,7 +124,7 @@ fn run_pipeline(input_str: &str, client_arg: &str) -> Result<Option<String>, Box
         Err(_) => return Ok(None),
     };
 
-    let home = env::var("HOME").unwrap_or_default();
+    let home = home_dir();
     let env_file_path = format!("{}/.voicemode/voicemode.env", home);
     let configs = read_env_file(&env_file_path);
 

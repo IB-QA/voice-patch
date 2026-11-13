@@ -87,6 +87,7 @@ nav:
   - Local Services:
     - Whisper STT: guides/whisper-setup.md
     - Kokoro TTS: guides/kokoro-setup.md
+    - Windows Local Services: guides/windows-local-services.md
     - LiveKit Browser Rooms: guides/livekit-setup.md
   - Reference:
     - CLI Commands: reference/cli.md
@@ -98,6 +99,14 @@ nav:
   - Development:
     - Local Development: tutorials/development-setup.md
     - Tool Loading Architecture: reference/tool-loading-architecture.md
+    - 'ADR 0001: Windows Local Services': architecture/adr/0001-windows-local-services.md
+    - 'ADR 0002: Run MCP from Local Build': architecture/adr/0002-run-mcp-from-local-build.md
+    - 'ADR 0003: Windows Console and Portability': architecture/adr/0003-windows-console-and-portability.md
+    - 'ADR 0004: Installer Scope Selection': architecture/adr/0004-installer-multi-platform-scope.md
+    - 'ADR 0005: Unified Service Install and GPU': architecture/adr/0005-unified-service-install-cli-and-gpu-variants.md
+    - 'ADR 0006: Terminal and Log Portability': architecture/adr/0006-cross-platform-terminal-and-log-portability.md
+    - ADR Index: architecture/adr/README.md
+    - Windows Workflows: architecture/windows-workflows.md
     - PR Review Rubric: maintainers/pr-review-rubric.md
   - Troubleshooting:
     - Overview: troubleshooting/index.md

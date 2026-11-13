@@ -70,6 +70,16 @@ class StatusData:
     dependencies: Dict[str, bool]
 
 
+def _runtime_command() -> str:
+    """Describe how this VoiceMode process was launched (the local install, not upstream uvx)."""
+    import sys
+
+    exe = Path(sys.argv[0]) if sys.argv and sys.argv[0] else None
+    if exe and exe.suffix.lower() == ".exe" and exe.exists():
+        return str(exe.resolve())
+    return shutil.which("voicemode") or f"{sys.executable} -m voice_mode"
+
+
 def check_ffmpeg() -> DependencyInfo:
     """Check if ffmpeg is installed."""
     path = shutil.which("ffmpeg")
@@ -110,6 +120,15 @@ def check_portaudio() -> DependencyInfo:
         if result.returncode == 0:
             return DependencyInfo(name="portaudio", installed=True)
         return DependencyInfo(name="portaudio", installed=False)
+
+    # On Windows, sounddevice bundles the PortAudio DLL
+    if platform.system() == "Windows":
+        try:
+            import sounddevice
+            version = sounddevice.get_portaudio_version()[1]
+            return DependencyInfo(name="portaudio", installed=True, version=version)
+        except Exception:
+            return DependencyInfo(name="portaudio", installed=False)
 
     # On Linux, check for the library
     # Include versioned .so.2 names since Debian/Ubuntu only install
@@ -186,6 +205,19 @@ def format_memory(bytes_val: float) -> str:
     return f"{mb:.0f} MB"
 
 
+def _windows_task_exists(task_name: str) -> bool:
+    """Check whether a per-user Scheduled Task with this name is registered."""
+    try:
+        result = subprocess.run(
+            ["schtasks", "/Query", "/TN", task_name],
+            capture_output=True,
+            timeout=10,
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
+
+
 def check_whisper_service() -> ServiceInfo:
     """Check Whisper (STT) service status."""
     status, proc = check_service_status(WHISPER_PORT, process_name="whisper-server")
@@ -196,12 +228,19 @@ def check_whisper_service() -> ServiceInfo:
     whisper_bin_paths = [
         whisper_dir / "build" / "bin" / "whisper-server",  # Direct build
         whisper_dir / "whisper.cpp" / "build" / "bin" / "whisper-server",  # Subdir build
+        whisper_dir / "bin" / "whisper-server.exe",  # Windows prebuilt release
     ]
+    if platform.system() == "Windows":
+        from voice_mode.utils.services.windows import machine_base_dir
+
+        whisper_bin_paths.append(machine_base_dir() / "services" / "whisper" / "bin" / "whisper-server.exe")
     is_installed = any(p.exists() for p in whisper_bin_paths)
 
     # Check auto-start configuration
     auto_start = False
-    if platform.system() == "Darwin":
+    if platform.system() == "Windows":
+        auto_start = _windows_task_exists("VoiceMode-Whisper")
+    elif platform.system() == "Darwin":
         plist_path = Path.home() / "Library" / "LaunchAgents" / "com.voicemode.whisper.plist"
         auto_start = plist_path.exists()
     else:
@@ -303,10 +342,16 @@ def check_kokoro_service() -> ServiceInfo:
     voicemode_dir = Path.home() / ".voicemode"
     kokoro_dir = voicemode_dir / "services" / "kokoro"
     is_installed = kokoro_dir.exists() and any(kokoro_dir.iterdir())
+    if platform.system() == "Windows":
+        from voice_mode.utils.services.kokoro_helpers import find_kokoro_fastapi
+
+        is_installed = find_kokoro_fastapi() is not None
 
     # Check auto-start configuration
     auto_start = False
-    if platform.system() == "Darwin":
+    if platform.system() == "Windows":
+        auto_start = _windows_task_exists("VoiceMode-Kokoro")
+    elif platform.system() == "Darwin":
         plist_path = Path.home() / "Library" / "LaunchAgents" / "com.voicemode.kokoro.plist"
         auto_start = plist_path.exists()
     else:
@@ -446,7 +491,7 @@ def collect_status_data() -> Dict[str, Any]:
         "version": __version__,
         "runtime": {
             "mode": "mcp",
-            "command": "uvx voice-mode"
+            "command": _runtime_command()
         },
         "tts": {
             "active": active["tts"],

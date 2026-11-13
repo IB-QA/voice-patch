@@ -160,7 +160,7 @@ class ConversationLogger:
         
         # Write to today's log file
         log_file = self._get_log_file_path(datetime.now().date())
-        with open(log_file, 'a') as f:
+        with open(log_file, 'a', encoding='utf-8') as f:
             f.write(json.dumps(entry) + '\n')
 
         self.inbox.record(

@@ -18,6 +18,16 @@ logger = logging.getLogger("voicemode")
 
 def find_whisper_server() -> Optional[str]:
     """Find the whisper-server binary."""
+    if platform.system() == "Windows":
+        from voice_mode.utils.services.windows import candidate_base_dirs
+
+        for base in candidate_base_dirs():
+            for rel in (("services", "whisper", "bin"), ("services", "whisper", "build", "bin")):
+                exe = base.joinpath(*rel, "whisper-server.exe")
+                if exe.is_file():
+                    return str(exe)
+        return shutil.which("whisper-server")
+
     # Check common installation paths
     paths_to_check = [
         Path.home() / ".voicemode" / "services" / "whisper" / "build" / "bin" / "whisper-server",  # New location
@@ -33,11 +43,7 @@ def find_whisper_server() -> Optional[str]:
             return str(path)
     
     # Try to find in PATH
-    result = subprocess.run(["which", "whisper-server"], capture_output=True, text=True)
-    if result.returncode == 0 and result.stdout.strip():
-        return result.stdout.strip()
-    
-    return None
+    return shutil.which("whisper-server")
 
 
 def find_whisper_model() -> Optional[str]:
@@ -65,6 +71,10 @@ def find_whisper_model() -> Optional[str]:
         Path.home() / ".voicemode" / "services" / "whisper" / "models",
         Path.home() / ".voicemode" / "whisper.cpp" / "models"  # legacy path
     ]
+    if platform.system() == "Windows":
+        from voice_mode.utils.services.windows import candidate_base_dirs
+
+        default_paths = [b / "services" / "whisper" / "models" for b in candidate_base_dirs()] + default_paths
     
     for default_path in default_paths:
         if default_path.exists():
